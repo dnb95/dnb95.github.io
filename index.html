@@ -35,7 +35,6 @@
             align-items: center;
         }
 
-        /* --- CURSEUR CUSTOM --- */
         #cursor {
             position: fixed;
             width: 20px;
@@ -56,7 +55,6 @@
             border-color: var(--secondary);
         }
     
-        /* --- FOND ANIMÉ --- */
         .space-bg {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -97,7 +95,6 @@
             perspective: 1000px; 
         }
 
-        /* --- TYPOGRAPHIE & TITRES --- */
         h1.mega-title {
             font-family: 'Orbitron', sans-serif;
             font-size: clamp(3rem, 8vw, 6rem);
@@ -128,7 +125,6 @@
             letter-spacing: 2px;
         }
 
-        /* --- CARTES PROJETS --- */
         .cards-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -204,7 +200,6 @@
         .card-insta:hover { border-color: #C13584; box-shadow: 0 0 20px rgba(193, 53, 132, 0.4); }
         .card-linkedin:hover { border-color: #0A66C2; box-shadow: 0 0 20px rgba(10, 102, 194, 0.4); }
 
-        /* --- SECTION BIO --- */
         .bio-section {
             width: 100%;
             max-width: 800px;
@@ -259,7 +254,6 @@
         
         @keyframes blink { 50% { border-color: transparent; } }
 
-        /* --- ZONE COOKIE CLICKER --- */
         .cc-wrapper {
             display: flex;
             flex-wrap: wrap;
@@ -273,6 +267,47 @@
             margin: 0 auto;
             position: relative;
             user-select: none;
+        }
+
+        #usernameOverlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5, 8, 11, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        #usernameOverlay h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            color: #fff;
+            text-shadow: 0 0 10px var(--primary);
+        }
+
+        .cc-input {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--primary);
+            color: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .cc-input:focus {
+            outline: none;
+            box-shadow: 0 0 10px var(--primary);
         }
 
         .cc-left {
@@ -298,7 +333,6 @@
             padding-left: 10px;
         }
 
-        /* Scrollbar custom pour la boutique */
         .cc-right::-webkit-scrollbar { width: 8px; }
         .cc-right::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; }
         .cc-right::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
@@ -306,6 +340,12 @@
         .cc-stats {
             text-align: center;
             margin-bottom: 30px;
+        }
+        
+        .cc-welcome {
+            color: var(--secondary);
+            font-size: 0.9rem;
+            margin-bottom: 5px;
         }
 
         .cc-cookies-count {
@@ -331,9 +371,10 @@
             width: 250px;
             height: 250px;
             border-radius: 50%;
-            box-shadow: inset 0 0 50px rgba(0,0,0,0.8), 0 0 30px rgba(0,0,0,0.5);
             transition: transform 0.05s;
             filter: drop-shadow(0 0 15px rgba(210, 105, 30, 0.4));
+            
+            mix-blend-mode: multiply; 
         }
 
         .big-cookie-btn:active .big-cookie-img {
@@ -398,7 +439,8 @@
             width: 100%;
             display: flex;
             justify-content: center;
-            gap: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
             margin-top: 20px;
             padding-top: 20px;
             border-top: 1px solid rgba(255,255,255,0.1);
@@ -419,6 +461,16 @@
             background: var(--secondary);
             color: #000;
             box-shadow: 0 0 10px var(--secondary);
+        }
+        
+        .cc-btn.primary-btn {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .cc-btn.primary-btn:hover {
+            background: var(--primary);
+            color: #000;
+            box-shadow: 0 0 10px var(--primary);
         }
 
         @media (max-width: 768px) {
@@ -479,15 +531,23 @@
 
         <h2 class="section-label">ZONE COOKIE CLICKER</h2>
         <div class="cc-wrapper">
+
+            <div id="usernameOverlay">
+                <h3>Initialisation...</h3>
+                <p style="color: #aaa;">Entrez votre pseudo pour commencer à produire.</p>
+                <input type="text" id="usernameInput" class="cc-input" placeholder="Votre Pseudo" maxlength="15">
+                <button class="cc-btn primary-btn" id="btnStartGame" data-hover>Lancer la production</button>
+            </div>
             
             <div class="cc-left">
                 <div class="cc-stats">
+                    <div class="cc-welcome">usine de <span id="playerNameDisplay">...</span></div>
                     <div class="cc-cookies-count" id="cookiesDisplay">0</div>
                     <div class="cc-cps">cookies par seconde : <span id="cpsDisplay">0</span></div>
                 </div>
                 
                 <button class="big-cookie-btn" id="bigCookie" data-hover>
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/f/f1/Choco_chip_cookie.png" alt="Big Cookie" class="big-cookie-img" draggable="false">
+                    <img src="https://png.pngtree.com/png-vector/20250425/ourmid/pngtree-chocolate-chip-cookie-icon-white-background-png-image_16100260.png" alt="Big Cookie" class="big-cookie-img" draggable="false">
                 </button>
             </div>
 
@@ -513,10 +573,12 @@
             cursor.style.top = e.clientY + 'px';
         });
 
-        hoverElements.forEach(el => {
+        function addHoverEffect(el) {
             el.addEventListener('mouseenter', () => cursor.classList.add('hovered'));
             el.addEventListener('mouseleave', () => cursor.classList.remove('hovered'));
-        });
+        }
+        
+        hoverElements.forEach(addHoverEffect);
 
         const cards = document.querySelectorAll('.tilt-card');
         cards.forEach(card => {
@@ -535,9 +597,9 @@
             });
         });
 
-
         
         const defaultSave = {
+            username: "",
             cookies: 0,
             totalCookies: 0,
             buildings: {
@@ -549,7 +611,6 @@
                 bank: { count: 0 }
             }
         };
-
 
         const buildingData = {
             cursor: { id: 'cursor', name: 'Curseur', icon: '🖱️', baseCost: 15, baseCps: 0.1 },
@@ -564,24 +625,25 @@
         let currentCps = 0;
         let clickPower = 1;
 
-
         const displayCookies = document.getElementById('cookiesDisplay');
         const displayCps = document.getElementById('cpsDisplay');
         const bigCookieBtn = document.getElementById('bigCookie');
         const storeContainer = document.getElementById('storeContainer');
-
+        const playerNameDisplay = document.getElementById('playerNameDisplay');
+        
+        const usernameOverlay = document.getElementById('usernameOverlay');
+        const usernameInput = document.getElementById('usernameInput');
+        const btnStartGame = document.getElementById('btnStartGame');
 
         function formatNumber(num) {
             return Math.floor(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
         }
-
 
         function getBuildingCost(id) {
             let base = buildingData[id].baseCost;
             let count = game.buildings[id].count;
             return Math.ceil(base * Math.pow(1.15, count));
         }
-
 
         function recalculateCps() {
             let cps = 0;
@@ -592,11 +654,10 @@
             displayCps.innerText = (Math.round(currentCps * 10) / 10).toLocaleString('fr-FR');
         }
 
- 
         function updateUI() {
             displayCookies.innerText = formatNumber(game.cookies);
+            playerNameDisplay.innerText = game.username;
             
-
             for (let id in buildingData) {
                 const cost = getBuildingCost(id);
                 const elCost = document.getElementById(`cost-${id}`);
@@ -616,9 +677,8 @@
                     }
                 }
             }
-            document.title = `${formatNumber(game.cookies)} cookies - Dan Clicker`;
+            document.title = `${formatNumber(game.cookies)} cookies - ${game.username}`;
         }
-
 
         function initStore() {
             storeContainer.innerHTML = '';
@@ -639,9 +699,7 @@
                     <div class="b-count" id="count-${id}"></div>
                 `;
 
-
-                div.addEventListener('mouseenter', () => cursor.classList.add('hovered'));
-                div.addEventListener('mouseleave', () => cursor.classList.remove('hovered'));
+                addHoverEffect(div);
 
                 div.addEventListener('click', () => {
                     let cost = getBuildingCost(id);
@@ -650,7 +708,7 @@
                         game.buildings[id].count++;
                         recalculateCps();
                         updateUI();
-                        saveGame(); 
+                        saveGame(false);
                     }
                 });
 
@@ -658,14 +716,13 @@
             }
         }
 
-
         bigCookieBtn.addEventListener('mousedown', (e) => {
+            if(!game.username) return; 
+
             game.cookies += clickPower;
             game.totalCookies += clickPower;
             
-
             const rect = bigCookieBtn.getBoundingClientRect();
-
             let x, y;
             if(e.clientX === 0 && e.clientY === 0) { 
                 x = rect.width / 2;
@@ -683,7 +740,6 @@
             
             bigCookieBtn.appendChild(particle);
             
-
             setTimeout(() => {
                 particle.remove();
             }, 1000);
@@ -692,19 +748,43 @@
         });
 
 
+        btnStartGame.addEventListener('click', () => {
+            const input = usernameInput.value.trim();
+            if(input.length >= 3) {
+                game.username = input;
+                saveGame(false);
+                recalculateCps();
+                updateUI();
+                usernameOverlay.style.display = 'none';
+            } else {
+                alert("Veuillez entrer un pseudo d'au moins 3 caractères.");
+                usernameInput.focus();
+            }
+        });
 
-        function saveGame() {
-            localStorage.setItem('danCookieSave', JSON.stringify(game));
+        usernameInput.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') btnStartGame.click();
+        });
+
+
+        function saveGame(showAlert = true) {
+            localStorage.setItem('danCookieSave_v2', JSON.stringify(game));
+            if(showAlert) alert("Partie sauvegardée localement !");
         }
 
         function loadGame() {
-            let saved = localStorage.getItem('danCookieSave');
+            let saved = localStorage.getItem('danCookieSave_v2');
+            
+            if(!saved) saved = localStorage.getItem('danCookieSave');
+
             if (saved) {
                 try {
                     let parsed = JSON.parse(saved);
-
+                    
                     game.cookies = parsed.cookies || 0;
                     game.totalCookies = parsed.totalCookies || 0;
+                    game.username = parsed.username || "";
+
                     for (let id in buildingData) {
                         if(parsed.buildings && parsed.buildings[id]) {
                             game.buildings[id].count = parsed.buildings[id].count;
@@ -712,39 +792,51 @@
                     }
                 } catch(e) { console.error("Erreur de chargement", e); }
             }
-            recalculateCps();
-            updateUI();
+            
+            if(game.username) {
+                usernameOverlay.style.display = 'none';
+                recalculateCps();
+                updateUI();
+            } else {
+                usernameOverlay.style.display = 'flex'; 
+                usernameInput.focus();
+            }
         }
 
         function resetGame() {
-            if(confirm("Veux-tu vraiment tout recommencer à zéro ? (C'est irréversible !)")) {
+            if(confirm("Veux-tu vraiment tout recommencer à zéro ? Ton pseudo sera aussi effacé. (C'est irréversible !)")) {
                 game = JSON.parse(JSON.stringify(defaultSave));
-                saveGame();
+                localStorage.removeItem('danCookieSave_v2');
+                localStorage.removeItem('danCookieSave'); 
+                usernameOverlay.style.display = 'flex';
+                usernameInput.value = "";
                 recalculateCps();
-                updateUI();
+                displayCookies.innerText = "0";
+                playerNameDisplay.innerText = "...";
+                document.title = "Dan Clicker";
             }
         }
 
         function exportSave() {
-    
-            let saveString = btoa(JSON.stringify(game));
-            prompt("Copie ce code pour sauvegarder ta progression ailleurs :", saveString);
+            let saveString = btoa(unescape(encodeURIComponent(JSON.stringify(game))));
+            prompt("Copie ce code pour sauvegarder ta progressionailleurs (inclut ton pseudo) :", saveString);
         }
 
         function importSave() {
             let saveString = prompt("Colle ton code de sauvegarde (Base64) ici :");
             if (saveString) {
                 try {
-                    let decoded = atob(saveString);
+                    let decoded = decodeURIComponent(escape(atob(saveString)));
                     let parsed = JSON.parse(decoded);
-                    if (parsed.buildings) {
+                    if (parsed.buildings && parsed.hasOwnProperty('username')) {
                         game = parsed;
-                        saveGame();
+                        saveGame(false);
                         recalculateCps();
                         updateUI();
-                        alert("Sauvegarde importée avec succès !");
+                        usernameOverlay.style.display = 'none'; // Cache si pseudo chargé
+                        alert(`Sauvegarde de "${game.username}" importée avec succès !`);
                     } else {
-                        alert("Code de sauvegarde invalide.");
+                        alert("Code de sauvegarde invalide (version incompatible).");
                     }
                 } catch(e) {
                     alert("Erreur lors de l'importation. Le code semble corrompu.");
@@ -752,8 +844,7 @@
             }
         }
 
-
-        document.getElementById('btnSave').addEventListener('click', () => { saveGame(); alert("Partie sauvegardée !"); });
+        document.getElementById('btnSave').addEventListener('click', () => saveGame(true));
         document.getElementById('btnExport').addEventListener('click', exportSave);
         document.getElementById('btnImport').addEventListener('click', importSave);
         document.getElementById('btnReset').addEventListener('click', resetGame);
@@ -761,7 +852,7 @@
 
 
         setInterval(() => {
-            if (currentCps > 0) {
+            if (currentCps > 0 && game.username) {
                 let toAdd = currentCps / 10;
                 game.cookies += toAdd;
                 game.totalCookies += toAdd;
@@ -769,9 +860,10 @@
             }
         }, 100);
         
-        setInterval(saveGame, 30000);
+        setInterval(() => {
+            if(game.username) saveGame(false);
+        }, 60000);
 
-        // eyJjb29raWVzIjo5MDAwMDAwMDAwMDAwMDAwLCJ0b3RhbENvb2tpZXMiOjkwMDAwMDAwMDAwMDAwMDAsImJ1aWxkaW5ncyI6eyJjdXJzb3IiOnsiY291bnQiOjEwMDB9LCJncmFuZG1hIjp7ImNvdW50IjoxMDAwfSwiZmFybSI6eyJjb3VudCI6MTAwMH0sIm1pbmUiOnsiY291bnQiOjEwMDB9LCJmYWN0b3J5Ijp7ImNvdW50IjoxMDAwfSwiYmFuayI6eyJjb3VudCI6MTAwMH19fQ==
         initStore();
         loadGame();
 
