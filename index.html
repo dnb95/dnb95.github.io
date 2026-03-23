@@ -2,8 +2,8 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Dan Bouillet - Acceuil</title>
-    <meta name="description" content="L'acceuil du site de Dan Bouillet.">
+    <title>Dan Bouillet - Accueil</title>
+    <meta name="description" content="L'accueil du site de Dan Bouillet.">
     <link rel="icon" type="image/png" href="https://upload.wikimedia.org/wikipedia/commons/2/20/Dan_Bouillet_Logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;500;800&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -35,6 +35,7 @@
             align-items: center;
         }
 
+        /* --- CURSEUR CUSTOM --- */
         #cursor {
             position: fixed;
             width: 20px;
@@ -53,8 +54,9 @@
             height: 50px;
             background: rgba(88, 166, 255, 0.2);
             border-color: var(--secondary);
-}
+        }
     
+        /* --- FOND ANIMÉ --- */
         .space-bg {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -95,6 +97,7 @@
             perspective: 1000px; 
         }
 
+        /* --- TYPOGRAPHIE & TITRES --- */
         h1.mega-title {
             font-family: 'Orbitron', sans-serif;
             font-size: clamp(3rem, 8vw, 6rem);
@@ -125,6 +128,7 @@
             letter-spacing: 2px;
         }
 
+        /* --- CARTES PROJETS --- */
         .cards-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -149,7 +153,6 @@
             transition: all 0.1s ease; 
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             transform-style: preserve-3d;
-            group;
         }
 
         .tilt-card::before {
@@ -201,7 +204,7 @@
         .card-insta:hover { border-color: #C13584; box-shadow: 0 0 20px rgba(193, 53, 132, 0.4); }
         .card-linkedin:hover { border-color: #0A66C2; box-shadow: 0 0 20px rgba(10, 102, 194, 0.4); }
 
-
+        /* --- SECTION BIO --- */
         .bio-section {
             width: 100%;
             max-width: 800px;
@@ -256,37 +259,174 @@
         
         @keyframes blink { 50% { border-color: transparent; } }
 
-        .game-wrapper {
-            position: relative;
-            padding: 20px;
-            background: rgba(0,0,0,0.3);
-            border-radius: 20px;
+        /* --- ZONE COOKIE CLICKER --- */
+        .cc-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            background: rgba(0,0,0,0.5);
             border: 1px solid rgba(255,255,255,0.1);
-            text-align: center;
+            border-radius: 20px;
+            padding: 20px;
             width: 100%;
-            max-width: 500px;
+            max-width: 900px;
             margin: 0 auto;
+            position: relative;
+            user-select: none;
         }
 
-        canvas {
-            background: #090a0f;
-            border: 2px solid var(--secondary);
+        .cc-left {
+            flex: 1;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-right: 1px solid rgba(255,255,255,0.1);
+            padding-right: 20px;
+            position: relative;
+        }
+
+        .cc-right {
+            flex: 1;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 500px;
+            overflow-y: auto;
+            padding-left: 10px;
+        }
+
+        /* Scrollbar custom pour la boutique */
+        .cc-right::-webkit-scrollbar { width: 8px; }
+        .cc-right::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; }
+        .cc-right::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
+
+        .cc-stats {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .cc-cookies-count {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+
+        .cc-cps {
+            font-size: 1rem;
+            color: #aaa;
+        }
+
+        .big-cookie-btn {
+            background: none;
+            border: none;
+            outline: none;
+            position: relative;
+        }
+
+        .big-cookie-img {
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.8), 0 0 30px rgba(0,0,0,0.5);
+            transition: transform 0.05s;
+            filter: drop-shadow(0 0 15px rgba(210, 105, 30, 0.4));
+        }
+
+        .big-cookie-btn:active .big-cookie-img {
+            transform: scale(0.95);
+        }
+
+        /* Particules de clic */
+        .click-particle {
+            position: absolute;
+            color: white;
+            font-weight: bold;
+            font-size: 1.5rem;
+            pointer-events: none;
+            animation: floatUp 1s ease-out forwards;
+            text-shadow: 0 0 5px black;
+            z-index: 10;
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-50px) scale(1.5); }
+        }
+
+        .building-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(90deg, rgba(22, 27, 34, 0.8), rgba(22, 27, 34, 0.4));
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 15px;
             border-radius: 10px;
-            box-shadow: 0 0 30px rgba(188, 140, 255, 0.2);
-            cursor: pointer;
+            transition: 0.2s;
+            position: relative;
+            overflow: hidden;
         }
 
-        .score-display {
+        .building-item:hover {
+            border-color: var(--primary);
+            background: linear-gradient(90deg, rgba(88, 166, 255, 0.2), rgba(22, 27, 34, 0.6));
+        }
+        
+        .building-item.locked {
+            opacity: 0.5;
+            filter: grayscale(100%);
+        }
+
+        .b-icon { font-size: 2rem; margin-right: 15px; }
+        
+        .b-info { flex: 1; display: flex; flex-direction: column; }
+        .b-name { font-weight: bold; font-size: 1.2rem; color: #fff; }
+        .b-cost { font-size: 0.9rem; color: #27c93f; display: flex; align-items: center; gap: 5px; }
+        .b-cost.too-expensive { color: #ff5f56; }
+        
+        .b-count {
             font-family: 'Orbitron', sans-serif;
             font-size: 2rem;
+            color: rgba(255,255,255,0.2);
+            font-weight: bold;
+        }
+
+        .cc-controls {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .cc-btn {
+            background: transparent;
+            border: 1px solid var(--secondary);
             color: var(--secondary);
-            margin-bottom: 15px;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
+
+        .cc-btn:hover {
+            background: var(--secondary);
+            color: #000;
+            box-shadow: 0 0 10px var(--secondary);
         }
 
         @media (max-width: 768px) {
             .cards-grid { grid-template-columns: 1fr; }
             .tilt-card { height: 250px; }
             .bio-content { justify-content: center; text-align: center; }
+            .cc-left { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); padding-right: 0; padding-bottom: 20px; }
+            .cc-right { padding-left: 0; }
         }
     </style>
 </head>
@@ -300,7 +440,6 @@
         <h1 class="mega-title" data-hover>MES PROJETS</h1>
 
         <div class="cards-grid">
-            
             <a href="https://dnb95.github.io/1STMG/" class="tilt-card card-project" data-hover target="_blank">
                 <div class="card-icon">🚀</div>
                 <h3 class="card-title">DAN REVIZ</h3>
@@ -333,16 +472,35 @@
                     <p>> Initializing user profile...</p>
                     <p>> Name: <span style="color: #e6edf3;">Dan</span></p>
                     <p>> Status: <span style="color: #e6edf3;">Lycéen en STMG</span></p>
-                    <p>> Conatct: <span style="color: #e6edf3;" class="typewriter">dan.bouillet.14@gmail.com</span></p>
+                    <p>> Contact: <span style="color: #e6edf3;" class="typewriter">dan.bouillet.14@gmail.com</span></p>
                 </div>
             </div>
         </div>
 
-        <h2 class="section-label">ZONE SNAKE</h2>
-        <div class="game-wrapper">
-            <div class="score-display" id="scoreBoard">000</div>
-            <canvas id="gameCanvas" width="350" height="350" data-hover></canvas>
-            <p style="margin-top: 10px; color: #666; font-size: 0.8rem;">CLAVIER : FLÈCHES | MOBILE : TOUCHER BORDS</p>
+        <h2 class="section-label">ZONE COOKIE CLICKER</h2>
+        <div class="cc-wrapper">
+            
+            <div class="cc-left">
+                <div class="cc-stats">
+                    <div class="cc-cookies-count" id="cookiesDisplay">0</div>
+                    <div class="cc-cps">cookies par seconde : <span id="cpsDisplay">0</span></div>
+                </div>
+                
+                <button class="big-cookie-btn" id="bigCookie" data-hover>
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/f/f1/Choco_chip_cookie.png" alt="Big Cookie" class="big-cookie-img" draggable="false">
+                </button>
+            </div>
+
+            <div class="cc-right" id="storeContainer">
+                </div>
+
+            <div class="cc-controls">
+                <button class="cc-btn" id="btnSave" data-hover>Sauvegarder</button>
+                <button class="cc-btn" id="btnExport" data-hover>Exporter (Base64)</button>
+                <button class="cc-btn" id="btnImport" data-hover>Importer</button>
+                <button class="cc-btn" id="btnReset" data-hover style="border-color: #ff5f56; color: #ff5f56;">Reset</button>
+            </div>
+            
         </div>
     </div>
 
@@ -361,135 +519,262 @@
         });
 
         const cards = document.querySelectorAll('.tilt-card');
-
         cards.forEach(card => {
             card.addEventListener('mousemove', (e) => {
                 const rect = card.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
-                
                 const centerX = rect.width / 2;
                 const centerY = rect.height / 2;
-                
                 const rotateX = ((y - centerY) / centerY) * -15;
                 const rotateY = ((x - centerX) / centerX) * 15;
-
                 card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
             });
-
             card.addEventListener('mouseleave', () => {
                 card.style.transform = `perspective(1000px) rotateX(0) rotateY(0) scale(1)`;
             });
         });
 
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const scoreEl = document.getElementById('scoreBoard');
 
-        const gridSize = 20; 
-        const tileCount = canvas.width / gridSize;
         
-        let velocityX = 0, velocityY = 0;
-        let playerX = 10, playerY = 10;
-        let trail = [];
-        let tail = 5;
-        let appleX = 12, appleY = 12;
-        let score = 0;
-
-        document.addEventListener('keydown', keyPush);
-        setInterval(game, 1000/12); 
-
-        function game() {
-            playerX += velocityX;
-            playerY += velocityY;
-
-            if(playerX < 0) playerX = tileCount - 1;
-            if(playerX > tileCount - 1) playerX = 0;
-            if(playerY < 0) playerY = tileCount - 1;
-            if(playerY > tileCount - 1) playerY = 0;
-
-            ctx.fillStyle = '#05080b';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            ctx.strokeStyle = 'rgba(88, 166, 255, 0.05)';
-            ctx.lineWidth = 1;
-            for(let i=0; i<tileCount; i++) {
-                ctx.beginPath(); ctx.moveTo(i*gridSize, 0); ctx.lineTo(i*gridSize, canvas.height); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(0, i*gridSize); ctx.lineTo(canvas.width, i*gridSize); ctx.stroke();
+        const defaultSave = {
+            cookies: 0,
+            totalCookies: 0,
+            buildings: {
+                cursor: { count: 0 },
+                grandma: { count: 0 },
+                farm: { count: 0 },
+                mine: { count: 0 },
+                factory: { count: 0 },
+                bank: { count: 0 }
             }
+        };
 
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = "#bc8cff";
-            ctx.fillStyle = '#bc8cff';
-            ctx.beginPath();
-            ctx.arc(appleX * gridSize + gridSize/2, appleY * gridSize + gridSize/2, gridSize/3, 0, Math.PI*2);
-            ctx.fill();
 
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = "#58a6ff";
-            ctx.fillStyle = '#58a6ff';
+        const buildingData = {
+            cursor: { id: 'cursor', name: 'Curseur', icon: '🖱️', baseCost: 15, baseCps: 0.1 },
+            grandma: { id: 'grandma', name: 'Grand-mère', icon: '👵', baseCost: 100, baseCps: 1 },
+            farm: { id: 'farm', name: 'Ferme', icon: '🌱', baseCost: 1100, baseCps: 8 },
+            mine: { id: 'mine', name: 'Mine', icon: '⛏️', baseCost: 12000, baseCps: 47 },
+            factory: { id: 'factory', name: 'Usine', icon: '🏭', baseCost: 130000, baseCps: 260 },
+            bank: { id: 'bank', name: 'Banque', icon: '🏦', baseCost: 1400000, baseCps: 1400 }
+        };
+
+        let game = JSON.parse(JSON.stringify(defaultSave));
+        let currentCps = 0;
+        let clickPower = 1;
+
+
+        const displayCookies = document.getElementById('cookiesDisplay');
+        const displayCps = document.getElementById('cpsDisplay');
+        const bigCookieBtn = document.getElementById('bigCookie');
+        const storeContainer = document.getElementById('storeContainer');
+
+
+        function formatNumber(num) {
+            return Math.floor(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        }
+
+
+        function getBuildingCost(id) {
+            let base = buildingData[id].baseCost;
+            let count = game.buildings[id].count;
+            return Math.ceil(base * Math.pow(1.15, count));
+        }
+
+
+        function recalculateCps() {
+            let cps = 0;
+            for (let id in game.buildings) {
+                cps += game.buildings[id].count * buildingData[id].baseCps;
+            }
+            currentCps = cps;
+            displayCps.innerText = (Math.round(currentCps * 10) / 10).toLocaleString('fr-FR');
+        }
+
+ 
+        function updateUI() {
+            displayCookies.innerText = formatNumber(game.cookies);
             
-            for(let i = 0; i < trail.length; i++) {
-                if(i == trail.length -1) {
-                    ctx.fillStyle = '#fff';
-                } else {
-                    ctx.fillStyle = '#58a6ff';
-                }
+
+            for (let id in buildingData) {
+                const cost = getBuildingCost(id);
+                const elCost = document.getElementById(`cost-${id}`);
+                const elItem = document.getElementById(`bitem-${id}`);
+                const elCount = document.getElementById(`count-${id}`);
                 
-                ctx.fillRect(trail[i].x * gridSize + 1, trail[i].y * gridSize + 1, gridSize - 2, gridSize - 2);
-
-                if(trail[i].x == playerX && trail[i].y == playerY && (velocityX !=0 || velocityY !=0)) {
-                    resetGame();
+                if(elCost) elCost.innerText = formatNumber(cost);
+                if(elCount) elCount.innerText = game.buildings[id].count > 0 ? game.buildings[id].count : '';
+                
+                if(elItem) {
+                    if(game.cookies >= cost) {
+                        elItem.classList.remove('locked');
+                        elCost.classList.remove('too-expensive');
+                    } else {
+                        elItem.classList.add('locked');
+                        elCost.classList.add('too-expensive');
+                    }
                 }
             }
+            document.title = `${formatNumber(game.cookies)} cookies - Dan Clicker`;
+        }
 
-            trail.push({x: playerX, y: playerY});
-            while(trail.length > tail) {
-                trail.shift();
-            }
 
-            if(appleX == playerX && appleY == playerY) {
-                tail++;
-                score += 10;
-                scoreEl.innerText = score.toString().padStart(3, '0');
-                appleX = Math.floor(Math.random() * tileCount);
-                appleY = Math.floor(Math.random() * tileCount);
+        function initStore() {
+            storeContainer.innerHTML = '';
+            for (let id in buildingData) {
+                let b = buildingData[id];
+                
+                let div = document.createElement('div');
+                div.className = 'building-item locked';
+                div.id = `bitem-${id}`;
+                div.setAttribute('data-hover', '');
+                
+                div.innerHTML = `
+                    <div class="b-icon">${b.icon}</div>
+                    <div class="b-info">
+                        <div class="b-name">${b.name}</div>
+                        <div class="b-cost" id="cost-${id}">0</div>
+                    </div>
+                    <div class="b-count" id="count-${id}"></div>
+                `;
+
+
+                div.addEventListener('mouseenter', () => cursor.classList.add('hovered'));
+                div.addEventListener('mouseleave', () => cursor.classList.remove('hovered'));
+
+                div.addEventListener('click', () => {
+                    let cost = getBuildingCost(id);
+                    if (game.cookies >= cost) {
+                        game.cookies -= cost;
+                        game.buildings[id].count++;
+                        recalculateCps();
+                        updateUI();
+                        saveGame(); 
+                    }
+                });
+
+                storeContainer.appendChild(div);
             }
+        }
+
+
+        bigCookieBtn.addEventListener('mousedown', (e) => {
+            game.cookies += clickPower;
+            game.totalCookies += clickPower;
+            
+
+            const rect = bigCookieBtn.getBoundingClientRect();
+
+            let x, y;
+            if(e.clientX === 0 && e.clientY === 0) { 
+                x = rect.width / 2;
+                y = rect.height / 2;
+            } else {
+                x = e.clientX - rect.left;
+                y = e.clientY - rect.top;
+            }
+            
+            const particle = document.createElement('div');
+            particle.classList.add('click-particle');
+            particle.innerText = `+${clickPower}`;
+            particle.style.left = `${x}px`;
+            particle.style.top = `${y}px`;
+            
+            bigCookieBtn.appendChild(particle);
+            
+
+            setTimeout(() => {
+                particle.remove();
+            }, 1000);
+
+            updateUI();
+        });
+
+
+
+        function saveGame() {
+            localStorage.setItem('danCookieSave', JSON.stringify(game));
+        }
+
+        function loadGame() {
+            let saved = localStorage.getItem('danCookieSave');
+            if (saved) {
+                try {
+                    let parsed = JSON.parse(saved);
+
+                    game.cookies = parsed.cookies || 0;
+                    game.totalCookies = parsed.totalCookies || 0;
+                    for (let id in buildingData) {
+                        if(parsed.buildings && parsed.buildings[id]) {
+                            game.buildings[id].count = parsed.buildings[id].count;
+                        }
+                    }
+                } catch(e) { console.error("Erreur de chargement", e); }
+            }
+            recalculateCps();
+            updateUI();
         }
 
         function resetGame() {
-            tail = 5;
-            score = 0;
-            scoreEl.innerText = "000";
-            velocityX = 0; velocityY = 0;
-            playerX = 10; playerY = 10;
-        }
-
-        function keyPush(evt) {
-            if([37, 38, 39, 40].indexOf(evt.keyCode) > -1) evt.preventDefault();
-            switch(evt.keyCode) {
-                case 37: if(velocityX !== 1) { velocityX = -1; velocityY = 0; } break;
-                case 38: if(velocityY !== 1) { velocityX = 0; velocityY = -1; } break;
-                case 39: if(velocityX !== -1) { velocityX = 1; velocityY = 0; } break;
-                case 40: if(velocityY !== -1) { velocityX = 0; velocityY = 1; } break;
+            if(confirm("Veux-tu vraiment tout recommencer à zéro ? (C'est irréversible !)")) {
+                game = JSON.parse(JSON.stringify(defaultSave));
+                saveGame();
+                recalculateCps();
+                updateUI();
             }
         }
 
-        canvas.addEventListener('mousedown', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            const cx = canvas.width / 2;
-            const cy = canvas.height / 2;
-            
-            if (Math.abs(x - cx) > Math.abs(y - cy)) {
-                if (x > cx && velocityX !== -1) { velocityX = 1; velocityY = 0; }
-                else if (x < cx && velocityX !== 1) { velocityX = -1; velocityY = 0; }
-            } else {
-                if (y > cy && velocityY !== -1) { velocityX = 0; velocityY = 1; }
-                else if (y < cy && velocityY !== 1) { velocityX = 0; velocityY = -1; }
+        function exportSave() {
+    
+            let saveString = btoa(JSON.stringify(game));
+            prompt("Copie ce code pour sauvegarder ta progression ailleurs :", saveString);
+        }
+
+        function importSave() {
+            let saveString = prompt("Colle ton code de sauvegarde (Base64) ici :");
+            if (saveString) {
+                try {
+                    let decoded = atob(saveString);
+                    let parsed = JSON.parse(decoded);
+                    if (parsed.buildings) {
+                        game = parsed;
+                        saveGame();
+                        recalculateCps();
+                        updateUI();
+                        alert("Sauvegarde importée avec succès !");
+                    } else {
+                        alert("Code de sauvegarde invalide.");
+                    }
+                } catch(e) {
+                    alert("Erreur lors de l'importation. Le code semble corrompu.");
+                }
             }
-        });
+        }
+
+
+        document.getElementById('btnSave').addEventListener('click', () => { saveGame(); alert("Partie sauvegardée !"); });
+        document.getElementById('btnExport').addEventListener('click', exportSave);
+        document.getElementById('btnImport').addEventListener('click', importSave);
+        document.getElementById('btnReset').addEventListener('click', resetGame);
+
+
+
+        setInterval(() => {
+            if (currentCps > 0) {
+                let toAdd = currentCps / 10;
+                game.cookies += toAdd;
+                game.totalCookies += toAdd;
+                updateUI();
+            }
+        }, 100);
+        
+        setInterval(saveGame, 30000);
+
+        // eyJjb29raWVzIjo5MDAwMDAwMDAwMDAwMDAwLCJ0b3RhbENvb2tpZXMiOjkwMDAwMDAwMDAwMDAwMDAsImJ1aWxkaW5ncyI6eyJjdXJzb3IiOnsiY291bnQiOjEwMDB9LCJncmFuZG1hIjp7ImNvdW50IjoxMDAwfSwiZmFybSI6eyJjb3VudCI6MTAwMH0sIm1pbmUiOnsiY291bnQiOjEwMDB9LCJmYWN0b3J5Ijp7ImNvdW50IjoxMDAwfSwiYmFuayI6eyJjb3VudCI6MTAwMH19fQ==
+        initStore();
+        loadGame();
+
     </script>
 </body>
 </html>
