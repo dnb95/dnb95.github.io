@@ -17,11 +17,7 @@
             --neon-glow: 0 0 15px rgba(88, 166, 255, 0.6);
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             background-color: var(--bg-dark);
@@ -35,578 +31,255 @@
         }
     
         .space-bg {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: 
-                radial-gradient(circle at 10% 20%, rgba(88, 166, 255, 0.15) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(188, 140, 255, 0.1) 0%, transparent 40%);
-            z-index: -2;
-            animation: pulseNebula 10s infinite alternate;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 10% 20%, rgba(88, 166, 255, 0.15) 0%, transparent 40%),
+                        radial-gradient(circle at 90% 80%, rgba(188, 140, 255, 0.1) 0%, transparent 40%);
+            z-index: -2; animation: pulseNebula 10s infinite alternate;
         }
 
-        @keyframes pulseNebula {
-            0% { transform: scale(1); opacity: 0.8; }
-            100% { transform: scale(1.1); opacity: 1; }
-        }
+        @keyframes pulseNebula { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(1.1); opacity: 1; } }
 
         .star-field {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            z-index: -1;
-            background-image: 
-                radial-gradient(1px 1px at 10% 10%, white 1px, transparent 0),
-                radial-gradient(1px 1px at 20% 30%, white 1px, transparent 0),
-                radial-gradient(2px 2px at 40% 70%, white 1px, transparent 0),
-                radial-gradient(1px 1px at 80% 40%, white 1px, transparent 0),
-                radial-gradient(2px 2px at 60% 90%, white 1px, transparent 0);
-            background-size: 550px 550px;
-            animation: moveStars 60s linear infinite;
-            opacity: 0.6;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+            background-image: radial-gradient(1px 1px at 10% 10%, white 1px, transparent 0),
+                              radial-gradient(1px 1px at 20% 30%, white 1px, transparent 0),
+                              radial-gradient(2px 2px at 40% 70%, white 1px, transparent 0),
+                              radial-gradient(1px 1px at 80% 40%, white 1px, transparent 0),
+                              radial-gradient(2px 2px at 60% 90%, white 1px, transparent 0);
+            background-size: 550px 550px; animation: moveStars 60s linear infinite; opacity: 0.6;
         }
         
         @keyframes moveStars { from { background-position: 0 0; } to { background-position: 550px 550px; } }
 
-        .container {
-            width: 90%;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 40px 0;
-        }
+        .container { width: 90%; max-width: 1200px; margin: 0 auto; padding: 40px 0; }
 
         h1.mega-title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: clamp(3rem, 8vw, 6rem);
-            text-transform: uppercase;
-            text-align: center;
-            margin: 60px 0;
-            background: linear-gradient(to right, #fff, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 30px rgba(88, 166, 255, 0.5);
-            animation: titleFloat 4s ease-in-out infinite;
-            letter-spacing: 4px;
+            font-family: 'Orbitron', sans-serif; font-size: clamp(3rem, 8vw, 6rem); text-transform: uppercase;
+            text-align: center; margin: 60px 0; background: linear-gradient(to right, #fff, var(--primary), var(--secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 30px rgba(88, 166, 255, 0.5);
+            animation: titleFloat 4s ease-in-out infinite; letter-spacing: 4px;
         }
 
-        @keyframes titleFloat {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
+        @keyframes titleFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
-        h2.section-label {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.5rem;
-            color: var(--secondary);
-            margin: 40px 0 20px;
-            padding-left: 20px;
-            border-left: 4px solid var(--primary);
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
+        h2.section-label { font-family: 'Orbitron', sans-serif; font-size: 1.5rem; color: var(--secondary); margin: 40px 0 20px; padding-left: 20px; border-left: 4px solid var(--primary); text-transform: uppercase; letter-spacing: 2px; }
 
-        .cards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            margin-bottom: 60px;
-        }
-
-        .tilt-card {
-            position: relative;
-            height: 350px; 
-            background: var(--glass);
-            backdrop-filter: blur(16px);
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 30px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-decoration: none;
-            overflow: hidden;
-            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; 
-        }
-
-        .tilt-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: -100%;
-            width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-            transition: 0.5s;
-            transform: skewX(-15deg);
-        }
-
-        .tilt-card:hover::before {
-            left: 100%;
-        }
-
-        .tilt-card:hover {
-            transform: translateY(-10px);
-            border-color: var(--primary);
-            box-shadow: var(--neon-glow);
-        }
-
-        .card-icon {
-            font-size: 4rem;
-            margin-bottom: 20px;
-            filter: drop-shadow(0 0 10px var(--primary));
-        }
-
-        .card-title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 2rem;
-            color: #fff;
-            margin-bottom: 10px;
-        }
-
-        .card-desc {
-            color: #8b949e;
-            text-align: center;
-            font-size: 0.9rem;
-            line-height: 1.5;
-        }
-
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-bottom: 60px; }
+        .tilt-card { position: relative; height: 350px; background: var(--glass); backdrop-filter: blur(16px); border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.1); padding: 30px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-decoration: none; overflow: hidden; transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; }
+        .tilt-card::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent); transition: 0.5s; transform: skewX(-15deg); }
+        .tilt-card:hover::before { left: 100%; }
+        .tilt-card:hover { transform: translateY(-10px); border-color: var(--primary); box-shadow: var(--neon-glow); }
+        .card-icon { font-size: 4rem; margin-bottom: 20px; filter: drop-shadow(0 0 10px var(--primary)); }
+        .card-title { font-family: 'Orbitron', sans-serif; font-size: 2rem; color: #fff; margin-bottom: 10px; }
+        .card-desc { color: #8b949e; text-align: center; font-size: 0.9rem; line-height: 1.5; }
         .card-project { background: linear-gradient(145deg, rgba(88, 166, 255, 0.1), rgba(22, 27, 34, 0.8)); }
         .card-insta { background: linear-gradient(145deg, rgba(193, 53, 132, 0.1), rgba(22, 27, 34, 0.8)); }
         .card-linkedin { background: linear-gradient(145deg, rgba(10, 102, 194, 0.1), rgba(22, 27, 34, 0.8)); }
-
         .card-insta:hover { border-color: #C13584; box-shadow: 0 10px 30px rgba(193, 53, 132, 0.4); }
         .card-linkedin:hover { border-color: #0A66C2; box-shadow: 0 10px 30px rgba(10, 102, 194, 0.4); }
 
-        .bio-section {
-            width: 100%;
-            max-width: 800px;
-            margin: 0 auto 60px;
-            background: rgba(5, 8, 11, 0.9);
-            border: 1px solid var(--primary);
-            border-radius: 10px;
-            padding: 2px; 
-            box-shadow: var(--neon-glow);
-        }
-
-        .terminal-header {
-            background: rgba(88, 166, 255, 0.2);
-            padding: 10px;
-            display: flex;
-            gap: 10px;
-            border-bottom: 1px solid var(--primary);
-        }
-
-        .dot { width: 12px; height: 12px; border-radius: 50%; }
-        .red { background: #ff5f56; }
-        .yellow { background: #ffbd2e; }
-        .green { background: #27c93f; }
-
-        .bio-content {
-            padding: 30px;
-            display: flex;
-            align-items: center;
-            gap: 30px;
-            flex-wrap: wrap;
-        }
-
-        .bio-avatar {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            border: 3px solid var(--primary);
-            object-fit: cover;
-            box-shadow: 0 0 20px rgba(88, 166, 255, 0.4);
-        }
-
-        .bio-text p {
-            font-family: 'Courier New', monospace;
-            font-size: 1.1rem;
-            color: var(--primary);
-        }
-        
-        .typewriter {
-            border-right: 2px solid var(--primary);
-            animation: blink 0.75s step-end infinite;
-        }
-        
+        .bio-section { width: 100%; max-width: 800px; margin: 0 auto 60px; background: rgba(5, 8, 11, 0.9); border: 1px solid var(--primary); border-radius: 10px; padding: 2px; box-shadow: var(--neon-glow); }
+        .terminal-header { background: rgba(88, 166, 255, 0.2); padding: 10px; display: flex; gap: 10px; border-bottom: 1px solid var(--primary); }
+        .dot { width: 12px; height: 12px; border-radius: 50%; } .red { background: #ff5f56; } .yellow { background: #ffbd2e; } .green { background: #27c93f; }
+        .bio-content { padding: 30px; display: flex; align-items: center; gap: 30px; flex-wrap: wrap; }
+        .bio-avatar { width: 120px; height: 120px; border-radius: 50%; border: 3px solid var(--primary); object-fit: cover; box-shadow: 0 0 20px rgba(88, 166, 255, 0.4); }
+        .bio-text p { font-family: 'Courier New', monospace; font-size: 1.1rem; color: var(--primary); }
+        .typewriter { border-right: 2px solid var(--primary); animation: blink 0.75s step-end infinite; }
         @keyframes blink { 50% { border-color: transparent; } }
 
-        .cc-wrapper {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            background: rgba(0,0,0,0.5);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 20px;
-            padding: 20px;
-            width: 100%;
-            max-width: 900px;
-            margin: 0 auto;
-            position: relative;
-            user-select: none;
-        }
-
-        #usernameOverlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(5, 8, 11, 0.95);
-            backdrop-filter: blur(10px);
-            z-index: 100;
-            border-radius: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
-            padding: 40px;
-            text-align: center;
-        }
-
-        #usernameOverlay h3 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 2rem;
-            color: #fff;
-            text-shadow: 0 0 10px var(--primary);
-        }
-
-        .cc-input {
-            background: rgba(0,0,0,0.3);
-            border: 1px solid var(--primary);
-            color: #fff;
-            padding: 15px;
-            border-radius: 5px;
-            font-family: 'Courier New', monospace;
-            font-size: 1.2rem;
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
+        .cc-wrapper { display: flex; flex-wrap: wrap; gap: 20px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 20px; width: 100%; max-width: 900px; margin: 0 auto; position: relative; user-select: none; }
+        #usernameOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 8, 11, 0.95); backdrop-filter: blur(10px); z-index: 100; border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 40px; text-align: center; }
+        #usernameOverlay h3 { font-family: 'Orbitron', sans-serif; font-size: 2rem; color: #fff; text-shadow: 0 0 10px var(--primary); }
+        .cc-input { background: rgba(0,0,0,0.3); border: 1px solid var(--primary); color: #fff; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 1.2rem; width: 100%; max-width: 400px; text-align: center; }
+        .cc-input:focus { outline: none; box-shadow: 0 0 10px var(--primary); }
+        .cc-left { flex: 1; min-width: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 20px; position: relative; }
+        .cc-right { flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 10px; max-height: 550px; overflow-y: auto; padding-left: 10px; }
+        .cc-right::-webkit-scrollbar { width: 8px; } .cc-right::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; } .cc-right::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
+        .cc-stats { text-align: center; margin-bottom: 30px; }
+        .cc-welcome { color: var(--secondary); font-size: 0.9rem; margin-bottom: 5px; }
+        .cc-cookies-count { font-family: 'Orbitron', sans-serif; font-size: 2.5rem; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        .cc-cps { font-size: 1rem; color: #aaa; margin-bottom: 5px; }
+        .cc-click-power { font-size: 0.8rem; color: var(--primary); }
+        .cookie-container { position: relative; width: 250px; height: 250px; margin-top: 20px; }
+        .big-cookie-btn { background: none; border: none; outline: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; cursor: pointer; }
+        .big-cookie-img { width: 100%; height: 100%; border-radius: 50%; transition: transform 0.05s; filter: drop-shadow(0 0 15px rgba(210, 105, 30, 0.4)); mix-blend-mode: multiply; }
+        .big-cookie-btn:active .big-cookie-img { transform: scale(0.95); }
+        #orbitingMice { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; animation: rotateOrbit 30s linear infinite; transform-origin: center; }
+        @keyframes rotateOrbit { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .orbit-mouse { position: absolute; font-size: 1.5rem; transition: all 0.5s; filter: drop-shadow(0 0 5px rgba(255,255,255,0.5)); }
+        .click-particle { position: absolute; color: white; font-weight: bold; font-size: 1.5rem; pointer-events: none; animation: floatUp 1s ease-out forwards; text-shadow: 0 0 5px black; z-index: 10; }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-50px) scale(1.5); } }
         
-        .cc-input:focus {
-            outline: none;
-            box-shadow: 0 0 10px var(--primary);
-        }
-
-        .cc-left {
-            flex: 1;
-            min-width: 300px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            border-right: 1px solid rgba(255,255,255,0.1);
-            padding-right: 20px;
-            position: relative;
-        }
-
-        .cc-right {
-            flex: 1;
-            min-width: 300px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            max-height: 500px;
-            overflow-y: auto;
-            padding-left: 10px;
-        }
-
-        .cc-right::-webkit-scrollbar { width: 8px; }
-        .cc-right::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; }
-        .cc-right::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
-
-        .cc-stats {
-            text-align: center;
-            margin-bottom: 30px;
-        }
+        .upgrades-container { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .upgrade-item { width: 45px; height: 45px; background: rgba(22, 27, 34, 0.8); border: 1px solid rgba(255,255,255,0.2); border-radius: 5px; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; cursor: pointer; transition: 0.2s; position: relative; }
+        .upgrade-item:hover { border-color: var(--secondary); background: rgba(188, 140, 255, 0.2); }
+        .upgrade-item.locked { opacity: 0.3; filter: grayscale(100%); cursor: not-allowed; }
         
-        .cc-welcome {
-            color: var(--secondary);
-            font-size: 0.9rem;
-            margin-bottom: 5px;
-        }
-
-        .cc-cookies-count {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 2.5rem;
-            color: #fff;
-            text-shadow: 0 0 10px rgba(255,255,255,0.5);
-        }
-
-        .cc-cps {
-            font-size: 1rem;
-            color: #aaa;
-            margin-bottom: 5px;
-        }
-        
-        .cc-click-power {
-            font-size: 0.8rem;
-            color: var(--primary);
-        }
-
-        .cookie-container {
-            position: relative;
-            width: 250px;
-            height: 250px;
-            margin-top: 20px;
-        }
-
-        .big-cookie-btn {
-            background: none;
-            border: none;
-            outline: none;
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 2;
-            cursor: pointer;
-        }
-
-        .big-cookie-img {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            transition: transform 0.05s;
-            filter: drop-shadow(0 0 15px rgba(210, 105, 30, 0.4));
-            mix-blend-mode: multiply; 
-        }
-
-        .big-cookie-btn:active .big-cookie-img {
-            transform: scale(0.95);
-        }
-
-        /* L'orbite des souris */
-        #orbitingMice {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: 1;
-            animation: rotateOrbit 30s linear infinite;
-            transform-origin: center;
-        }
-
-        @keyframes rotateOrbit {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        .orbit-mouse {
-            position: absolute;
-            font-size: 1.5rem;
-            transition: all 0.5s;
-            filter: drop-shadow(0 0 5px rgba(255,255,255,0.5));
-        }
-
-        .click-particle {
-            position: absolute;
-            color: white;
-            font-weight: bold;
-            font-size: 1.5rem;
-            pointer-events: none;
-            animation: floatUp 1s ease-out forwards;
-            text-shadow: 0 0 5px black;
-            z-index: 10;
-        }
-
-        @keyframes floatUp {
-            0% { opacity: 1; transform: translateY(0) scale(1); }
-            100% { opacity: 0; transform: translateY(-50px) scale(1.5); }
-        }
-
-        .building-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: linear-gradient(90deg, rgba(22, 27, 34, 0.8), rgba(22, 27, 34, 0.4));
-            border: 1px solid rgba(255,255,255,0.1);
-            padding: 15px;
-            border-radius: 10px;
-            transition: 0.2s;
-            position: relative;
-            overflow: hidden;
-            cursor: pointer;
-        }
-
-        .building-item:hover {
-            border-color: var(--primary);
-            background: linear-gradient(90deg, rgba(88, 166, 255, 0.2), rgba(22, 27, 34, 0.6));
-        }
-        
-        .building-item.locked {
-            opacity: 0.5;
-            filter: grayscale(100%);
-            cursor: not-allowed;
-        }
-
+        .building-item { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(90deg, rgba(22, 27, 34, 0.8), rgba(22, 27, 34, 0.4)); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; transition: 0.2s; position: relative; overflow: hidden; cursor: pointer; }
+        .building-item:hover { border-color: var(--primary); background: linear-gradient(90deg, rgba(88, 166, 255, 0.2), rgba(22, 27, 34, 0.6)); }
+        .building-item.locked { opacity: 0.5; filter: grayscale(100%); cursor: not-allowed; }
         .b-icon { font-size: 2rem; margin-right: 15px; }
+        .b-info { flex: 1; display: flex; flex-direction: column; } .b-name { font-weight: bold; font-size: 1.2rem; color: #fff; } .b-cost { font-size: 0.9rem; color: #27c93f; display: flex; align-items: center; gap: 5px; } .b-cost.too-expensive { color: #ff5f56; }
+        .b-count { font-family: 'Orbitron', sans-serif; font-size: 2rem; color: rgba(255,255,255,0.2); font-weight: bold; }
         
-        .b-info { flex: 1; display: flex; flex-direction: column; }
-        .b-name { font-weight: bold; font-size: 1.2rem; color: #fff; }
-        .b-cost { font-size: 0.9rem; color: #27c93f; display: flex; align-items: center; gap: 5px; }
-        .b-cost.too-expensive { color: #ff5f56; }
+        .cc-controls { width: 100%; display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
+        .cc-btn { background: rgba(0,0,0,0.5); border: 1px solid var(--secondary); color: var(--secondary); padding: 8px 15px; border-radius: 5px; font-family: 'Montserrat', sans-serif; font-size: 0.9rem; transition: 0.2s; cursor: pointer; }
+        .cc-btn:hover { background: var(--secondary); color: #000; box-shadow: 0 0 10px var(--secondary); }
+        .cc-btn.primary-btn { border-color: var(--primary); color: var(--primary); font-weight: bold; } .cc-btn.primary-btn:hover { background: var(--primary); color: #000; box-shadow: 0 0 10px var(--primary); }
+        .overlay-buttons { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
         
-        .b-count {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 2rem;
-            color: rgba(255,255,255,0.2);
-            font-weight: bold;
-        }
+        #reminderText { color: #ffbd2e; font-size: 0.8rem; margin-top: 10px; display: none; width: 100%; text-align: center; animation: blinkWarning 1s infinite alternate; }
+        @keyframes blinkWarning { 0% { opacity: 0.5; } 100% { opacity: 1; } }
 
-        .cc-controls {
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255,255,255,0.1);
-        }
+        #goldenCookie { position: fixed; width: 80px; height: 80px; background: url('https://upload.wikimedia.org/wikipedia/commons/f/f1/Choco_chip_cookie.png') center/cover; filter: drop-shadow(0 0 20px gold) sepia(1) hue-rotate(30deg) saturate(3); border-radius: 50%; z-index: 1000; cursor: pointer; display: none; animation: pulseGC 2s infinite; }
+        @keyframes pulseGC { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
-        .cc-btn {
-            background: transparent;
-            border: 1px solid var(--secondary);
-            color: var(--secondary);
-            padding: 8px 15px;
-            border-radius: 5px;
-            font-family: 'Montserrat', sans-serif;
-            font-size: 0.9rem;
-            transition: 0.2s;
-            cursor: pointer;
-        }
+        #adminPanel { display: none; width: 100%; max-width: 900px; margin: 0 auto; background: rgba(0,0,0,0.8); border: 1px solid #ff5f56; border-radius: 10px; padding: 30px; }
+        .admin-table { width: 100%; border-collapse: collapse; margin-top: 20px; color: #fff; }
+        .admin-table th, .admin-table td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left; }
+        .btn-delete { background: #ff5f56; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
 
-        .cc-btn:hover {
-            background: var(--secondary);
-            color: #000;
-            box-shadow: 0 0 10px var(--secondary);
-        }
-        
-        .cc-btn.primary-btn {
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-        .cc-btn.primary-btn:hover {
-            background: var(--primary);
-            color: #000;
-            box-shadow: 0 0 10px var(--primary);
-        }
+        .leaderboard-wrapper { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 30px; width: 100%; max-width: 900px; margin: 0 auto 60px; }
+        .lb-row { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(22, 27, 34, 0.4); margin-bottom: 5px; border-radius: 8px; transition: 0.3s; }
+        .lb-row:hover { background: rgba(88, 166, 255, 0.1); transform: translateX(5px); }
+        .lb-row.top-1 { border-left: 4px solid #ffd700; background: linear-gradient(90deg, rgba(255,215,0,0.1), transparent); }
+        .lb-row.top-2 { border-left: 4px solid #c0c0c0; background: linear-gradient(90deg, rgba(192,192,192,0.1), transparent); }
+        .lb-row.top-3 { border-left: 4px solid #cd7f32; background: linear-gradient(90deg, rgba(205,127,50,0.1), transparent); }
+        .lb-rank { font-family: 'Orbitron', sans-serif; font-size: 1.5rem; color: var(--secondary); width: 40px; font-weight: bold; }
+        .lb-name { flex: 1; font-size: 1.2rem; font-weight: bold; color: #fff; }
+        .lb-score { font-family: 'Orbitron', sans-serif; color: var(--primary); font-size: 1.1rem; }
 
-        .overlay-buttons {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        @media (max-width: 768px) {
-            .cards-grid { grid-template-columns: 1fr; }
-            .tilt-card { height: 250px; }
-            .bio-content { justify-content: center; text-align: center; }
-            .cc-left { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); padding-right: 0; padding-bottom: 20px; }
-            .cc-right { padding-left: 0; }
-        }
+        @media (max-width: 768px) { .cards-grid { grid-template-columns: 1fr; } .cc-left { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); padding-right: 0; padding-bottom: 20px; } .cc-right { padding-left: 0; } }
     </style>
 </head>
 <body>
 
     <div class="space-bg"></div>
     <div class="star-field"></div>
+    <div id="goldenCookie" title="Cookie Doré ! Clique vite !"></div>
 
     <div class="container">
         <h1 class="mega-title">MES PROJETS</h1>
 
         <div class="cards-grid">
             <a href="https://dnb95.github.io/1STMG/" class="tilt-card card-project" target="_blank">
-                <div class="card-icon">🚀</div>
-                <h3 class="card-title">DAN REVIZ</h3>
-                <p class="card-desc">Plateforme d'aide.<br>Révision des livres pour le bac</p>
+                <div class="card-icon">🚀</div><h3 class="card-title">DAN REVIZ</h3><p class="card-desc">Plateforme d'aide.<br>Révision des livres pour le bac</p>
             </a>
-
             <a href="https://instagram.com/dnb.95" class="tilt-card card-insta" target="_blank">
-                <div class="card-icon">📸</div>
-                <h3 class="card-title">INSTAGRAM</h3>
-                <p class="card-desc">@dnb.95<br>(Y a pas grand choses)</p>
+                <div class="card-icon">📸</div><h3 class="card-title">INSTAGRAM</h3><p class="card-desc">@dnb.95<br>(Y a pas grand choses)</p>
             </a>
-
             <a href="https://www.linkedin.com/in/xbox/" class="tilt-card card-linkedin" target="_blank">
-                <div class="card-icon">💼</div>
-                <h3 class="card-title">LINKEDIN</h3>
-                <p class="card-desc">Connexion Pro.<br>Mon parcours</p>
+                <div class="card-icon">💼</div><h3 class="card-title">LINKEDIN</h3><p class="card-desc">Connexion Pro.<br>Mon parcours</p>
             </a>
         </div>
 
         <h2 class="section-label">IDENTITÉ</h2>
         <div class="bio-section">
-            <div class="terminal-header">
-                <div class="dot red"></div>
-                <div class="dot yellow"></div>
-                <div class="dot green"></div>
-            </div>
+            <div class="terminal-header"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div></div>
             <div class="bio-content">
                 <img src="https://avatars.githubusercontent.com/u/255840404" alt="Dan" class="bio-avatar">
                 <div class="bio-text">
-                    <p>> Initializing user profile...</p>
-                    <p>> Name: <span style="color: #e6edf3;">Dan</span></p>
+                    <p>> Initializing user profile...</p><p>> Name: <span style="color: #e6edf3;">Dan</span></p>
                     <p>> Status: <span style="color: #e6edf3;">Lycéen en STMG</span></p>
                     <p>> Contact: <span style="color: #e6edf3;" class="typewriter">dan.bouillet.14@gmail.com</span></p>
                 </div>
             </div>
         </div>
 
-        <h2 class="section-label">ZONE COOKIE CLICKER</h2>
-        <div class="cc-wrapper">
-
-            <div id="usernameOverlay">
-                <h3>Initialisation...</h3>
-                <p style="color: #aaa;">Entrez votre pseudo, jouez en invité, ou importez une sauvegarde.</p>
-                <input type="text" id="usernameInput" class="cc-input" placeholder="Votre Pseudo" maxlength="15">
-                <div class="overlay-buttons">
-                    <button class="cc-btn primary-btn" id="btnStartGame">Lancer la production</button>
-                    <button class="cc-btn" id="btnGuest">Jouer en Invité</button>
-                    <button class="cc-btn" id="btnImportOverlay">Importer Save</button>
-                </div>
+        <div id="adminPanel">
+            <h2 style="color: #ff5f56; font-family: 'Orbitron', sans-serif; text-align: center;">🛡️ PANNEAU D'ADMINISTRATION</h2>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <button id="btnCloseAdmin" class="cc-btn primary-btn">Fermer & Retourner au Jeu</button>
             </div>
-            
-            <div class="cc-left">
-                <div class="cc-stats">
-                    <div class="cc-welcome">usine de <span id="playerNameDisplay">...</span></div>
-                    <div class="cc-cookies-count" id="cookiesDisplay">0</div>
-                    <div class="cc-cps">cookies par seconde : <span id="cpsDisplay">0</span></div>
-                    <div class="cc-click-power">puissance de clic : <span id="clickPowerDisplay">1</span></div>
+            <h3 style="color: var(--primary);">Sauvegardes Serveur (stmg_saves)</h3>
+            <table class="admin-table" id="adminSavesTable">
+                <thead><tr><th>Code Sauvegarde</th><th>Cookies</th><th>Dernière Maj</th><th>Action</th></tr></thead>
+                <tbody><tr><td colspan="4">Chargement...</td></tr></tbody>
+            </table>
+            <br><br>
+            <h3 style="color: var(--primary);">Classement (stmg_leaderboard)</h3>
+            <table class="admin-table" id="adminLbTable">
+                <thead><tr><th>Pseudo</th><th>Score</th><th>Action</th></tr></thead>
+                <tbody><tr><td colspan="3">Chargement...</td></tr></tbody>
+            </table>
+        </div>
+
+        <div id="gameSection">
+            <h2 class="section-label">ZONE COOKIE CLICKER</h2>
+            <div class="cc-wrapper">
+
+                <div id="usernameOverlay">
+                    <h3>Initialisation...</h3>
+                    <p style="color: #aaa; margin-bottom: 10px;">Choisis un pseudo unique pour créer ton usine.</p>
+                    <input type="text" id="usernameInput" class="cc-input" placeholder="Pseudo" maxlength="15">
+                    <div class="overlay-buttons" style="margin-top: 20px;">
+                        <button class="cc-btn primary-btn" id="btnStartGame">Créer mon Usine</button>
+                        <button class="cc-btn" id="btnImportPrompt">J'ai déjà un Code</button>
+                        <button class="cc-btn" id="btnGuest">Jouer en Invité</button>
+                    </div>
                 </div>
                 
-                <div class="cookie-container">
-                    <button class="big-cookie-btn" id="bigCookie">
-                        <img src="https://png.pngtree.com/png-vector/20250425/ourmid/pngtree-chocolate-chip-cookie-icon-white-background-png-image_16100260.png" alt="Big Cookie" class="big-cookie-img" draggable="false">
-                    </button>
-                    <div id="orbitingMice"></div>
+                <div class="cc-left">
+                    <div class="cc-stats">
+                        <div class="cc-welcome">usine de <span id="playerNameDisplay">...</span></div>
+                        <div class="cc-cookies-count" id="cookiesDisplay">0</div>
+                        <div class="cc-cps">cookies par seconde : <span id="cpsDisplay">0</span></div>
+                        <div class="cc-click-power">puissance de clic : <span id="clickPowerDisplay">1</span></div>
+                    </div>
+                    
+                    <div class="cookie-container">
+                        <button class="big-cookie-btn" id="bigCookie">
+                            <img src="https://png.pngtree.com/png-vector/20250425/ourmid/pngtree-chocolate-chip-cookie-icon-white-background-png-image_16100260.png" alt="Big Cookie" class="big-cookie-img" draggable="false">
+                        </button>
+                        <div id="orbitingMice"></div>
+                    </div>
+                </div>
+
+                <div class="cc-right">
+                    <div class="upgrades-container" id="upgradesContainer"></div>
+                    <div id="storeContainer"></div>
+                </div>
+
+                <div class="cc-controls">
+                    <button class="cc-btn primary-btn" id="btnSaveData">💾 Sauvegarder & Publier Score</button>
+                    <button class="cc-btn" id="btnShowCode">🔑 Voir mon Code Secret</button>
+                    <button class="cc-btn" id="btnImportFooter">📥 Importer</button>
+                    <button class="cc-btn" id="btnReset" style="border-color: #ff5f56; color: #ff5f56;">🗑️ Reset Local</button>
+                    <div id="reminderText">⚠️ Tu as beaucoup progressé, n'oublie pas de sauvegarder !</div>
                 </div>
             </div>
 
-            <div class="cc-right" id="storeContainer">
+            <h2 class="section-label">CLASSEMENT STMG</h2>
+            <div class="leaderboard-wrapper">
+                <div id="leaderboardList">
+                    <p style="text-align: center; color: #8b949e; font-family: 'Orbitron', sans-serif;">Connexion à la base de données STMG...</p>
                 </div>
-
-            <div class="cc-controls">
-                <button class="cc-btn" id="btnSave">Sauvegarder</button>
-                <button class="cc-btn" id="btnExport">Exporter (Base64)</button>
-                <button class="cc-btn" id="btnImport">Importer</button>
-                <button class="cc-btn" id="btnReset" style="border-color: #ff5f56; color: #ff5f56;">Reset</button>
             </div>
-            
         </div>
+
     </div>
 
-    <script>
-        
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, query, orderBy, limit, deleteDoc, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDXdEnimnKl8dG7xXprd5uhWFANddUr2Sg",
+            authDomain: "dancookieclicker.firebaseapp.com",
+            projectId: "dancookieclicker",
+            storageBucket: "dancookieclicker.firebasestorage.app",
+            messagingSenderId: "438891454674",
+            appId: "1:438891454674:web:603b70cad0b1cd422fcd0b",
+            measurementId: "G-58T7DPL4LH"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // --- MOTEUR COOKIE CLICKER ---
         const defaultSave = {
-            username: "", 
-            cookies: 0,
-            totalCookies: 0,
-            buildings: {
-                cursor: { count: 0 },
-                grandma: { count: 0 },
-                farm: { count: 0 },
-                mine: { count: 0 },
-                factory: { count: 0 },
-                bank: { count: 0 }
-            }
+            username: "", saveCode: "", cookies: 0, totalCookies: 0, upgradesBought: [], 
+            buildings: { cursor: { count: 0 }, grandma: { count: 0 }, farm: { count: 0 }, mine: { count: 0 }, factory: { count: 0 }, bank: { count: 0 } }
         };
 
         const buildingData = {
@@ -618,70 +291,62 @@
             bank: { id: 'bank', name: 'Banque', icon: '🏦', baseCost: 1400000, baseCps: 1400 }
         };
 
+        // Boutique étendue
+        const upgradeData = [
+            { id: 'up1', icon: '🦾', cost: 500, desc: "Clic x2", type: 'click_mult', val: 2 },
+            { id: 'up2', icon: '👵🏼', cost: 5000, desc: "Mamies x2", type: 'b_mult', target: 'grandma', val: 2 },
+            { id: 'up3', icon: '🚜', cost: 50000, desc: "Fermes x2", type: 'b_mult', target: 'farm', val: 2 },
+            { id: 'up4', icon: '⛏️', cost: 500000, desc: "Mines x2", type: 'b_mult', target: 'mine', val: 2 },
+            { id: 'up5', icon: '🏭', cost: 5000000, desc: "Usines x2", type: 'b_mult', target: 'factory', val: 2 },
+            { id: 'up6', icon: '💸', cost: 50000000, desc: "Banques x2", type: 'b_mult', target: 'bank', val: 2 },
+            { id: 'up7', icon: '🖱️', cost: 100000, desc: "Clic x2 (Encore)", type: 'click_mult', val: 2 }
+        ];
+
         let game = JSON.parse(JSON.stringify(defaultSave));
-        let currentCps = 0;
-        let clickPower = 1;
+        let currentCps = 0; let clickPower = 1;
+        let unsavedProgress = false; // Pour gérer le rappel
 
         const displayCookies = document.getElementById('cookiesDisplay');
         const displayCps = document.getElementById('cpsDisplay');
         const displayClickPower = document.getElementById('clickPowerDisplay');
         const bigCookieBtn = document.getElementById('bigCookie');
         const storeContainer = document.getElementById('storeContainer');
+        const upgradesContainer = document.getElementById('upgradesContainer');
         const playerNameDisplay = document.getElementById('playerNameDisplay');
         const orbitingMiceContainer = document.getElementById('orbitingMice');
-        
         const usernameOverlay = document.getElementById('usernameOverlay');
-        const usernameInput = document.getElementById('usernameInput');
-        const btnStartGame = document.getElementById('btnStartGame');
-        const btnGuest = document.getElementById('btnGuest');
-        const btnImportOverlay = document.getElementById('btnImportOverlay');
+        const reminderText = document.getElementById('reminderText');
 
         function formatNumber(num) {
+            if (num > 1e18) return num.toExponential(3); 
             return Math.floor(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
         }
 
         function getBuildingCost(id) {
-            let base = buildingData[id].baseCost;
-            let count = game.buildings[id].count;
-            return Math.ceil(base * Math.pow(1.15, count));
+            return Math.ceil(buildingData[id].baseCost * Math.pow(1.15, game.buildings[id].count));
         }
 
-        function updateMiceOrbit() {
-            orbitingMiceContainer.innerHTML = '';
-            let count = game.buildings.cursor.count;
-            if (count > 50) count = 50; 
-            
-            let radius = 160; 
-            let centerX = 125; 
-            let centerY = 125;
-            
-            for(let i = 0; i < count; i++) {
-                let angle = (i / count) * Math.PI * 2;
-                let x = centerX + radius * Math.cos(angle);
-                let y = centerY + radius * Math.sin(angle);
-                
-                let mouse = document.createElement('div');
-                mouse.className = 'orbit-mouse';
-                mouse.innerText = '🖱️';
-                mouse.style.left = `${x}px`;
-                mouse.style.top = `${y}px`;
-                
-                // Oriente la souris vers le cookie
-                let rotation = angle * (180 / Math.PI) + 90;
-                mouse.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
-                
-                orbitingMiceContainer.appendChild(mouse);
-            }
-        }
+        function hasUpgrade(id) { return game.upgradesBought.includes(id); }
 
         function recalculateStats() {
+            let bMults = { cursor: 1, grandma: 1, farm: 1, mine: 1, factory: 1, bank: 1 };
+            let cMult = 1;
+
+            game.upgradesBought.forEach(upId => {
+                let up = upgradeData.find(u => u.id === upId);
+                if(up) {
+                    if(up.type === 'b_mult') bMults[up.target] *= up.val;
+                    if(up.type === 'click_mult') cMult *= up.val;
+                }
+            });
+
             let cps = 0;
             for (let id in game.buildings) {
-                cps += game.buildings[id].count * buildingData[id].baseCps;
+                cps += game.buildings[id].count * buildingData[id].baseCps * bMults[id];
             }
             currentCps = cps;
             
-            clickPower = 1 + game.buildings.cursor.count + Math.floor(currentCps * 0.05);
+            clickPower = (1 + game.buildings.cursor.count + Math.floor(currentCps * 0.05)) * cMult;
             
             displayCps.innerText = (Math.round(currentCps * 10) / 10).toLocaleString('fr-FR');
             displayClickPower.innerText = formatNumber(clickPower);
@@ -701,201 +366,311 @@
                 if(elCount) elCount.innerText = game.buildings[id].count > 0 ? game.buildings[id].count : '';
                 
                 if(elItem) {
-                    if(game.cookies >= cost) {
-                        elItem.classList.remove('locked');
-                        elCost.classList.remove('too-expensive');
-                    } else {
-                        elItem.classList.add('locked');
-                        elCost.classList.add('too-expensive');
-                    }
+                    if(game.cookies >= cost) { elItem.classList.remove('locked'); elCost.classList.remove('too-expensive'); } 
+                    else { elItem.classList.add('locked'); elCost.classList.add('too-expensive'); }
                 }
             }
-            document.title = `${formatNumber(game.cookies)} cookies - ${game.username}`;
+            
+            upgradesContainer.innerHTML = '';
+            upgradeData.forEach(up => {
+                if(!hasUpgrade(up.id)) {
+                    let uDiv = document.createElement('div');
+                    uDiv.className = game.cookies >= up.cost ? 'upgrade-item' : 'upgrade-item locked';
+                    uDiv.innerText = up.icon;
+                    uDiv.title = `${up.desc} (Coût: ${formatNumber(up.cost)})`;
+                    uDiv.onclick = () => {
+                        if(game.cookies >= up.cost) {
+                            game.cookies -= up.cost; game.upgradesBought.push(up.id);
+                            unsavedProgress = true; recalculateStats(); updateUI();
+                        }
+                    };
+                    upgradesContainer.appendChild(uDiv);
+                }
+            });
+
+            document.title = `${formatNumber(game.cookies)} cookies`;
             updateMiceOrbit();
+        }
+
+        function updateMiceOrbit() {
+            orbitingMiceContainer.innerHTML = '';
+            let count = Math.min(game.buildings.cursor.count, 50); 
+            let radius = 160, center = 125;
+            for(let i = 0; i < count; i++) {
+                let angle = (i / count) * Math.PI * 2;
+                let mouse = document.createElement('div');
+                mouse.className = 'orbit-mouse'; mouse.innerText = '🖱️';
+                mouse.style.left = `${center + radius * Math.cos(angle)}px`;
+                mouse.style.top = `${center + radius * Math.sin(angle)}px`;
+                mouse.style.transform = `translate(-50%, -50%) rotate(${angle * (180 / Math.PI) + 90}deg)`;
+                orbitingMiceContainer.appendChild(mouse);
+            }
         }
 
         function initStore() {
             storeContainer.innerHTML = '';
             for (let id in buildingData) {
                 let b = buildingData[id];
-                
                 let div = document.createElement('div');
-                div.className = 'building-item locked';
-                div.id = `bitem-${id}`;
-                
-                div.innerHTML = `
-                    <div class="b-icon">${b.icon}</div>
-                    <div class="b-info">
-                        <div class="b-name">${b.name}</div>
-                        <div class="b-cost" id="cost-${id}">0</div>
-                    </div>
-                    <div class="b-count" id="count-${id}"></div>
-                `;
-
+                div.className = 'building-item locked'; div.id = `bitem-${id}`;
+                div.innerHTML = `<div class="b-icon">${b.icon}</div><div class="b-info"><div class="b-name">${b.name}</div><div class="b-cost" id="cost-${id}">0</div></div><div class="b-count" id="count-${id}"></div>`;
                 div.addEventListener('click', () => {
                     let cost = getBuildingCost(id);
                     if (game.cookies >= cost) {
-                        game.cookies -= cost;
-                        game.buildings[id].count++;
-                        recalculateStats();
-                        updateUI();
-                        saveGame(false); 
+                        game.cookies -= cost; game.buildings[id].count++;
+                        unsavedProgress = true; recalculateStats(); updateUI();
                     }
                 });
-
                 storeContainer.appendChild(div);
             }
         }
 
         bigCookieBtn.addEventListener('mousedown', (e) => {
             if(!game.username) return; 
-
-            game.cookies += clickPower;
-            game.totalCookies += clickPower;
-            
+            game.cookies += clickPower; game.totalCookies += clickPower;
+            unsavedProgress = true;
             const rect = bigCookieBtn.getBoundingClientRect();
-            let x, y;
-            if(e.clientX === 0 && e.clientY === 0) {
-                x = rect.width / 2;
-                y = rect.height / 2;
-            } else {
-                x = e.clientX - rect.left;
-                y = e.clientY - rect.top;
+            let x = (e.clientX === 0) ? rect.width/2 : e.clientX - rect.left;
+            let y = (e.clientY === 0) ? rect.height/2 : e.clientY - rect.top;
+            
+            const p = document.createElement('div');
+            p.className = 'click-particle'; p.innerText = `+${formatNumber(clickPower)}`;
+            p.style.left = `${x}px`; p.style.top = `${y}px`;
+            document.querySelector('.cookie-container').appendChild(p);
+            setTimeout(() => { p.remove(); }, 1000);
+            updateUI();
+        });
+
+        function spawnGoldenCookie() {
+            const delay = Math.random() * (12*60000 - 8*60000) + 8*60000; 
+            setTimeout(() => {
+                let gc = document.getElementById('goldenCookie');
+                gc.style.display = 'block';
+                gc.style.left = Math.random() * 80 + 10 + '%'; gc.style.top = Math.random() * 80 + 10 + '%';
+                
+                let hideTimeout = setTimeout(() => { gc.style.display = 'none'; spawnGoldenCookie(); }, 15000);
+                
+                gc.onclick = () => {
+                    clearTimeout(hideTimeout); gc.style.display = 'none';
+                    let bonus = currentCps * 60 * 15; if(bonus === 0) bonus = 500; 
+                    game.cookies += bonus; game.totalCookies += bonus; unsavedProgress = true;
+                    alert(`🌟 Cookie Doré ! +${formatNumber(bonus)} cookies !`);
+                    updateUI(); spawnGoldenCookie();
+                }
+            }, delay);
+        }
+        
+        function generateUniqueCode(pseudo) {
+            let rnd = Math.floor(Math.random() * 90000) + 10000; 
+            return `${pseudo}-${rnd}`; 
+        }
+
+        async function saveGameToServer() {
+            if(!game.saveCode || game.username === "Invité") {
+                alert("Tu es un invité, tu dois avoir un compte pour sauvegarder en ligne."); return;
             }
             
-            const particle = document.createElement('div');
-            particle.classList.add('click-particle');
-            particle.innerText = `+${formatNumber(clickPower)}`;
-            particle.style.left = `${x}px`;
-            particle.style.top = `${y}px`;
+            let btn = document.getElementById('btnSaveData');
+            btn.innerText = "⏳ Sauvegarde..."; btn.disabled = true;
+
+            try {
+                await setDoc(doc(db, "stmg_saves", game.saveCode), {
+                    saveData: JSON.stringify(game),
+                    lastUpdate: new Date().toISOString()
+                });
+                await setDoc(doc(db, "stmg_leaderboard", game.saveCode), {
+                    username: game.username,
+                    score: Math.floor(game.cookies)
+                });
+
+                unsavedProgress = false;
+                reminderText.style.display = 'none';
+                saveLocal(); 
+                
+                alert("✅ Partie sauvegardée et Classement mis à jour !");
+                await loadLeaderboard(); 
+            } catch(e) { 
+                console.error(e); 
+                alert("❌ Erreur de sauvegarde. Vérifie ta connexion ou les Règles Firebase !"); 
+            }
             
-            document.querySelector('.cookie-container').appendChild(particle);
-            
-            setTimeout(() => { particle.remove(); }, 1000);
-
-            updateUI();
-        });
-
-
-        function startGameWithUsername(name) {
-            game.username = name;
-            saveGame(false);
-            recalculateStats();
-            updateUI();
-            usernameOverlay.style.display = 'none';
+            btn.innerHTML = "💾 Sauvegarder & Publier Score"; btn.disabled = false;
         }
 
-        btnStartGame.addEventListener('click', () => {
-            const input = usernameInput.value.trim();
-            if(input.length >= 3) startGameWithUsername(input);
-            else alert("Veuillez entrer un pseudo d'au moins 3 caractères.");
+        document.getElementById('btnStartGame').addEventListener('click', async () => {
+            const input = document.getElementById('usernameInput').value.trim();
+            if(input.length < 3) { alert("Pseudo de 3 caractères minimum."); return; }
+            
+            document.getElementById('btnStartGame').innerText = "Vérification...";
+
+            try {
+                const q = query(collection(db, "stmg_leaderboard"), where("username", "==", input));
+                const snap = await getDocs(q);
+                
+                if(!snap.empty) {
+                    alert("⚠️ Ce pseudo est déjà pris ! Choisis-en un autre.");
+                    document.getElementById('btnStartGame').innerText = "Créer mon Usine";
+                    return;
+                }
+
+                game.username = input;
+                game.saveCode = generateUniqueCode(input);
+                saveLocal();
+                await setDoc(doc(db, "stmg_saves", game.saveCode), { saveData: JSON.stringify(game), lastUpdate: new Date().toISOString() });
+                await setDoc(doc(db, "stmg_leaderboard", game.saveCode), { username: game.username, score: Math.floor(game.cookies) });
+                
+                recalculateStats(); updateUI(); loadLeaderboard();
+                usernameOverlay.style.display = 'none';
+            } catch(e) {
+                alert("Impossible de vérifier le pseudo. Les Règles Firebase sont bien configurées ?");
+                document.getElementById('btnStartGame').innerText = "Créer mon Usine";
+            }
         });
 
-        usernameInput.addEventListener('keypress', (e) => {
-            if(e.key === 'Enter') btnStartGame.click();
+        document.getElementById('btnGuest').addEventListener('click', () => {
+            game.username = "Invité"; game.saveCode = "";
+            recalculateStats(); updateUI(); usernameOverlay.style.display = 'none';
         });
 
-        btnGuest.addEventListener('click', () => startGameWithUsername("Invité"));
+        async function processImport(code) {
+            if(code === "admin03032009" || code === "admin22022009") {
+                document.getElementById('gameSection').style.display = 'none';
+                document.getElementById('adminPanel').style.display = 'block';
+                loadAdminData();
+                return;
+            }
 
-        btnImportOverlay.addEventListener('click', importSave);
-
-
-
-        function saveGame(showAlert = true) {
-            localStorage.setItem('danCookieSave_v3', JSON.stringify(game));
-            if(showAlert) alert("Partie sauvegardée localement !");
+            if(!code) { alert("Aucun code fourni !"); return; }
+            
+            try {
+                const docRef = doc(db, "stmg_saves", code);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    let parsed = JSON.parse(docSnap.data().saveData);
+                    game = parsed;
+                    if(!game.upgradesBought) game.upgradesBought = []; 
+                    saveLocal(); recalculateStats(); updateUI();
+                    usernameOverlay.style.display = 'none';
+                    alert(`✅ Compte de ${game.username} récupéré avec succès !`);
+                } else {
+                    alert("❌ Code introuvable sur le serveur.");
+                }
+            } catch(e) { alert("Erreur de connexion au serveur."); }
         }
 
-        function loadGame() {
-            let saved = localStorage.getItem('danCookieSave_v3');
-            if(!saved) saved = localStorage.getItem('danCookieSave_v2');
+        document.getElementById('btnImportPrompt').addEventListener('click', () => {
+            let code = prompt("Colle ton Code Secret ici :");
+            if(code) processImport(code);
+        });
 
+        document.getElementById('btnImportFooter').addEventListener('click', () => {
+            let code = prompt("Colle ton Code Secret ici (Attention, ça écrasera ta partie actuelle !) :");
+            if(code) processImport(code);
+        });
+
+        document.getElementById('btnShowCode').addEventListener('click', () => {
+            if(game.saveCode) {
+                prompt("Voici ton Code Secret. Copie-le et garde-le bien, c'est ta seule clé !", game.saveCode);
+            } else {
+                alert("Tu es en Invité. Tu n'as pas de Code Secret !");
+            }
+        });
+
+        document.getElementById('btnSaveData').addEventListener('click', saveGameToServer);
+
+        function saveLocal() { localStorage.setItem('danCookieSave_v4', JSON.stringify(game)); }
+
+        function loadLocalGame() {
+            let saved = localStorage.getItem('danCookieSave_v4');
             if (saved) {
                 try {
                     let parsed = JSON.parse(saved);
-                    game.cookies = parsed.cookies || 0;
-                    game.totalCookies = parsed.totalCookies || 0;
-                    game.username = parsed.username || ""; 
-
-                    for (let id in buildingData) {
-                        if(parsed.buildings && parsed.buildings[id]) {
-                            game.buildings[id].count = parsed.buildings[id].count;
-                        }
-                    }
-                } catch(e) { console.error("Erreur de chargement", e); }
+                    game = parsed;
+                    if(!game.upgradesBought) game.upgradesBought = [];
+                } catch(e) {}
             }
-            
-            if(game.username) {
+            if(game.saveCode || game.username === "Invité") {
                 usernameOverlay.style.display = 'none';
-                recalculateStats();
-                updateUI();
+                recalculateStats(); updateUI();
             } else {
-                usernameOverlay.style.display = 'flex'; 
-                usernameInput.focus();
+                usernameOverlay.style.display = 'flex'; document.getElementById('usernameInput').focus();
             }
         }
 
-        function resetGame() {
-            if(confirm("Veux-tu vraiment tout recommencer à zéro ? (C'est irréversible !)")) {
+        document.getElementById('btnReset').addEventListener('click', () => {
+            if(confirm("Effacer ton cache local ? (Ton compte restera sur le serveur si tu as ton code)")) {
                 game = JSON.parse(JSON.stringify(defaultSave));
-                localStorage.removeItem('danCookieSave_v3');
-                usernameOverlay.style.display = 'flex';
-                usernameInput.value = "";
-                recalculateStats();
-                displayCookies.innerText = "0";
-                playerNameDisplay.innerText = "...";
-                orbitingMiceContainer.innerHTML = '';
-                document.title = "Dan Clicker";
+                localStorage.removeItem('danCookieSave_v4');
+                location.reload(); 
             }
-        }
-
-        function exportSave() {
-            let saveString = btoa(unescape(encodeURIComponent(JSON.stringify(game))));
-            prompt("Copie ce code pour sauvegarder ta progression :", saveString);
-        }
-
-        function importSave() {
-            let saveString = prompt("Colle ton code de sauvegarde (Base64) ici :");
-            if (saveString) {
-                try {
-                    let decoded = decodeURIComponent(escape(atob(saveString)));
-                    let parsed = JSON.parse(decoded);
-                    if (parsed.buildings && parsed.hasOwnProperty('username')) {
-                        game = parsed;
-                        saveGame(false);
-                        recalculateStats();
-                        updateUI();
-                        usernameOverlay.style.display = 'none'; 
-                        alert(`Sauvegarde de "${game.username}" importée avec succès !`);
-                    } else {
-                        alert("Code de sauvegarde invalide (version incompatible).");
-                    }
-                } catch(e) {
-                    alert("Erreur lors de l'importation. Le code semble corrompu.");
-                }
-            }
-        }
-
-        document.getElementById('btnSave').addEventListener('click', () => saveGame(true));
-        document.getElementById('btnExport').addEventListener('click', exportSave);
-        document.getElementById('btnImport').addEventListener('click', importSave);
-        document.getElementById('btnReset').addEventListener('click', resetGame);
+        });
 
         setInterval(() => {
             if (currentCps > 0 && game.username) {
-                let toAdd = currentCps / 10;
-                game.cookies += toAdd;
-                game.totalCookies += toAdd;
-                updateUI();
+                let toAdd = currentCps / 10; game.cookies += toAdd; game.totalCookies += toAdd; updateUI();
+                unsavedProgress = true;
             }
         }, 100);
         
         setInterval(() => {
-            if(game.username) saveGame(false);
-        }, 60000);
+            if(unsavedProgress && game.saveCode) {
+                reminderText.style.display = 'block';
+            }
+        }, 120000);
+
+        const leaderboardList = document.getElementById('leaderboardList');
+
+        async function loadLeaderboard() {
+            try {
+                const q = query(collection(db, "stmg_leaderboard"), orderBy("score", "desc"), limit(10));
+                const querySnapshot = await getDocs(q);
+                leaderboardList.innerHTML = '';
+                if (querySnapshot.empty) { leaderboardList.innerHTML = '<p style="text-align: center; color: #8b949e;">Classement vide. Sois le premier !</p>'; return; }
+                let rank = 1;
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const row = document.createElement('div');
+                    row.className = `lb-row ${rank===1?'top-1':rank===2?'top-2':rank===3?'top-3':''}`;
+                    row.innerHTML = `<div class="lb-rank">#${rank}</div><div class="lb-name">${data.username}</div><div class="lb-score">${formatNumber(data.score)} 🍪</div>`;
+                    leaderboardList.appendChild(row); rank++;
+                });
+            } catch (error) { leaderboardList.innerHTML = `<p style="text-align: center; color: #ff5f56;">Erreur de connexion à Firebase.</p>`; }
+        }
+
+        document.getElementById('btnCloseAdmin').addEventListener('click', () => {
+            document.getElementById('adminPanel').style.display = 'none';
+            document.getElementById('gameSection').style.display = 'block';
+        });
+
+        async function loadAdminData() {
+            const sTable = document.querySelector('#adminSavesTable tbody'); sTable.innerHTML = '';
+            try {
+                const sSnap = await getDocs(collection(db, "stmg_saves"));
+                sSnap.forEach(d => {
+                    let sd = JSON.parse(d.data().saveData);
+                    sTable.innerHTML += `<tr><td>${d.id}</td><td>${formatNumber(sd.cookies)}</td><td>${new Date(d.data().lastUpdate).toLocaleTimeString()}</td><td><button class="btn-delete" onclick="window.delDoc('stmg_saves', '${d.id}')">Suppr.</button></td></tr>`;
+                });
+            } catch(e){ sTable.innerHTML = '<tr><td colspan="4">Erreur droits Firebase</td></tr>'; }
+
+            const lTable = document.querySelector('#adminLbTable tbody'); lTable.innerHTML = '';
+            try {
+                const lSnap = await getDocs(collection(db, "stmg_leaderboard"));
+                lSnap.forEach(d => {
+                    lTable.innerHTML += `<tr><td>${d.data().username}</td><td>${formatNumber(d.data().score)}</td><td><button class="btn-delete" onclick="window.delDoc('stmg_leaderboard', '${d.id}')">Suppr.</button></td></tr>`;
+                });
+            } catch(e){}
+        }
+
+        window.delDoc = async function(coll, id) {
+            if(confirm("Supprimer " + id + " de " + coll + " ?")) {
+                await deleteDoc(doc(db, coll, id)); loadAdminData(); 
+            }
+        };
 
         initStore();
-        loadGame();
+        loadLocalGame();
+        loadLeaderboard();
+        spawnGoldenCookie();
 
     </script>
 </body>
