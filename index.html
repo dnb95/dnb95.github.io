@@ -21,7 +21,6 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            cursor: none; 
         }
 
         body {
@@ -33,26 +32,6 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-        }
-
-        #cursor {
-            position: fixed;
-            width: 20px;
-            height: 20px;
-            border: 2px solid var(--primary);
-            border-radius: 50%;
-            pointer-events: none;
-            transform: translate(-50%, -50%);
-            z-index: 9999;
-            transition: width 0.2s, height 0.2s, background 0.2s;
-            mix-blend-mode: difference;
-        }
-        
-        #cursor.hovered {
-            width: 50px;
-            height: 50px;
-            background: rgba(88, 166, 255, 0.2);
-            border-color: var(--secondary);
         }
     
         .space-bg {
@@ -92,7 +71,6 @@
             max-width: 1200px;
             margin: 0 auto;
             padding: 40px 0;
-            perspective: 1000px; 
         }
 
         h1.mega-title {
@@ -146,9 +124,7 @@
             align-items: center;
             text-decoration: none;
             overflow: hidden;
-            transition: all 0.1s ease; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            transform-style: preserve-3d;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; 
         }
 
         .tilt-card::before {
@@ -166,6 +142,7 @@
         }
 
         .tilt-card:hover {
+            transform: translateY(-10px);
             border-color: var(--primary);
             box-shadow: var(--neon-glow);
         }
@@ -173,7 +150,6 @@
         .card-icon {
             font-size: 4rem;
             margin-bottom: 20px;
-            transform: translateZ(40px); 
             filter: drop-shadow(0 0 10px var(--primary));
         }
 
@@ -182,14 +158,12 @@
             font-size: 2rem;
             color: #fff;
             margin-bottom: 10px;
-            transform: translateZ(30px);
         }
 
         .card-desc {
             color: #8b949e;
             text-align: center;
             font-size: 0.9rem;
-            transform: translateZ(20px);
             line-height: 1.5;
         }
 
@@ -197,8 +171,8 @@
         .card-insta { background: linear-gradient(145deg, rgba(193, 53, 132, 0.1), rgba(22, 27, 34, 0.8)); }
         .card-linkedin { background: linear-gradient(145deg, rgba(10, 102, 194, 0.1), rgba(22, 27, 34, 0.8)); }
 
-        .card-insta:hover { border-color: #C13584; box-shadow: 0 0 20px rgba(193, 53, 132, 0.4); }
-        .card-linkedin:hover { border-color: #0A66C2; box-shadow: 0 0 20px rgba(10, 102, 194, 0.4); }
+        .card-insta:hover { border-color: #C13584; box-shadow: 0 10px 30px rgba(193, 53, 132, 0.4); }
+        .card-linkedin:hover { border-color: #0A66C2; box-shadow: 0 10px 30px rgba(10, 102, 194, 0.4); }
 
         .bio-section {
             width: 100%;
@@ -358,22 +332,38 @@
         .cc-cps {
             font-size: 1rem;
             color: #aaa;
+            margin-bottom: 5px;
+        }
+        
+        .cc-click-power {
+            font-size: 0.8rem;
+            color: var(--primary);
+        }
+
+        .cookie-container {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            margin-top: 20px;
         }
 
         .big-cookie-btn {
             background: none;
             border: none;
             outline: none;
-            position: relative;
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 2;
+            cursor: pointer;
         }
 
         .big-cookie-img {
-            width: 250px;
-            height: 250px;
+            width: 100%;
+            height: 100%;
             border-radius: 50%;
             transition: transform 0.05s;
             filter: drop-shadow(0 0 15px rgba(210, 105, 30, 0.4));
-            
             mix-blend-mode: multiply; 
         }
 
@@ -381,7 +371,29 @@
             transform: scale(0.95);
         }
 
-        /* Particules de clic */
+        /* L'orbite des souris */
+        #orbitingMice {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            animation: rotateOrbit 30s linear infinite;
+            transform-origin: center;
+        }
+
+        @keyframes rotateOrbit {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .orbit-mouse {
+            position: absolute;
+            font-size: 1.5rem;
+            transition: all 0.5s;
+            filter: drop-shadow(0 0 5px rgba(255,255,255,0.5));
+        }
+
         .click-particle {
             position: absolute;
             color: white;
@@ -409,6 +421,7 @@
             transition: 0.2s;
             position: relative;
             overflow: hidden;
+            cursor: pointer;
         }
 
         .building-item:hover {
@@ -419,6 +432,7 @@
         .building-item.locked {
             opacity: 0.5;
             filter: grayscale(100%);
+            cursor: not-allowed;
         }
 
         .b-icon { font-size: 2rem; margin-right: 15px; }
@@ -455,6 +469,7 @@
             font-family: 'Montserrat', sans-serif;
             font-size: 0.9rem;
             transition: 0.2s;
+            cursor: pointer;
         }
 
         .cc-btn:hover {
@@ -473,6 +488,13 @@
             box-shadow: 0 0 10px var(--primary);
         }
 
+        .overlay-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
         @media (max-width: 768px) {
             .cards-grid { grid-template-columns: 1fr; }
             .tilt-card { height: 250px; }
@@ -484,27 +506,26 @@
 </head>
 <body>
 
-    <div id="cursor"></div>
     <div class="space-bg"></div>
     <div class="star-field"></div>
 
     <div class="container">
-        <h1 class="mega-title" data-hover>MES PROJETS</h1>
+        <h1 class="mega-title">MES PROJETS</h1>
 
         <div class="cards-grid">
-            <a href="https://dnb95.github.io/1STMG/" class="tilt-card card-project" data-hover target="_blank">
+            <a href="https://dnb95.github.io/1STMG/" class="tilt-card card-project" target="_blank">
                 <div class="card-icon">🚀</div>
                 <h3 class="card-title">DAN REVIZ</h3>
                 <p class="card-desc">Plateforme d'aide.<br>Révision des livres pour le bac</p>
             </a>
 
-            <a href="https://instagram.com/dnb.95" class="tilt-card card-insta" data-hover target="_blank">
+            <a href="https://instagram.com/dnb.95" class="tilt-card card-insta" target="_blank">
                 <div class="card-icon">📸</div>
                 <h3 class="card-title">INSTAGRAM</h3>
                 <p class="card-desc">@dnb.95<br>(Y a pas grand choses)</p>
             </a>
 
-            <a href="https://www.linkedin.com/in/xbox/" class="tilt-card card-linkedin" data-hover target="_blank">
+            <a href="https://www.linkedin.com/in/xbox/" class="tilt-card card-linkedin" target="_blank">
                 <div class="card-icon">💼</div>
                 <h3 class="card-title">LINKEDIN</h3>
                 <p class="card-desc">Connexion Pro.<br>Mon parcours</p>
@@ -534,9 +555,13 @@
 
             <div id="usernameOverlay">
                 <h3>Initialisation...</h3>
-                <p style="color: #aaa;">Entrez votre pseudo pour commencer à produire.</p>
+                <p style="color: #aaa;">Entrez votre pseudo, jouez en invité, ou importez une sauvegarde.</p>
                 <input type="text" id="usernameInput" class="cc-input" placeholder="Votre Pseudo" maxlength="15">
-                <button class="cc-btn primary-btn" id="btnStartGame" data-hover>Lancer la production</button>
+                <div class="overlay-buttons">
+                    <button class="cc-btn primary-btn" id="btnStartGame">Lancer la production</button>
+                    <button class="cc-btn" id="btnGuest">Jouer en Invité</button>
+                    <button class="cc-btn" id="btnImportOverlay">Importer Save</button>
+                </div>
             </div>
             
             <div class="cc-left">
@@ -544,62 +569,34 @@
                     <div class="cc-welcome">usine de <span id="playerNameDisplay">...</span></div>
                     <div class="cc-cookies-count" id="cookiesDisplay">0</div>
                     <div class="cc-cps">cookies par seconde : <span id="cpsDisplay">0</span></div>
+                    <div class="cc-click-power">puissance de clic : <span id="clickPowerDisplay">1</span></div>
                 </div>
                 
-                <button class="big-cookie-btn" id="bigCookie" data-hover>
-                    <img src="https://png.pngtree.com/png-vector/20250425/ourmid/pngtree-chocolate-chip-cookie-icon-white-background-png-image_16100260.png" alt="Big Cookie" class="big-cookie-img" draggable="false">
-                </button>
+                <div class="cookie-container">
+                    <button class="big-cookie-btn" id="bigCookie">
+                        <img src="https://png.pngtree.com/png-vector/20250425/ourmid/pngtree-chocolate-chip-cookie-icon-white-background-png-image_16100260.png" alt="Big Cookie" class="big-cookie-img" draggable="false">
+                    </button>
+                    <div id="orbitingMice"></div>
+                </div>
             </div>
 
             <div class="cc-right" id="storeContainer">
                 </div>
 
             <div class="cc-controls">
-                <button class="cc-btn" id="btnSave" data-hover>Sauvegarder</button>
-                <button class="cc-btn" id="btnExport" data-hover>Exporter (Base64)</button>
-                <button class="cc-btn" id="btnImport" data-hover>Importer</button>
-                <button class="cc-btn" id="btnReset" data-hover style="border-color: #ff5f56; color: #ff5f56;">Reset</button>
+                <button class="cc-btn" id="btnSave">Sauvegarder</button>
+                <button class="cc-btn" id="btnExport">Exporter (Base64)</button>
+                <button class="cc-btn" id="btnImport">Importer</button>
+                <button class="cc-btn" id="btnReset" style="border-color: #ff5f56; color: #ff5f56;">Reset</button>
             </div>
             
         </div>
     </div>
 
     <script>
-        const cursor = document.getElementById('cursor');
-        const hoverElements = document.querySelectorAll('[data-hover]');
-
-        document.addEventListener('mousemove', (e) => {
-            cursor.style.left = e.clientX + 'px';
-            cursor.style.top = e.clientY + 'px';
-        });
-
-        function addHoverEffect(el) {
-            el.addEventListener('mouseenter', () => cursor.classList.add('hovered'));
-            el.addEventListener('mouseleave', () => cursor.classList.remove('hovered'));
-        }
-        
-        hoverElements.forEach(addHoverEffect);
-
-        const cards = document.querySelectorAll('.tilt-card');
-        cards.forEach(card => {
-            card.addEventListener('mousemove', (e) => {
-                const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                const centerX = rect.width / 2;
-                const centerY = rect.height / 2;
-                const rotateX = ((y - centerY) / centerY) * -15;
-                const rotateY = ((x - centerX) / centerX) * 15;
-                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
-            });
-            card.addEventListener('mouseleave', () => {
-                card.style.transform = `perspective(1000px) rotateX(0) rotateY(0) scale(1)`;
-            });
-        });
-
         
         const defaultSave = {
-            username: "",
+            username: "", 
             cookies: 0,
             totalCookies: 0,
             buildings: {
@@ -627,13 +624,17 @@
 
         const displayCookies = document.getElementById('cookiesDisplay');
         const displayCps = document.getElementById('cpsDisplay');
+        const displayClickPower = document.getElementById('clickPowerDisplay');
         const bigCookieBtn = document.getElementById('bigCookie');
         const storeContainer = document.getElementById('storeContainer');
         const playerNameDisplay = document.getElementById('playerNameDisplay');
+        const orbitingMiceContainer = document.getElementById('orbitingMice');
         
         const usernameOverlay = document.getElementById('usernameOverlay');
         const usernameInput = document.getElementById('usernameInput');
         const btnStartGame = document.getElementById('btnStartGame');
+        const btnGuest = document.getElementById('btnGuest');
+        const btnImportOverlay = document.getElementById('btnImportOverlay');
 
         function formatNumber(num) {
             return Math.floor(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
@@ -645,13 +646,45 @@
             return Math.ceil(base * Math.pow(1.15, count));
         }
 
-        function recalculateCps() {
+        function updateMiceOrbit() {
+            orbitingMiceContainer.innerHTML = '';
+            let count = game.buildings.cursor.count;
+            if (count > 50) count = 50; 
+            
+            let radius = 160; 
+            let centerX = 125; 
+            let centerY = 125;
+            
+            for(let i = 0; i < count; i++) {
+                let angle = (i / count) * Math.PI * 2;
+                let x = centerX + radius * Math.cos(angle);
+                let y = centerY + radius * Math.sin(angle);
+                
+                let mouse = document.createElement('div');
+                mouse.className = 'orbit-mouse';
+                mouse.innerText = '🖱️';
+                mouse.style.left = `${x}px`;
+                mouse.style.top = `${y}px`;
+                
+                // Oriente la souris vers le cookie
+                let rotation = angle * (180 / Math.PI) + 90;
+                mouse.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+                
+                orbitingMiceContainer.appendChild(mouse);
+            }
+        }
+
+        function recalculateStats() {
             let cps = 0;
             for (let id in game.buildings) {
                 cps += game.buildings[id].count * buildingData[id].baseCps;
             }
             currentCps = cps;
+            
+            clickPower = 1 + game.buildings.cursor.count + Math.floor(currentCps * 0.05);
+            
             displayCps.innerText = (Math.round(currentCps * 10) / 10).toLocaleString('fr-FR');
+            displayClickPower.innerText = formatNumber(clickPower);
         }
 
         function updateUI() {
@@ -678,6 +711,7 @@
                 }
             }
             document.title = `${formatNumber(game.cookies)} cookies - ${game.username}`;
+            updateMiceOrbit();
         }
 
         function initStore() {
@@ -688,7 +722,6 @@
                 let div = document.createElement('div');
                 div.className = 'building-item locked';
                 div.id = `bitem-${id}`;
-                div.setAttribute('data-hover', '');
                 
                 div.innerHTML = `
                     <div class="b-icon">${b.icon}</div>
@@ -699,16 +732,14 @@
                     <div class="b-count" id="count-${id}"></div>
                 `;
 
-                addHoverEffect(div);
-
                 div.addEventListener('click', () => {
                     let cost = getBuildingCost(id);
                     if (game.cookies >= cost) {
                         game.cookies -= cost;
                         game.buildings[id].count++;
-                        recalculateCps();
+                        recalculateStats();
                         updateUI();
-                        saveGame(false);
+                        saveGame(false); 
                     }
                 });
 
@@ -724,7 +755,7 @@
             
             const rect = bigCookieBtn.getBoundingClientRect();
             let x, y;
-            if(e.clientX === 0 && e.clientY === 0) { 
+            if(e.clientX === 0 && e.clientY === 0) {
                 x = rect.width / 2;
                 y = rect.height / 2;
             } else {
@@ -734,56 +765,57 @@
             
             const particle = document.createElement('div');
             particle.classList.add('click-particle');
-            particle.innerText = `+${clickPower}`;
+            particle.innerText = `+${formatNumber(clickPower)}`;
             particle.style.left = `${x}px`;
             particle.style.top = `${y}px`;
             
-            bigCookieBtn.appendChild(particle);
+            document.querySelector('.cookie-container').appendChild(particle);
             
-            setTimeout(() => {
-                particle.remove();
-            }, 1000);
+            setTimeout(() => { particle.remove(); }, 1000);
 
             updateUI();
         });
 
 
+        function startGameWithUsername(name) {
+            game.username = name;
+            saveGame(false);
+            recalculateStats();
+            updateUI();
+            usernameOverlay.style.display = 'none';
+        }
+
         btnStartGame.addEventListener('click', () => {
             const input = usernameInput.value.trim();
-            if(input.length >= 3) {
-                game.username = input;
-                saveGame(false);
-                recalculateCps();
-                updateUI();
-                usernameOverlay.style.display = 'none';
-            } else {
-                alert("Veuillez entrer un pseudo d'au moins 3 caractères.");
-                usernameInput.focus();
-            }
+            if(input.length >= 3) startGameWithUsername(input);
+            else alert("Veuillez entrer un pseudo d'au moins 3 caractères.");
         });
 
         usernameInput.addEventListener('keypress', (e) => {
             if(e.key === 'Enter') btnStartGame.click();
         });
 
+        btnGuest.addEventListener('click', () => startGameWithUsername("Invité"));
+
+        btnImportOverlay.addEventListener('click', importSave);
+
+
 
         function saveGame(showAlert = true) {
-            localStorage.setItem('danCookieSave_v2', JSON.stringify(game));
+            localStorage.setItem('danCookieSave_v3', JSON.stringify(game));
             if(showAlert) alert("Partie sauvegardée localement !");
         }
 
         function loadGame() {
-            let saved = localStorage.getItem('danCookieSave_v2');
-            
-            if(!saved) saved = localStorage.getItem('danCookieSave');
+            let saved = localStorage.getItem('danCookieSave_v3');
+            if(!saved) saved = localStorage.getItem('danCookieSave_v2');
 
             if (saved) {
                 try {
                     let parsed = JSON.parse(saved);
-                    
                     game.cookies = parsed.cookies || 0;
                     game.totalCookies = parsed.totalCookies || 0;
-                    game.username = parsed.username || "";
+                    game.username = parsed.username || ""; 
 
                     for (let id in buildingData) {
                         if(parsed.buildings && parsed.buildings[id]) {
@@ -795,7 +827,7 @@
             
             if(game.username) {
                 usernameOverlay.style.display = 'none';
-                recalculateCps();
+                recalculateStats();
                 updateUI();
             } else {
                 usernameOverlay.style.display = 'flex'; 
@@ -804,22 +836,22 @@
         }
 
         function resetGame() {
-            if(confirm("Veux-tu vraiment tout recommencer à zéro ? Ton pseudo sera aussi effacé. (C'est irréversible !)")) {
+            if(confirm("Veux-tu vraiment tout recommencer à zéro ? (C'est irréversible !)")) {
                 game = JSON.parse(JSON.stringify(defaultSave));
-                localStorage.removeItem('danCookieSave_v2');
-                localStorage.removeItem('danCookieSave'); 
+                localStorage.removeItem('danCookieSave_v3');
                 usernameOverlay.style.display = 'flex';
                 usernameInput.value = "";
-                recalculateCps();
+                recalculateStats();
                 displayCookies.innerText = "0";
                 playerNameDisplay.innerText = "...";
+                orbitingMiceContainer.innerHTML = '';
                 document.title = "Dan Clicker";
             }
         }
 
         function exportSave() {
             let saveString = btoa(unescape(encodeURIComponent(JSON.stringify(game))));
-            prompt("Copie ce code pour sauvegarder ta progressionailleurs (inclut ton pseudo) :", saveString);
+            prompt("Copie ce code pour sauvegarder ta progression :", saveString);
         }
 
         function importSave() {
@@ -831,9 +863,9 @@
                     if (parsed.buildings && parsed.hasOwnProperty('username')) {
                         game = parsed;
                         saveGame(false);
-                        recalculateCps();
+                        recalculateStats();
                         updateUI();
-                        usernameOverlay.style.display = 'none'; // Cache si pseudo chargé
+                        usernameOverlay.style.display = 'none'; 
                         alert(`Sauvegarde de "${game.username}" importée avec succès !`);
                     } else {
                         alert("Code de sauvegarde invalide (version incompatible).");
@@ -848,8 +880,6 @@
         document.getElementById('btnExport').addEventListener('click', exportSave);
         document.getElementById('btnImport').addEventListener('click', importSave);
         document.getElementById('btnReset').addEventListener('click', resetGame);
-
-
 
         setInterval(() => {
             if (currentCps > 0 && game.username) {
