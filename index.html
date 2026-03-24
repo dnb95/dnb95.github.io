@@ -156,6 +156,7 @@
         .btn-edit { background: #ffbd2e; color: black; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-right: 5px;}
         .btn-ban { background: #000; color: #ff5f56; border: 1px solid #ff5f56; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-weight: bold;}
 
+        /* Admin Edit Modal */
         #adminEditModal { display: none; position: fixed; top: 10%; left: 50%; transform: translateX(-50%); background: #111; border: 1px solid var(--primary); border-radius: 10px; padding: 25px; z-index: 2000; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; box-shadow: 0 0 30px #000; color: white; font-family: 'Courier New', Courier, monospace; }
         #adminEditModal h3 { font-family: 'Orbitron', sans-serif; color: var(--primary); margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px;}
         .edit-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; background: #222; padding: 8px; border-radius: 5px;}
@@ -358,7 +359,7 @@
         const db = getFirestore(app);
 
         const defaultSave = {
-            username: "", saveCode: "", cookies: 0, totalCookies: 0, upgradesBought: [], playtime: 0, banned: false,
+            username: "", saveCode: "", cookies: 0, totalCookies: 0, upgradesBought: [], playtime: 0, banned: false, lastAdminSync: 0,
             buildings: { 
                 cursor: { count: 0 }, grandma: { count: 0 }, farm: { count: 0 }, mine: { count: 0 }, factory: { count: 0 }, 
                 bank: { count: 0 }, temple: { count: 0 }, wizard: { count: 0 }, shipment: { count: 0 }, alch: { count: 0 }, 
@@ -492,7 +493,7 @@
         }
 
         function updateUI() {
-            game.cookies = validateNum(game.cookies); // Securité
+            game.cookies = validateNum(game.cookies); 
             if(game.banned) { document.getElementById('banScreen').style.display = 'flex'; return; }
 
             displayCookies.innerText = formatNumber(game.cookies);
@@ -605,7 +606,7 @@
         function spawnCrack(x, y) {
             let crack = document.createElement('div');
             crack.className = 'crack-effect';
-            crack.style.left = (x - 40) + 'px';
+            crack.style.left = (x - 40) + 'px'; 
             crack.style.top = (y - 40) + 'px';
             document.querySelector('.cookie-container').appendChild(crack);
             setTimeout(() => crack.remove(), 200);
@@ -653,7 +654,6 @@
                     gc.onclick = () => {
                         clearTimeout(hideTimeout); gc.style.display = 'none';
                         
-                        // Buff Frenzy x2 pour 1 minute
                         isGoldenFrenzy = true;
                         mainCookieImg.src = imgCookieGolden;
                         mainCookieImg.style.filter = "drop-shadow(0 0 30px gold)";
@@ -664,7 +664,7 @@
                             mainCookieImg.src = imgCookieBase;
                             mainCookieImg.style.filter = "drop-shadow(0 0 15px rgba(210, 105, 30, 0.4))";
                             recalculateStats(); updateUI();
-                        }, 60000); // 1 minute
+                        }, 60000); 
 
                         spawnGoldenCookie();
                     }
@@ -696,17 +696,38 @@
             btn.innerHTML = "💾 Sauvegarde Manuelle"; btn.disabled = false;
         });
 
-        let banListener = null;
-        function setupBanListener() {
+        let realtimeListener = null;
+        function setupRealtimeListener() {
             if(!game.saveCode) return;
-            if(banListener) banListener(); // Clear old
-            banListener = onSnapshot(doc(db, "stmg_leaderboard", game.saveCode), (docSnap) => {
-                if(docSnap.exists() && docSnap.data().banned) {
-                    game.banned = true;
-                    document.getElementById('banScreen').style.display = 'flex';
-                } else if (game.banned) {
-                    game.banned = false;
-                    document.getElementById('banScreen').style.display = 'none';
+            if(realtimeListener) realtimeListener(); 
+            
+            realtimeListener = onSnapshot(doc(db, "stmg_leaderboard", game.saveCode), async (docSnap) => {
+                if(docSnap.exists()) {
+                    const data = docSnap.data();
+                    
+                    if(data.banned && !game.banned) {
+                        game.banned = true;
+                        document.getElementById('banScreen').style.display = 'flex';
+                    } else if (!data.banned && game.banned) {
+                        game.banned = false;
+                        document.getElementById('banScreen').style.display = 'none';
+                    }
+
+                    if (data.adminEditTimestamp && data.adminEditTimestamp > (game.lastAdminSync || 0)) {
+                        game.lastAdminSync = data.adminEditTimestamp; // on marque l'heure du scan
+                        
+                        const saveSnap = await getDoc(doc(db, "stmg_saves", game.saveCode));
+                        if(saveSnap.exists()) {
+                            let parsed = JSON.parse(saveSnap.data().saveData);
+                            parsed.lastAdminSync = data.adminEditTimestamp; 
+                            game = { ...defaultSave, ...parsed, buildings: { ...defaultSave.buildings, ...parsed.buildings } };
+                            if(!game.upgradesBought) game.upgradesBought = [];
+                            
+                            saveLocal(); recalculateStats(); updateUI();
+                            
+                            alert("⚠️ Vos données ont été modifiées en direct par un Administrateur !");
+                        }
+                    }
                 }
             });
         }
@@ -723,7 +744,7 @@
                     document.getElementById('btnStartGame').innerText = "Créer mon Usine"; return;
                 }
                 game.username = input; game.saveCode = generateUniqueCode(input);
-                saveLocal(); await saveGameToServer(); setupBanListener();
+                saveLocal(); await saveGameToServer(); setupRealtimeListener();
                 recalculateStats(); updateUI(); loadLeaderboards();
                 usernameOverlay.style.display = 'none';
             } catch(e) { alert("Erreur serveur."); document.getElementById('btnStartGame').innerText = "Créer mon Usine"; }
@@ -746,7 +767,7 @@
                     if(!game.upgradesBought) game.upgradesBought = []; 
                     
                     saveLocal(); recalculateStats(); updateUI(); usernameOverlay.style.display = 'none';
-                    setupBanListener(); // Relie au ban temps réel
+                    setupRealtimeListener(); 
                     
                     if(game.banned) { document.getElementById('banScreen').style.display = 'flex'; return; }
                     alert(`✅ Compte de ${game.username} récupéré !`);
@@ -772,7 +793,7 @@
                 } catch(e) {}
             }
             if(game.saveCode || game.username === "Invité") {
-                setupBanListener();
+                setupRealtimeListener();
                 if(game.banned) { document.getElementById('banScreen').style.display = 'flex'; return; }
                 usernameOverlay.style.display = 'none'; recalculateStats(); updateUI();
             } else { usernameOverlay.style.display = 'flex'; }
@@ -859,6 +880,7 @@
         window.banDoc = async function(id, status) {
             if(confirm(status ? "Bannir ce joueur ?" : "Débannir ce joueur ?")) {
                 await updateDoc(doc(db, "stmg_leaderboard", id), { banned: status });
+                
                 const saveRef = doc(db, "stmg_saves", id); const s = await getDoc(saveRef);
                 if(s.exists()) {
                     let p = JSON.parse(s.data().saveData); p.banned = status;
@@ -909,14 +931,16 @@
             let newCps = calculateCpsForSave(adminTempEditData);
 
             await updateDoc(doc(db, "stmg_saves", adminTempEditId), { saveData: JSON.stringify(adminTempEditData) });
+            // C'est ce timestamp en particulier qui est capté par le jeu de la victime et déclenche la maj en direct !
             await updateDoc(doc(db, "stmg_leaderboard", adminTempEditId), { 
                 score: adminTempEditData.cookies, 
                 playtime: adminTempEditData.playtime,
-                cps: Math.floor(newCps)
+                cps: Math.floor(newCps),
+                adminEditTimestamp: Date.now() 
             });
 
             document.getElementById('adminEditModal').style.display = 'none';
-            alert("Compte modifié avec succès !");
+            alert("Compte modifié avec succès ! Le joueur est mis à jour en direct.");
             loadAdminData(); 
             loadLeaderboards(); 
         });
