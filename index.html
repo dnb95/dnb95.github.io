@@ -21,14 +21,8 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            background-color: var(--bg-dark);
-            color: #e6edf3;
-            font-family: 'Montserrat', sans-serif;
-            overflow-x: hidden;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            background-color: var(--bg-dark); color: #e6edf3; font-family: 'Montserrat', sans-serif;
+            overflow-x: hidden; min-height: 100vh; display: flex; flex-direction: column; align-items: center;
         }
     
         .space-bg {
@@ -95,8 +89,9 @@
         .cc-input:focus { outline: none; box-shadow: 0 0 10px var(--primary); }
         
         .cc-left { flex: 1; min-width: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 20px; position: relative; }
-        .cc-right { flex: 1.5; min-width: 350px; display: flex; flex-direction: column; gap: 10px; max-height: 600px; overflow-y: auto; padding-left: 10px; position: relative; }
-        .cc-right::-webkit-scrollbar { width: 8px; } .cc-right::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; } .cc-right::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
+        
+        .cc-right { flex: 1.5; min-width: 350px; display: flex; flex-direction: column; gap: 10px; max-height: 600px; overflow-y: auto; padding-left: 10px; position: relative; -ms-overflow-style: none; scrollbar-width: none; }
+        .cc-right::-webkit-scrollbar { display: none; } 
         
         .cc-stats { text-align: center; margin-bottom: 30px; }
         .cc-welcome { color: var(--secondary); font-size: 0.9rem; margin-bottom: 5px; }
@@ -109,6 +104,9 @@
         .big-cookie-img { width: 100%; height: 100%; border-radius: 50%; transition: transform 0.05s; filter: drop-shadow(0 0 15px rgba(210, 105, 30, 0.4)); mix-blend-mode: multiply; }
         .big-cookie-btn:active .big-cookie-img { transform: scale(0.95); }
         
+        .crack-effect { position: absolute; width: 80px; height: 80px; background: radial-gradient(circle, rgba(0,0,0,0.6) 0%, transparent 70%); border-radius: 50%; pointer-events: none; z-index: 6; animation: crackFade 0.2s ease-out forwards; }
+        @keyframes crackFade { 0% { opacity: 1; transform: scale(0.5); } 100% { opacity: 0; transform: scale(1.5); } }
+
         .crumb { position: absolute; background: #8b5a2b; border-radius: 50%; width: 8px; height: 8px; z-index: 3; pointer-events: none; animation: scatter 0.5s ease-out forwards; }
         @keyframes scatter { 0% { transform: scale(1) translate(0, 0); opacity: 1; } 100% { transform: scale(0) translate(var(--tx), var(--ty)); opacity: 0; } }
 
@@ -130,8 +128,7 @@
         .upgrade-item:hover { border-color: var(--secondary); background: rgba(188, 140, 255, 0.2); }
         .upgrade-item.locked { opacity: 0.3; filter: grayscale(100%); cursor: not-allowed; }
         
-        .tooltip { position: absolute; background: rgba(5, 8, 11, 0.95); border: 1px solid var(--secondary); border-radius: 5px; padding: 10px; color: #fff; font-size: 0.85rem; pointer-events: none; z-index: 1000; opacity: 0; transition: opacity 0.2s; width: max-content; max-width: 250px; box-shadow: 0 5px 15px rgba(0,0,0,0.8); }
-        .has-tooltip:hover + .tooltip, .upgrade-item:hover .tooltip { opacity: 1; }
+        .tooltip { position: fixed; background: rgba(5, 8, 11, 0.95); border: 1px solid var(--secondary); border-radius: 5px; padding: 10px; color: #fff; font-size: 0.85rem; pointer-events: none; z-index: 1000; opacity: 0; transition: opacity 0.1s; width: max-content; max-width: 250px; box-shadow: 0 5px 15px rgba(0,0,0,0.8); }
 
         .building-item { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(90deg, rgba(22, 27, 34, 0.8), rgba(22, 27, 34, 0.4)); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; transition: 0.2s; position: relative; overflow: hidden; cursor: pointer; }
         .building-item:hover { border-color: var(--primary); background: linear-gradient(90deg, rgba(88, 166, 255, 0.2), rgba(22, 27, 34, 0.6)); }
@@ -185,8 +182,9 @@
 <body>
 
     <div id="banScreen">
-        <h1>❌ ACCÈS REFUSÉ ❌</h1>
-        <p>Ce compte a été placé sur liste noire par l'administrateur.</p>
+        <h1 style="font-size: 3rem; margin-bottom: 20px;">❌ ACCÈS REFUSÉ ❌</h1>
+        <p style="font-size: 1.2rem; color: #aaa;">Ce compte a été placé sur liste noire par l'administrateur.</p>
+        <button class="cc-btn" style="margin-top:40px; border-color:white; color:white; font-size: 1.2rem;" onclick="localStorage.removeItem('danCookieSave_v5'); location.reload();">Déconnexion & Retour à l'accueil</button>
     </div>
 
     <div id="adminEditModal">
@@ -310,9 +308,9 @@
                     <div class="upgrades-container" id="upgradesContainer"></div>
                     
                     <div id="storeContainer" style="position: relative;"></div>
-                    
-                    <div id="gameTooltip" class="tooltip"></div>
                 </div>
+                
+                <div id="gameTooltip" class="tooltip"></div>
 
                 <div class="cc-controls">
                     <button class="cc-btn primary-btn" id="btnSaveData">💾 Sauvegarde Manuelle</button>
@@ -344,7 +342,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, query, orderBy, limit, deleteDoc, where, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, query, orderBy, limit, deleteDoc, where, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDXdEnimnKl8dG7xXprd5uhWFANddUr2Sg",
@@ -359,7 +357,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // --- MOTEUR COOKIE CLICKER ---
         const defaultSave = {
             username: "", saveCode: "", cookies: 0, totalCookies: 0, upgradesBought: [], playtime: 0, banned: false,
             buildings: { 
@@ -400,6 +397,10 @@
         let currentCps = 0; let clickPower = 1;
         let storeMode = 'buy'; 
         let unsavedProgress = false; 
+        
+        let isGoldenFrenzy = false;
+        const imgCookieBase = "https://png.pngtree.com/png-vector/20250425/ourmid/pngtree-chocolate-chip-cookie-icon-white-background-png-image_16100260.png";
+        const imgCookieGolden = "https://i.ibb.co/Y4fx1dPt/image-removebg-preview-2.png";
 
         const displayCookies = document.getElementById('cookiesDisplay');
         const displayCps = document.getElementById('cpsDisplay');
@@ -412,8 +413,12 @@
         const usernameOverlay = document.getElementById('usernameOverlay');
         const tooltip = document.getElementById('gameTooltip');
         const reminderText = document.getElementById('reminderText');
+        const mainCookieImg = document.getElementById('mainCookieImg');
+
+        function validateNum(n) { return (isNaN(n) || !isFinite(n) || n < 0) ? 0 : n; }
 
         function formatNumber(num) {
+            num = validateNum(num);
             if (num < 1000000) return Math.floor(num).toLocaleString('fr-FR');
             const units = ["", " Million", " Milliard", " Billion", " Billiard", " Trillion", " Quatrillion", " Quintillion", " Sextillion", " Septillion", " Octillion"];
             let unitIndex = Math.floor((Math.log10(num) - 3) / 3);
@@ -434,10 +439,11 @@
         document.getElementById('btnModeBuy').onclick = (e) => { storeMode = 'buy'; e.target.classList.add('active'); document.getElementById('btnModeSell').classList.remove('sell-active'); updateUI(); };
         document.getElementById('btnModeSell').onclick = (e) => { storeMode = 'sell'; e.target.classList.add('sell-active'); document.getElementById('btnModeBuy').classList.remove('active'); updateUI(); };
 
-        function getBuildingBuyCost(id) { return Math.ceil(buildingData[id].baseCost * Math.pow(1.15, game.buildings[id].count)); }
+        function getBuildingBuyCost(id) { return Math.ceil(buildingData[id].baseCost * Math.pow(1.15, validateNum(game.buildings[id].count))); }
         function getBuildingSellCost(id) { 
-            if(game.buildings[id].count === 0) return 0;
-            return Math.ceil(buildingData[id].baseCost * Math.pow(1.15, game.buildings[id].count - 1) * 0.5); 
+            let count = validateNum(game.buildings[id].count);
+            if(count === 0) return 0;
+            return Math.ceil(buildingData[id].baseCost * Math.pow(1.15, count - 1) * 0.5); 
         }
 
         function hasUpgrade(id) { return game.upgradesBought.includes(id); }
@@ -454,9 +460,9 @@
             });
             let cps = 0;
             for (let id in saveObj.buildings) {
-                if(saveObj.buildings[id]) cps += saveObj.buildings[id].count * buildingData[id].baseCps * bMults[id];
+                if(saveObj.buildings[id]) cps += validateNum(saveObj.buildings[id].count) * buildingData[id].baseCps * bMults[id];
             }
-            return cps * gMult;
+            return validateNum(cps * gMult);
         }
 
         function recalculateStats() {
@@ -474,16 +480,19 @@
 
             let cps = 0;
             for (let id in game.buildings) {
-                if(game.buildings[id]) cps += game.buildings[id].count * buildingData[id].baseCps * bMults[id];
+                if(game.buildings[id]) cps += validateNum(game.buildings[id].count) * buildingData[id].baseCps * bMults[id];
             }
-            currentCps = cps * gMult;
-            clickPower = (1 + game.buildings.cursor.count + Math.floor(currentCps * 0.05)) * cMult;
+            currentCps = validateNum(cps * gMult);
+            
+            clickPower = validateNum((1 + validateNum(game.buildings.cursor.count) + Math.floor(currentCps * 0.05)) * cMult);
+            if(isGoldenFrenzy) clickPower *= 2;
             
             displayCps.innerText = formatNumber(currentCps);
             displayClickPower.innerText = formatNumber(clickPower);
         }
 
         function updateUI() {
+            game.cookies = validateNum(game.cookies); // Securité
             if(game.banned) { document.getElementById('banScreen').style.display = 'flex'; return; }
 
             displayCookies.innerText = formatNumber(game.cookies);
@@ -520,7 +529,7 @@
                     let uDiv = document.createElement('div');
                     uDiv.className = game.cookies >= up.cost ? 'upgrade-item' : 'upgrade-item locked';
                     uDiv.innerText = up.icon;
-                    uDiv.onmouseenter = (e) => showTooltip(e, `<b>${up.desc}</b><br>Coût: ${formatNumber(up.cost)}`);
+                    uDiv.onmousemove = (e) => showTooltip(e, `<b>${up.desc}</b><br>Coût d'achat: <span style="color:#27c93f">${formatNumber(up.cost)}</span>`);
                     uDiv.onmouseleave = hideTooltip;
                     uDiv.onclick = () => {
                         if(game.cookies >= up.cost) {
@@ -544,9 +553,9 @@
 
         function updateMiceOrbit() {
             orbitingMiceContainer.innerHTML = '';
-            let count = Math.min(game.buildings.cursor.count, 50); 
+            let count = Math.min(validateNum(game.buildings.cursor.count), 50); 
             let radius = 160, center = 125;
-            let isAdvanced = game.buildings.cursor.count >= 20;
+            let isAdvanced = validateNum(game.buildings.cursor.count) >= 20;
 
             for(let i = 0; i < count; i++) {
                 let angle = (i / count) * Math.PI * 2;
@@ -566,13 +575,14 @@
             for (let id in buildingData) {
                 let b = buildingData[id];
                 let div = document.createElement('div');
-                div.className = 'building-item locked has-tooltip'; div.id = `bitem-${id}`;
+                div.className = 'building-item locked'; div.id = `bitem-${id}`;
                 div.innerHTML = `<div class="b-icon">${b.icon}</div><div class="b-info"><div class="b-name">${b.name}</div><div class="b-cost" id="cost-${id}">0</div></div><div class="b-count" id="count-${id}"></div>`;
                 
                 div.onmousemove = (e) => {
-                    let count = game.buildings[id] ? game.buildings[id].count : 0;
+                    let count = validateNum(game.buildings[id] ? game.buildings[id].count : 0);
                     let prod = formatNumber(b.baseCps * count);
-                    let txt = `<b>${b.name}</b><br><i style="color:#aaa; font-size:0.8rem">${b.desc}</i><br>Production locale de base: ${prod} CpS`;
+                    let txt = `<b>${b.name}</b><br><i style="color:#aaa; font-size:0.8rem">${b.desc}</i><br>Production actuelle : ${prod} CpS`;
+                    if(storeMode === 'sell') txt += `<br><span style="color:var(--danger)">Prix de revente : +${formatNumber(getBuildingSellCost(id))}</span>`;
                     showTooltip(e, txt);
                 };
                 div.onmouseleave = hideTooltip;
@@ -590,6 +600,15 @@
                 });
                 storeContainer.appendChild(div);
             }
+        }
+
+        function spawnCrack(x, y) {
+            let crack = document.createElement('div');
+            crack.className = 'crack-effect';
+            crack.style.left = (x - 40) + 'px';
+            crack.style.top = (y - 40) + 'px';
+            document.querySelector('.cookie-container').appendChild(crack);
+            setTimeout(() => crack.remove(), 200);
         }
 
         function spawnCrumb(x, y) {
@@ -616,14 +635,15 @@
             document.querySelector('.cookie-container').appendChild(p);
             setTimeout(() => { p.remove(); }, 1000);
 
-            for(let i=0; i<3; i++) spawnCrumb(x, y);
+            spawnCrack(x, y);
+            for(let i=0; i<2; i++) spawnCrumb(x, y);
             updateUI();
         });
 
         function spawnGoldenCookie() {
-            const delay = Math.random() * (4*60000) + (3*60000); 
+            const delay = Math.random() * (2*60000) + (4*60000); 
             setTimeout(() => {
-                if(Math.random() <= 0.90) { 
+                if(Math.random() <= 0.90 && !game.banned && game.username) { 
                     let gc = document.getElementById('goldenCookie');
                     gc.style.display = 'block';
                     gc.style.left = Math.random() * 80 + 10 + '%'; gc.style.top = Math.random() * 80 + 10 + '%';
@@ -632,10 +652,21 @@
                     
                     gc.onclick = () => {
                         clearTimeout(hideTimeout); gc.style.display = 'none';
-                        let bonus = currentCps * 60 * 15; if(bonus === 0) bonus = 500; 
-                        game.cookies += bonus; game.totalCookies += bonus; unsavedProgress = true;
-                        alert(`🌟 Cookie Doré ! +${formatNumber(bonus)} cookies !`);
-                        updateUI(); spawnGoldenCookie();
+                        
+                        // Buff Frenzy x2 pour 1 minute
+                        isGoldenFrenzy = true;
+                        mainCookieImg.src = imgCookieGolden;
+                        mainCookieImg.style.filter = "drop-shadow(0 0 30px gold)";
+                        recalculateStats(); updateUI();
+                        
+                        setTimeout(() => {
+                            isGoldenFrenzy = false;
+                            mainCookieImg.src = imgCookieBase;
+                            mainCookieImg.style.filter = "drop-shadow(0 0 15px rgba(210, 105, 30, 0.4))";
+                            recalculateStats(); updateUI();
+                        }, 60000); // 1 minute
+
+                        spawnGoldenCookie();
                     }
                 } else {
                     spawnGoldenCookie(); 
@@ -647,6 +678,7 @@
 
         async function saveGameToServer() {
             if(!game.saveCode || game.username === "Invité" || game.banned) return;
+            game.cookies = validateNum(game.cookies);
             try {
                 await setDoc(doc(db, "stmg_saves", game.saveCode), { saveData: JSON.stringify(game), lastUpdate: new Date().toISOString() });
                 await setDoc(doc(db, "stmg_leaderboard", game.saveCode), {
@@ -664,6 +696,21 @@
             btn.innerHTML = "💾 Sauvegarde Manuelle"; btn.disabled = false;
         });
 
+        let banListener = null;
+        function setupBanListener() {
+            if(!game.saveCode) return;
+            if(banListener) banListener(); // Clear old
+            banListener = onSnapshot(doc(db, "stmg_leaderboard", game.saveCode), (docSnap) => {
+                if(docSnap.exists() && docSnap.data().banned) {
+                    game.banned = true;
+                    document.getElementById('banScreen').style.display = 'flex';
+                } else if (game.banned) {
+                    game.banned = false;
+                    document.getElementById('banScreen').style.display = 'none';
+                }
+            });
+        }
+
         document.getElementById('btnStartGame').addEventListener('click', async () => {
             const input = document.getElementById('usernameInput').value.trim();
             if(input.length < 3) { alert("Pseudo de 3 caractères minimum."); return; }
@@ -676,7 +723,7 @@
                     document.getElementById('btnStartGame').innerText = "Créer mon Usine"; return;
                 }
                 game.username = input; game.saveCode = generateUniqueCode(input);
-                saveLocal(); await saveGameToServer();
+                saveLocal(); await saveGameToServer(); setupBanListener();
                 recalculateStats(); updateUI(); loadLeaderboards();
                 usernameOverlay.style.display = 'none';
             } catch(e) { alert("Erreur serveur."); document.getElementById('btnStartGame').innerText = "Créer mon Usine"; }
@@ -697,8 +744,11 @@
                     let parsed = JSON.parse(docSnap.data().saveData);
                     game = { ...defaultSave, ...parsed, buildings: { ...defaultSave.buildings, ...parsed.buildings } };
                     if(!game.upgradesBought) game.upgradesBought = []; 
-                    if(game.banned) { document.getElementById('banScreen').style.display = 'flex'; return; }
+                    
                     saveLocal(); recalculateStats(); updateUI(); usernameOverlay.style.display = 'none';
+                    setupBanListener(); // Relie au ban temps réel
+                    
+                    if(game.banned) { document.getElementById('banScreen').style.display = 'flex'; return; }
                     alert(`✅ Compte de ${game.username} récupéré !`);
                 } else { alert("❌ Code introuvable."); }
             } catch(e) { alert("Erreur de connexion."); }
@@ -722,6 +772,7 @@
                 } catch(e) {}
             }
             if(game.saveCode || game.username === "Invité") {
+                setupBanListener();
                 if(game.banned) { document.getElementById('banScreen').style.display = 'flex'; return; }
                 usernameOverlay.style.display = 'none'; recalculateStats(); updateUI();
             } else { usernameOverlay.style.display = 'flex'; }
@@ -735,18 +786,16 @@
 
         setInterval(() => {
             if (currentCps > 0 && game.username && !game.banned) {
-                let toAdd = currentCps / 10; game.cookies += toAdd; game.totalCookies += toAdd; updateUI();
+                let toAdd = currentCps / 10; game.cookies += validateNum(toAdd); game.totalCookies += validateNum(toAdd); updateUI();
             }
         }, 100);
         
         setInterval(() => {
-            if(game.username && game.username !== "Invité" && !game.banned) {
-                game.playtime++; 
-            }
+            if(game.username && game.username !== "Invité" && !game.banned) game.playtime++; 
             if(unsavedProgress && game.saveCode) reminderText.style.display = 'block';
         }, 1000);
 
-        window.addEventListener('beforeunload', () => { if(unsavedProgress) saveGameToServer(); });
+        window.addEventListener('beforeunload', () => { if(unsavedProgress && !game.banned) saveGameToServer(); });
 
         async function loadLeaderboards() {
             try {
@@ -827,14 +876,14 @@
                 document.getElementById('editPlayerName').innerText = adminTempEditData.username;
                 
                 let html = `
-                    <div class="edit-group"><label>Cookies :</label><input type="number" id="edit_cookies" value="${Math.floor(adminTempEditData.cookies)}"></div>
-                    <div class="edit-group"><label>Temps de jeu (sec) :</label><input type="number" id="edit_playtime" value="${adminTempEditData.playtime}"></div>
+                    <div class="edit-group"><label>Cookies :</label><input type="number" id="edit_cookies" value="${Math.floor(validateNum(adminTempEditData.cookies))}"></div>
+                    <div class="edit-group"><label>Temps de jeu (sec) :</label><input type="number" id="edit_playtime" value="${validateNum(adminTempEditData.playtime)}"></div>
                     <hr style="border: 0; border-top: 1px solid #333; margin: 15px 0;">
                     <h4 style="color:var(--secondary); margin-bottom:10px;">Bâtiments</h4>
                 `;
                 
                 for(let key in buildingData) {
-                    let count = adminTempEditData.buildings[key] ? adminTempEditData.buildings[key].count : 0;
+                    let count = adminTempEditData.buildings[key] ? validateNum(adminTempEditData.buildings[key].count) : 0;
                     html += `<div class="edit-group"><label>${buildingData[key].name} :</label><input type="number" id="edit_b_${key}" value="${count}"></div>`;
                 }
 
@@ -848,11 +897,11 @@
         document.getElementById('btnSaveAdminEdit').addEventListener('click', async () => {
             if(!adminTempEditId || !adminTempEditData) return;
             
-            adminTempEditData.cookies = parseInt(document.getElementById('edit_cookies').value) || 0;
-            adminTempEditData.playtime = parseInt(document.getElementById('edit_playtime').value) || 0;
+            adminTempEditData.cookies = validateNum(parseInt(document.getElementById('edit_cookies').value));
+            adminTempEditData.playtime = validateNum(parseInt(document.getElementById('edit_playtime').value));
             
             for(let key in buildingData) {
-                let val = parseInt(document.getElementById(`edit_b_${key}`).value) || 0;
+                let val = validateNum(parseInt(document.getElementById(`edit_b_${key}`).value));
                 if(!adminTempEditData.buildings[key]) adminTempEditData.buildings[key] = { count: 0 };
                 adminTempEditData.buildings[key].count = val;
             }
