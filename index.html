@@ -1071,3 +1071,1076 @@
     </script>
 </body>
 </html>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Dan Bouillet - Accueil</title>
+    <meta name="description" content="L'accueil du site de Dan Bouillet.">
+    <link rel="icon" type="image/png" href="https://upload.wikimedia.org/wikipedia/commons/2/20/Dan_Bouillet_Logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;500;800&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        :root {
+            --primary: #58a6ff;
+            --secondary: #bc8cff;
+            --bg-dark: #05080b;
+            --glass: rgba(22, 27, 34, 0.55);
+            --neon-glow: 0 0 15px rgba(88, 166, 255, 0.6);
+            --danger: #ff5f56;
+            --gold-glow: 0 0 70px rgba(255, 215, 0, 0.8);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-dark); color: #e6edf3; font-family: 'Montserrat', sans-serif;
+            overflow-x: hidden; min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+        }
+    
+        .space-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 10% 20%, rgba(88, 166, 255, 0.15) 0%, transparent 40%),
+                        radial-gradient(circle at 90% 80%, rgba(188, 140, 255, 0.1) 0%, transparent 40%);
+            z-index: -2;
+        }
+
+        .star-field {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+            background-image: radial-gradient(1px 1px at 10% 10%, white 1px, transparent 0),
+                              radial-gradient(1px 1px at 20% 30%, white 1px, transparent 0),
+                              radial-gradient(2px 2px at 40% 70%, white 1px, transparent 0),
+                              radial-gradient(1px 1px at 80% 40%, white 1px, transparent 0),
+                              radial-gradient(2px 2px at 60% 90%, white 1px, transparent 0);
+            background-size: 550px 550px; opacity: 0.6;
+        }
+
+        .container { width: 90%; max-width: 1200px; margin: 0 auto; padding: 40px 0; }
+
+        h1.mega-title {
+            font-family: 'Orbitron', sans-serif; font-size: clamp(3rem, 8vw, 6rem); text-transform: uppercase;
+            text-align: center; margin: 60px 0; background: linear-gradient(to right, #fff, var(--primary), var(--secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 30px rgba(88, 166, 255, 0.5);
+            letter-spacing: 4px;
+        }
+
+        h2.section-label { font-family: 'Orbitron', sans-serif; font-size: 1.5rem; color: var(--secondary); margin: 40px 0 20px; padding-left: 20px; border-left: 4px solid var(--primary); text-transform: uppercase; letter-spacing: 2px; }
+
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-bottom: 60px; }
+        .tilt-card { position: relative; height: 350px; background: var(--glass); backdrop-filter: blur(16px); border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.1); padding: 30px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-decoration: none; overflow: hidden; transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; }
+        .tilt-card::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent); transition: 0.5s; transform: skewX(-15deg); }
+        .tilt-card:hover::before { left: 100%; }
+        .tilt-card:hover { transform: translateY(-10px); border-color: var(--primary); box-shadow: var(--neon-glow); }
+        .card-icon { font-size: 4rem; margin-bottom: 20px; filter: drop-shadow(0 0 10px var(--primary)); }
+        .card-title { font-family: 'Orbitron', sans-serif; font-size: 2rem; color: #fff; margin-bottom: 10px; }
+        .card-desc { color: #8b949e; text-align: center; font-size: 0.9rem; line-height: 1.5; }
+        .card-project { background: linear-gradient(145deg, rgba(88, 166, 255, 0.1), rgba(22, 27, 34, 0.8)); }
+        .card-insta { background: linear-gradient(145deg, rgba(193, 53, 132, 0.1), rgba(22, 27, 34, 0.8)); }
+        .card-linkedin { background: linear-gradient(145deg, rgba(10, 102, 194, 0.1), rgba(22, 27, 34, 0.8)); }
+        .card-insta:hover { border-color: #C13584; box-shadow: 0 10px 30px rgba(193, 53, 132, 0.4); }
+        .card-linkedin:hover { border-color: #0A66C2; box-shadow: 0 10px 30px rgba(10, 102, 194, 0.4); }
+
+        .bio-section { width: 100%; max-width: 800px; margin: 0 auto 60px; background: rgba(5, 8, 11, 0.9); border: 1px solid var(--primary); border-radius: 10px; padding: 2px; box-shadow: var(--neon-glow); }
+        .terminal-header { background: rgba(88, 166, 255, 0.2); padding: 10px; display: flex; gap: 10px; border-bottom: 1px solid var(--primary); }
+        .dot { width: 12px; height: 12px; border-radius: 50%; } .red { background: #ff5f56; } .yellow { background: #ffbd2e; } .green { background: #27c93f; }
+        .bio-content { padding: 30px; display: flex; align-items: center; gap: 30px; flex-wrap: wrap; }
+        .bio-avatar { width: 120px; height: 120px; border-radius: 50%; border: 3px solid var(--primary); object-fit: cover; box-shadow: 0 0 20px rgba(88, 166, 255, 0.4); }
+        .bio-text p { font-family: 'Courier New', monospace; font-size: 1.1rem; color: var(--primary); }
+        .typewriter { border-right: 2px solid var(--primary); animation: blink 0.75s step-end infinite; }
+        @keyframes blink { 50% { border-color: transparent; } }
+
+        .cc-wrapper { display: flex; flex-wrap: wrap; gap: 20px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 20px; width: 100%; max-width: 1000px; margin: 0 auto; position: relative; user-select: none; transition: box-shadow 0.4s ease, border-color 0.4s ease; }
+        .cc-wrapper.golden-frenzy { box-shadow: var(--gold-glow); border-color: gold !important; }
+
+        #usernameOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 8, 11, 0.95); backdrop-filter: blur(10px); z-index: 100; border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 40px; text-align: center; }
+        #usernameOverlay h3 { font-family: 'Orbitron', sans-serif; font-size: 2rem; color: #fff; text-shadow: 0 0 10px var(--primary); }
+        .cc-input { background: rgba(0,0,0,0.3); border: 1px solid var(--primary); color: #fff; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 1.2rem; width: 100%; max-width: 400px; text-align: center; }
+        .cc-input:focus { outline: none; box-shadow: 0 0 10px var(--primary); }
+        
+        .cc-left { flex: 1; min-width: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 20px; position: relative; }
+        
+        .cc-right { flex: 1.5; min-width: 350px; display: flex; flex-direction: column; gap: 10px; max-height: 600px; overflow-y: auto; padding-left: 10px; position: relative; -ms-overflow-style: none; scrollbar-width: none; }
+        .cc-right::-webkit-scrollbar { display: none; } 
+        
+        .cc-stats { text-align: center; margin-bottom: 30px; }
+        .cc-welcome { color: var(--secondary); font-size: 0.9rem; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; justify-content: center; flex-wrap: wrap; }
+        .cc-cookies-count { font-family: 'Orbitron', sans-serif; font-size: 2.2rem; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        .cc-cps { font-size: 1rem; color: #aaa; margin-bottom: 5px; }
+        .cc-click-power { font-size: 0.8rem; color: var(--primary); }
+        
+        .cookie-container { position: relative; width: 250px; height: 250px; margin-top: 20px; }
+        .big-cookie-btn { background: none; border: none; outline: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; cursor: pointer; }
+        .big-cookie-img { width: 100%; height: 100%; border-radius: 50%; transition: transform 0.05s; filter: drop-shadow(0 0 15px rgba(210, 105, 30, 0.4)); mix-blend-mode: multiply; }
+        .big-cookie-btn:active .big-cookie-img { transform: scale(0.95); }
+        
+        .crack-effect { position: absolute; width: 80px; height: 80px; background: radial-gradient(circle, rgba(0,0,0,0.6) 0%, transparent 70%); border-radius: 50%; pointer-events: none; z-index: 6; animation: crackFade 0.2s ease-out forwards; }
+        @keyframes crackFade { 0% { opacity: 1; transform: scale(0.5); } 100% { opacity: 0; transform: scale(1.5); } }
+
+        .crumb { position: absolute; background: #8b5a2b; border-radius: 50%; width: 8px; height: 8px; z-index: 3; pointer-events: none; animation: scatter 0.5s ease-out forwards; }
+        @keyframes scatter { 0% { transform: scale(1) translate(0, 0); opacity: 1; } 100% { transform: scale(0) translate(var(--tx), var(--ty)); opacity: 0; } }
+
+        .click-particle { position: absolute; color: white; font-weight: bold; font-size: 1.5rem; pointer-events: none; animation: floatUp 1s ease-out forwards; text-shadow: 0 0 5px black; z-index: 10; }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-50px) scale(1.5); } }
+        
+        .buy-sell-toggle { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 10px; }
+        .bs-btn { background: transparent; border: none; color: #aaa; padding: 5px 20px; border-radius: 5px; cursor: pointer; font-family: 'Orbitron', sans-serif; transition: 0.2s; }
+        .bs-btn.active { background: var(--primary); color: #000; font-weight: bold; box-shadow: 0 0 10px var(--primary); }
+        .bs-btn.sell-active { background: var(--danger); color: #fff; font-weight: bold; box-shadow: 0 0 10px var(--danger); }
+
+        .upgrades-container { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .upgrade-item { width: 45px; height: 45px; background: rgba(22, 27, 34, 0.8); border: 1px solid rgba(255,255,255,0.2); border-radius: 5px; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; cursor: pointer; transition: 0.2s; position: relative; }
+        .upgrade-item:hover { border-color: var(--secondary); background: rgba(188, 140, 255, 0.2); }
+        .upgrade-item.locked { opacity: 0.3; filter: grayscale(100%); cursor: not-allowed; }
+        
+        .tooltip { position: fixed; background: rgba(5, 8, 11, 0.95); border: 1px solid var(--secondary); border-radius: 5px; padding: 10px; color: #fff; font-size: 0.85rem; pointer-events: none; z-index: 1000; opacity: 0; transition: opacity 0.1s; width: max-content; max-width: 250px; box-shadow: 0 5px 15px rgba(0,0,0,0.8); }
+
+        .building-item { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(90deg, rgba(22, 27, 34, 0.8), rgba(22, 27, 34, 0.4)); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; transition: 0.2s; position: relative; overflow: hidden; cursor: pointer; }
+        .building-item:hover { border-color: var(--primary); background: linear-gradient(90deg, rgba(88, 166, 255, 0.2), rgba(22, 27, 34, 0.6)); }
+        .building-item.locked { opacity: 0.5; filter: grayscale(100%); cursor: not-allowed; }
+        .b-icon { font-size: 2rem; margin-right: 15px; }
+        .b-info { flex: 1; display: flex; flex-direction: column; } .b-name { font-weight: bold; font-size: 1.2rem; color: #fff; } .b-cost { font-size: 0.9rem; color: #27c93f; display: flex; align-items: center; gap: 5px; } .b-cost.too-expensive { color: #ff5f56; }
+        .b-count { font-family: 'Orbitron', sans-serif; font-size: 2rem; color: rgba(255,255,255,0.2); font-weight: bold; }
+        
+        .cc-controls { width: 100%; display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
+        .cc-btn { background: rgba(0,0,0,0.5); border: 1px solid var(--secondary); color: var(--secondary); padding: 8px 15px; border-radius: 5px; font-family: 'Montserrat', sans-serif; font-size: 0.9rem; transition: 0.2s; cursor: pointer; }
+        .cc-btn:hover { background: var(--secondary); color: #000; box-shadow: 0 0 10px var(--secondary); }
+        .cc-btn.primary-btn { border-color: var(--primary); color: var(--primary); font-weight: bold; } .cc-btn.primary-btn:hover { background: var(--primary); color: #000; box-shadow: 0 0 10px var(--primary); }
+        .overlay-buttons { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        
+        #reminderText { color: #ffbd2e; font-size: 0.8rem; margin-top: 10px; display: none; width: 100%; text-align: center; animation: blinkWarning 1s infinite alternate; }
+        @keyframes blinkWarning { 0% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        #goldenCookie { 
+            position: absolute; 
+            width: 90px; 
+            height: 90px; 
+            background: url('https://i.ibb.co/Y4fx1dPt/image-removebg-preview-2.png') center/contain no-repeat; 
+            filter: drop-shadow(0 0 20px gold); 
+            z-index: 1000; 
+            cursor: pointer; 
+            display: none; 
+            animation: pulseGC 2s infinite; 
+        }
+        @keyframes pulseGC { 0% { transform: scale(1); } 50% { transform: scale(1.1); filter: drop-shadow(0 0 30px #fff); } 100% { transform: scale(1); } }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 5000; align-items: center; justify-content: center; }
+        .modal-content { background: #111; padding: 30px; border: 1px solid var(--primary); border-radius: 10px; width: 90%; max-width: 450px; text-align: center; }
+
+        #adminPanel { display: none; width: 100%; max-width: 1000px; margin: 0 auto; background: rgba(0,0,0,0.9); border: 1px solid #ff5f56; border-radius: 10px; padding: 30px; box-shadow: 0 0 30px rgba(255, 95, 86, 0.4); }
+        .admin-table { width: 100%; border-collapse: collapse; margin-top: 20px; color: #fff; font-size: 0.9rem; }
+        .admin-table th, .admin-table td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left; }
+        .btn-delete { background: #ff5f56; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-right: 5px;}
+        .btn-edit { background: #ffbd2e; color: black; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-right: 5px;}
+        .btn-ban { background: #000; color: #ff5f56; border: 1px solid #ff5f56; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-weight: bold;}
+
+        #adminEditModal { display: none; position: fixed; top: 10%; left: 50%; transform: translateX(-50%); background: #111; border: 1px solid var(--primary); border-radius: 10px; padding: 25px; z-index: 2000; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; box-shadow: 0 0 30px #000; color: white; font-family: 'Courier New', Courier, monospace; }
+        #adminEditModal h3 { font-family: 'Orbitron', sans-serif; color: var(--primary); margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px;}
+        .edit-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; background: #222; padding: 8px; border-radius: 5px;}
+        .edit-group label { flex: 1; }
+        .edit-group input { background: #000; color: #fff; border: 1px solid var(--secondary); padding: 5px; width: 120px; text-align: right; border-radius: 3px; font-family: inherit;}
+
+        .lb-container { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 60px; justify-content: center; width: 100%; max-width: 1200px;}
+        .leaderboard-wrapper { flex: 1; min-width: 300px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 20px; }
+        .lb-title { text-align: center; color: var(--secondary); font-family: 'Orbitron', sans-serif; font-size: 1.2rem; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;}
+        .lb-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(22, 27, 34, 0.4); margin-bottom: 5px; border-radius: 8px; transition: 0.3s; }
+        .lb-row:hover { background: rgba(88, 166, 255, 0.1); transform: translateX(5px); }
+        .lb-row.top-1 { border-left: 4px solid #ffd700; background: linear-gradient(90deg, rgba(255,215,0,0.1), transparent); }
+        .lb-row.top-2 { border-left: 4px solid #c0c0c0; background: linear-gradient(90deg, rgba(192,192,192,0.1), transparent); }
+        .lb-row.top-3 { border-left: 4px solid #cd7f32; background: linear-gradient(90deg, rgba(205,127,50,0.1), transparent); }
+        .lb-rank { font-family: 'Orbitron', sans-serif; font-size: 1.2rem; color: var(--secondary); width: 30px; font-weight: bold; }
+        .lb-name { flex: 1; font-size: 1rem; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px;}
+        .lb-score { font-family: 'Orbitron', sans-serif; color: var(--primary); font-size: 0.9rem; text-align: right;}
+
+        .chat-widget { position: fixed; bottom: 20px; right: 20px; width: 320px; background: rgba(0,0,0,0.95); border: 1px solid var(--primary); border-radius: 10px; z-index: 1000; display: none; flex-direction: column; box-shadow: 0 0 20px rgba(88,166,255,0.3); }
+        .chat-header { background: var(--primary); color: #000; padding: 12px; font-weight: bold; cursor: pointer; text-align: center; font-family: 'Orbitron'; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .chat-body { height: 280px; overflow-y: auto; padding: 12px; font-size: 0.9rem; display: flex; flex-direction: column; gap: 8px; }
+        .chat-msg { background: rgba(255,255,255,0.1); padding: 8px 12px; border-radius: 8px; word-wrap: break-word; max-width: 85%; }
+        .chat-input-area { display: flex; border-top: 1px solid #333; }
+        .chat-input { flex: 1; background: transparent; border: none; color: #fff; padding: 12px; outline: none; font-size: 0.95rem; }
+        .chat-send { background: transparent; border: none; color: var(--primary); padding: 0 18px; cursor: pointer; font-size: 1.3rem; }
+
+        #banScreen { display: none; position: fixed; top:0; left:0; width: 100%; height: 100%; background: #000; z-index: 9999; color: red; flex-direction: column; align-items: center; justify-content: center; font-family: 'Courier New', monospace; text-align: center;}
+
+        @media (max-width: 768px) { .cards-grid { grid-template-columns: 1fr; } .cc-left { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); padding-right: 0; padding-bottom: 20px; } .cc-right { padding-left: 0; } }
+    </style>
+</head>
+<body>
+
+    <div id="banScreen">
+        <h1 style="font-size: 3rem; margin-bottom: 20px;">❌ ACCÈS REFUSÉ ❌</h1>
+        <p style="font-size: 1.2rem; color: #aaa;">Ce compte a été placé sur liste noire par l'administrateur.</p>
+        <button class="cc-btn" style="margin-top:40px; border-color:white; color:white; font-size: 1.2rem;" onclick="localStorage.removeItem('danCookieSave_v6'); location.reload();">Déconnexion & Retour à l'accueil</button>
+    </div>
+
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <h3 style="color:var(--secondary); margin-bottom:15px; font-family:'Orbitron';">⚙️ Paramètres du compte</h3>
+            <div style="text-align:left; margin-bottom:15px;">
+                <label style="font-size:0.9rem; color:#aaa;">Pseudo visible par les autres :</label>
+                <input type="text" id="setDisplayName" class="cc-input" style="width:100%; margin-top:5px;" maxlength="20">
+            </div>
+            <div style="text-align:left; margin-bottom:20px;">
+                <label style="font-size:0.9rem; color:#aaa;">Mot de passe (laisser vide = aucun) :</label>
+                <input type="password" id="setPwd" class="cc-input" style="width:100%; margin-top:5px;" maxlength="20">
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+                <button class="cc-btn" onclick="document.getElementById('settingsModal').style.display='none'">Fermer</button>
+                <button class="cc-btn primary-btn" id="btnSaveSettings">Valider les changements</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="pwdModal" class="modal">
+        <div class="modal-content">
+            <h3 style="color:var(--primary); margin-bottom:15px; font-family:'Orbitron';">🔒 Compte protégé</h3>
+            <p style="font-size:0.9rem; color:#aaa; margin-bottom:15px;">Ce compte est protégé par un mot de passe.</p>
+            <input type="password" id="checkPwd" class="cc-input" style="width:100%; margin-bottom:20px;" placeholder="Entre ton mot de passe">
+            <div style="display:flex; justify-content:space-between;">
+                <button class="cc-btn" onclick="location.reload()">Annuler</button>
+                <button class="cc-btn primary-btn" id="btnVerifyPwd">Déverrouiller</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="adminEditModal">
+        <h3>Édition du joueur : <span id="editPlayerName"></span></h3>
+        <div id="editFormContent"></div>
+        <div style="margin-top:20px; text-align:right; display:flex; justify-content:flex-end; gap:10px;">
+            <button class="cc-btn" onclick="document.getElementById('adminEditModal').style.display='none'">Annuler</button>
+            <button class="cc-btn primary-btn" id="btnSaveAdminEdit">Sauvegarder</button>
+        </div>
+    </div>
+
+    <div class="space-bg"></div>
+    <div class="star-field"></div>
+
+    <div class="container">
+        <h1 class="mega-title">MES PROJETS</h1>
+
+        <div class="cards-grid">
+            <a href="https://dnb95.github.io/1STMG/" class="tilt-card card-project" target="_blank">
+                <div class="card-icon">🚀</div><h3 class="card-title">DAN REVIZ</h3><p class="card-desc">Plateforme d'aide.<br>Révision des livres pour le bac</p>
+            </a>
+            <a href="https://instagram.com/dnb.95" class="tilt-card card-insta" target="_blank">
+                <div class="card-icon">📸</div><h3 class="card-title">INSTAGRAM</h3><p class="card-desc">@dnb.95<br>(Y a pas grand choses)</p>
+            </a>
+            <a href="https://www.linkedin.com/in/xbox/" class="tilt-card card-linkedin" target="_blank">
+                <div class="card-icon">💼</div><h3 class="card-title">LINKEDIN</h3><p class="card-desc">Connexion Pro.<br>Mon parcours</p>
+            </a>
+        </div>
+
+        <h2 class="section-label">IDENTITÉ</h2>
+        
+        <div class="bio-wrapper" style="perspective: 1000px; width: 100%; max-width: 800px; margin: 0 auto 60px;">
+            <div id="bioFlipper" style="transition: transform 0.6s; transform-style: preserve-3d; position: relative; width: 100%;">
+                <div class="bio-section front" style="margin: 0; backface-visibility: hidden; position: relative; width: 100%;">
+                    <div class="terminal-header" style="justify-content: space-between; align-items: center;">
+                        <div style="display: flex; gap: 10px;"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div></div>
+                        <div title="Voir profil de Jayden" onclick="document.getElementById('bioFlipper').style.transform = 'rotateY(180deg)';" style="cursor: pointer; font-size: 1.2rem; transition: transform 0.3s;" onmouseover="this.style.transform='rotate(90deg)'" onmouseout="this.style.transform='rotate(0deg)'">🔄</div>
+                    </div>
+                    <div class="bio-content">
+                        <img src="https://avatars.githubusercontent.com/u/255840404" alt="Dan" class="bio-avatar">
+                        <div class="bio-text">
+                            <p>> Initializing user profile...</p><p>> Name: <span style="color: #e6edf3;">Dan</span></p>
+                            <p>> Status: <span style="color: #e6edf3;">Lycéen en STMG</span></p>
+                            <p>> Contact: <span style="color: #e6edf3;" class="typewriter">dan.bouillet.14@gmail.com</span></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bio-section back" style="margin: 0; backface-visibility: hidden; position: absolute; top: 0; left: 0; width: 100%; transform: rotateY(180deg);">
+                    <div class="terminal-header" style="justify-content: space-between; align-items: center;">
+                        <div style="display: flex; gap: 10px;"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div></div>
+                        <div title="Voir profil de Dan" onclick="document.getElementById('bioFlipper').style.transform = 'rotateY(0deg)';" style="cursor: pointer; font-size: 1.2rem; transition: transform 0.3s;" onmouseover="this.style.transform='rotate(-90deg)'" onmouseout="this.style.transform='rotate(0deg)'">🔄</div>
+                    </div>
+                    <div class="bio-content">
+                        <img src="https://i.ibb.co/60xqvnKB/Capture-d-cran-2026-03-23-201502.png" alt="Jayden" class="bio-avatar">
+                        <div class="bio-text">
+                            <p>> Initializing user profile...</p><p>> Name: <span style="color: #e6edf3;">Jayden</span></p>
+                            <p>> Status: <span style="color: #e6edf3;">Lycéen en STMG</span></p>
+                            <p>> Contact: <span style="color: #e6edf3;" class="typewriter">JaydenHounnouvi@gmail.com</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="adminPanel">
+            <h2 style="color: #ff5f56; font-family: 'Orbitron', sans-serif; text-align: center;">🛡️ PANNEAU D'ADMINISTRATION</h2>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <button id="btnCloseAdmin" class="cc-btn primary-btn">Fermer & Retourner au Jeu</button>
+            </div>
+            <h3 style="color: var(--primary);">Sauvegardes Serveur & Sanctions</h3>
+            <div style="overflow-x: auto;">
+                <table class="admin-table" id="adminSavesTable">
+                    <thead><tr><th>ID (Code)</th><th>Pseudo</th><th>Cookies</th><th>CpS</th><th>Action</th></tr></thead>
+                    <tbody><tr><td colspan="5">Chargement...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="gameSection">
+            <h2 class="section-label">ZONE DNB CLICKER</h2>
+            
+            <div class="cc-wrapper" id="ccWrapper">
+
+                <div id="usernameOverlay">
+                    <h3>Initialisation...</h3>
+                    <input type="text" id="usernameInput" class="cc-input" placeholder="Ton pseudo unique" maxlength="20">
+                    <div class="overlay-buttons" style="margin-top: 25px; gap: 12px;">
+                        <button class="cc-btn primary-btn" id="btnSignUp">S'inscrire</button>
+                        <button class="cc-btn" id="btnLoginCode">Se connecter</button>
+                        <button class="cc-btn" id="btnGuest">Jouer en Invité</button>
+                    </div>
+                </div>
+                
+                <div class="cc-left">
+                    <div class="cc-stats">
+                        <div class="cc-welcome">
+                            usine de <span id="playerNameDisplay">...</span>
+                            <button id="btnGear" class="cc-btn" style="padding:3px 9px; font-size:0.8rem; display:none;">⚙️</button>
+                            <button id="btnOpenAdmin" class="cc-btn" style="padding:3px 9px; font-size:0.8rem; border-color:#ff5f56; color:#ff5f56; display:none;">🛡️ Admin</button>
+                        </div>
+                        <div class="cc-cookies-count" id="cookiesDisplay">0</div>
+                        <div class="cc-cps">cookies par seconde : <span id="cpsDisplay">0</span></div>
+                        <div class="cc-click-power">puissance de clic : <span id="clickPowerDisplay">1</span></div>
+                    </div>
+                    
+                    <div class="cookie-container">
+                        <button class="big-cookie-btn" id="bigCookie">
+                            <img src="https://png.pngtree.com/png-vector/20250425/ourmid/pngtree-chocolate-chip-cookie-icon-white-background-png-image_16100260.png" alt="Big Cookie" class="big-cookie-img" draggable="false" id="mainCookieImg">
+                        </button>
+                        <div id="goldenCookie" title="Cookie Doré ! Clique vite !"></div>
+                    </div>
+                </div>
+
+                <div class="cc-right">
+                    <div class="buy-sell-toggle">
+                        <button class="bs-btn active" id="btnModeBuy">Acheter</button>
+                        <button class="bs-btn" id="btnModeSell">Vendre</button>
+                    </div>
+                    <div class="upgrades-container" id="upgradesContainer"></div>
+                    <div id="storeContainer" style="position: relative;"></div>
+                </div>
+                
+                <div id="gameTooltip" class="tooltip"></div>
+
+                <div class="cc-controls">
+                    <button class="cc-btn primary-btn" id="btnSaveData">💾 Sauvegarde Manuelle</button>
+                    <button class="cc-btn" id="btnShowCode">🔑 Voir mon Code</button>
+                    <button class="cc-btn" id="btnImportFooter">📥 Importer un code</button>
+                    <button class="cc-btn" id="btnReset" style="border-color: #ff5f56; color: #ff5f56;">🗑️ Reset Local</button>
+                    <div id="reminderText">⚠️ Pensez à sauvegarder avant de quitter !</div>
+                </div>
+            </div>
+
+            <h2 class="section-label">CLASSEMENTS</h2>
+            <div class="lb-container">
+                <div class="leaderboard-wrapper">
+                    <div class="lb-title">🏆 Top Cookies</div>
+                    <div id="lbCookies"><p style="text-align:center; color:#8b949e;">Chargement...</p></div>
+                </div>
+                <div class="leaderboard-wrapper">
+                    <div class="lb-title">🚀 Top Vitesse (CpS)</div>
+                    <div id="lbCps"><p style="text-align:center; color:#8b949e;">Chargement...</p></div>
+                </div>
+                <div class="leaderboard-wrapper">
+                    <div class="lb-title">⏱️ Addicts (Temps de jeu)</div>
+                    <div id="lbPlaytime"><p style="text-align:center; color:#8b949e;">Chargement...</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, query, orderBy, limit, deleteDoc, where, updateDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDXdEnimnKl8dG7xXprd5uhWFANddUr2Sg",
+            authDomain: "dancookieclicker.firebaseapp.com",
+            projectId: "dancookieclicker",
+            storageBucket: "dancookieclicker.firebasestorage.app",
+            messagingSenderId: "438891454674",
+            appId: "1:438891454674:web:603b70cad0b1cd422fcd0b",
+            measurementId: "G-58T7DPL4LH"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const defaultSave = {
+            username: "", saveCode: "", displayName: "", password: "", cookies: 0, totalCookies: 0, upgradesBought: [], playtime: 0, banned: false, lastAdminSync: 0,
+            buildings: { cursor: {count:0}, grandma:{count:0}, farm:{count:0}, mine:{count:0}, factory:{count:0}, bank:{count:0}, temple:{count:0}, wizard:{count:0}, shipment:{count:0}, alch:{count:0}, portal:{count:0}, time:{count:0}, prism:{count:0} }
+        };
+
+        const buildingData = {
+            cursor: { id: 'cursor', name: 'Curseur', icon: '🖱️', baseCost: 15, baseCps: 0.5, desc: 'Clique automatiquement toutes les 10 secondes.' },
+            grandma: { id: 'grandma', name: 'Grand-mère', icon: '👵', baseCost: 100, baseCps: 1, desc: 'Une gentille mamie pour cuire plus de cookies.' },
+            farm: { id: 'farm', name: 'Ferme', icon: '🌱', baseCost: 1100, baseCps: 6, desc: 'Fait pousser des plants de cookies.' },
+            mine: { id: 'mine', name: 'Mine', icon: '⛏️', baseCost: 120000, baseCps: 28, desc: 'Extrait de la pâte à cookie.' },
+            factory: { id: 'factory', name: 'Usine', icon: '🏭', baseCost: 1300000, baseCps: 140, desc: 'Produit des cookies en masse.' },
+            bank: { id: 'bank', name: 'Banque', icon: '🏦', baseCost: 14000000, baseCps: 350, desc: 'Génère des cookies avec les intérêts.' },
+            temple: { id: 'temple', name: 'Temple', icon: '🏛️', baseCost: 200000000, baseCps: 900, desc: 'Prie pour avoir plus de cookies.' },
+            wizard: { id: 'wizard', name: 'Tour de sorcier', icon: '🧙‍♂️', baseCost: 3300000000, baseCps: 100000, desc: 'Invoque des cookies magiquement.' },
+            shipment: { id: 'shipment', name: 'Vaisseau', icon: '🚀', baseCost: 51000000000, baseCps: 260000, desc: 'Ramène des cookies de la planète cookie.' },
+            alch: { id: 'alch', name: 'Labo Alchimie', icon: '⚗️', baseCost: 750000000000, baseCps: 1600000, desc: 'Transforme l\'or en cookies.' },
+            portal: { id: 'portal', name: 'Portail', icon: '🌀', baseCost: 10000000000000, baseCps: 1900000, desc: 'Ouvre une porte vers le cookie-verse.' },
+            time: { id: 'time', name: 'Machine Temporelle', icon: '⏳', baseCost: 140000000000000, baseCps: 6500000, desc: 'Ramène des cookies du passé.' },
+            prism: { id: 'prism', name: 'Prisme', icon: '🌈', baseCost: 2000000000000000, baseCps: 43000000, desc: 'Convertit la lumière en cookies.' }
+        };
+
+        const upgradeData = [
+            { id: 'up1', icon: '🦾', cost: 500, desc: "Clic x2", type: 'click_mult', val: 2 },
+            { id: 'up2', icon: '👵🏼', cost: 5000, desc: "Mamies x2", type: 'b_mult', target: 'grandma', val: 2 },
+            { id: 'up3', icon: '🚜', cost: 50000, desc: "Fermes x2", type: 'b_mult', target: 'farm', val: 2 },
+            { id: 'up4', icon: '⛏️', cost: 500000, desc: "Mines x2", type: 'b_mult', target: 'mine', val: 2 },
+            { id: 'up5', icon: '🏭', cost: 5000000, desc: "Usines x2", type: 'b_mult', target: 'factory', val: 2 },
+            { id: 'up6', icon: '💸', cost: 50000000, desc: "Banques x2", type: 'b_mult', target: 'bank', val: 2 },
+            { id: 'up7', icon: '🖱️', cost: 100000, desc: "Clic x2 (Encore)", type: 'click_mult', val: 2 },
+            { id: 'up8', icon: '🖱️', cost: 10002212100, desc: "Clic x3 (Encore)", type: 'click_mult', val: 3 },
+            { id: 'up9', icon: '🥛', cost: 10000000000, desc: "Production globale -7%", type: 'global_mult', val: 0.93 }
+        ];
+
+        let game = JSON.parse(JSON.stringify(defaultSave));
+        let currentCps = 0; let clickPower = 1;
+        let storeMode = 'buy'; 
+        let unsavedProgress = false; 
+        let isGoldenFrenzy = false;
+        let isAdmin = false;
+        let realtimeListener = null;
+        let chatListener = null;
+
+        const imgCookieBase = "https://png.pngtree.com/png-vector/20250425/ourmid/pngtree-chocolate-chip-cookie-icon-white-background-png-image_16100260.png";
+        const imgCookieGolden = "https://i.ibb.co/Y4fx1dPt/image-removebg-preview-2.png";
+
+        const displayCookies = document.getElementById('cookiesDisplay');
+        const displayCps = document.getElementById('cpsDisplay');
+        const displayClickPower = document.getElementById('clickPowerDisplay');
+        const bigCookieBtn = document.getElementById('bigCookie');
+        const storeContainer = document.getElementById('storeContainer');
+        const upgradesContainer = document.getElementById('upgradesContainer');
+        const playerNameDisplay = document.getElementById('playerNameDisplay');
+        const usernameOverlay = document.getElementById('usernameOverlay');
+        const tooltip = document.getElementById('gameTooltip');
+        const reminderText = document.getElementById('reminderText');
+        const mainCookieImg = document.getElementById('mainCookieImg');
+        const goldenCookie = document.getElementById('goldenCookie');
+        const ccWrapper = document.getElementById('ccWrapper');
+        const btnGear = document.getElementById('btnGear');
+        const btnOpenAdmin = document.getElementById('btnOpenAdmin');
+
+        function validateNum(n) { return (isNaN(n) || !isFinite(n) || n < 0) ? 0 : n; }
+
+        function formatNumber(num) {
+            num = validateNum(num);
+            if (num < 1000000) return Math.floor(num).toLocaleString('fr-FR');
+            const units = ["", " Million", " Milliard", " Billion", " Billiard", " Trillion", " Quatrillion", " Quintillion", " Sextillion", " Septillion", " Octillion"];
+            let unitIndex = Math.floor((Math.log10(num) - 3) / 3);
+            if (unitIndex >= units.length) return num.toExponential(3); 
+            let shortVal = (num / Math.pow(10, unitIndex * 3 + 3)).toFixed(2);
+            if (shortVal.endsWith(".00")) shortVal = shortVal.substring(0, shortVal.length - 3);
+            let suffix = units[unitIndex];
+            if (parseFloat(shortVal) >= 2 && suffix !== "") suffix += "s"; 
+            return shortVal + suffix;
+        }
+
+        function formatTime(sec) {
+            let h = Math.floor(sec / 3600);
+            let m = Math.floor((sec % 3600) / 60);
+            return `${h}h ${m}m`;
+        }
+
+        document.getElementById('btnModeBuy').onclick = (e) => { storeMode = 'buy'; e.target.classList.add('active'); document.getElementById('btnModeSell').classList.remove('sell-active'); updateUI(); };
+        document.getElementById('btnModeSell').onclick = (e) => { storeMode = 'sell'; e.target.classList.add('sell-active'); document.getElementById('btnModeBuy').classList.remove('active'); updateUI(); };
+
+        function getBuildingBuyCost(id) { return Math.ceil(buildingData[id].baseCost * Math.pow(1.15, validateNum(game.buildings[id].count))); }
+        function getBuildingSellCost(id) { 
+            let count = validateNum(game.buildings[id].count);
+            if(count === 0) return 0;
+            return Math.ceil(buildingData[id].baseCost * Math.pow(1.15, count - 1) * 0.5); 
+        }
+
+        function hasUpgrade(id) { return game.upgradesBought.includes(id); }
+
+        function calculateCpsForSave(saveObj) {
+            let bMults = { cursor: 1, grandma: 1, farm: 1, mine: 1, factory: 1, bank: 1, temple: 1, wizard: 1, shipment: 1, alch: 1, portal: 1, time: 1, prism: 1 };
+            let gMult = 1;
+            saveObj.upgradesBought.forEach(upId => {
+                let up = upgradeData.find(u => u.id === upId);
+                if(up) {
+                    if(up.type === 'b_mult' && bMults[up.target] !== undefined) bMults[up.target] *= up.val;
+                    if(up.type === 'global_mult') gMult *= up.val;
+                }
+            });
+            let cps = 0;
+            for (let id in saveObj.buildings) {
+                if(saveObj.buildings[id]) cps += validateNum(saveObj.buildings[id].count) * buildingData[id].baseCps * bMults[id];
+            }
+            return validateNum(cps * gMult);
+        }
+
+        function recalculateStats() {
+            let bMults = { cursor: 1, grandma: 1, farm: 1, mine: 1, factory: 1, bank: 1, temple: 1, wizard: 1, shipment: 1, alch: 1, portal: 1, time: 1, prism: 1 };
+            let cMult = 1; let gMult = 1;
+
+            game.upgradesBought.forEach(upId => {
+                let up = upgradeData.find(u => u.id === upId);
+                if(up) {
+                    if(up.type === 'b_mult' && bMults[up.target] !== undefined) bMults[up.target] *= up.val;
+                    if(up.type === 'click_mult') cMult *= up.val;
+                    if(up.type === 'global_mult') gMult *= up.val;
+                }
+            });
+
+            let cps = 0;
+            for (let id in game.buildings) {
+                if(game.buildings[id]) cps += validateNum(game.buildings[id].count) * buildingData[id].baseCps * bMults[id];
+            }
+            currentCps = validateNum(cps * gMult);
+            
+            clickPower = validateNum((1 + validateNum(game.buildings.cursor.count) + Math.floor(currentCps * 0.05)) * cMult);
+            if(isGoldenFrenzy) clickPower *= 2;
+            
+            displayCps.innerText = formatNumber(currentCps);
+            displayClickPower.innerText = formatNumber(clickPower);
+        }
+
+        function updateUI() {
+            game.cookies = validateNum(game.cookies); 
+            if(game.banned) { document.getElementById('banScreen').style.display = 'flex'; return; }
+
+            displayCookies.innerText = formatNumber(game.cookies);
+            playerNameDisplay.innerText = game.displayName || game.username;
+            
+            for (let id in buildingData) {
+                const elCost = document.getElementById(`cost-${id}`);
+                const elItem = document.getElementById(`bitem-${id}`);
+                const elCount = document.getElementById(`count-${id}`);
+                if(!game.buildings[id]) game.buildings[id] = {count: 0}; 
+
+                if(elCost && elItem && elCount) {
+                    elCount.innerText = game.buildings[id].count > 0 ? game.buildings[id].count : '';
+                    if(storeMode === 'buy') {
+                        const cost = getBuildingBuyCost(id);
+                        elCost.innerText = formatNumber(cost);
+                        elCost.style.color = '#27c93f';
+                        if(game.cookies >= cost) { elItem.classList.remove('locked'); elCost.classList.remove('too-expensive'); } 
+                        else { elItem.classList.add('locked'); elCost.classList.add('too-expensive'); }
+                    } else { 
+                        const cost = getBuildingSellCost(id);
+                        elCost.innerText = "+" + formatNumber(cost);
+                        elCost.style.color = 'var(--danger)';
+                        elCost.classList.remove('too-expensive');
+                        if(game.buildings[id].count > 0) { elItem.classList.remove('locked'); }
+                        else { elItem.classList.add('locked'); }
+                    }
+                }
+            }
+            
+            upgradesContainer.innerHTML = '';
+            upgradeData.forEach(up => {
+                if(!hasUpgrade(up.id)) {
+                    let uDiv = document.createElement('div');
+                    uDiv.className = game.cookies >= up.cost ? 'upgrade-item' : 'upgrade-item locked';
+                    uDiv.innerText = up.icon;
+                    uDiv.onmousemove = (e) => showTooltip(e, `<b>${up.desc}</b><br>Coût d'achat: <span style="color:#27c93f">${formatNumber(up.cost)}</span>`);
+                    uDiv.onmouseleave = hideTooltip;
+                    uDiv.onclick = () => {
+                        if(game.cookies >= up.cost) {
+                            game.cookies -= up.cost; game.upgradesBought.push(up.id);
+                            hideTooltip(); unsavedProgress = true; recalculateStats(); updateUI();
+                        }
+                    };
+                    upgradesContainer.appendChild(uDiv);
+                }
+            });
+
+            document.title = `${formatNumber(game.cookies)} cookies`;
+        }
+
+        function showTooltip(e, html) {
+            tooltip.innerHTML = html; tooltip.style.opacity = 1;
+            tooltip.style.left = (e.clientX + 15) + 'px'; tooltip.style.top = (e.clientY + 15) + 'px';
+        }
+        function hideTooltip() { tooltip.style.opacity = 0; }
+
+        function initStore() {
+            storeContainer.innerHTML = '';
+            for (let id in buildingData) {
+                let b = buildingData[id];
+                let div = document.createElement('div');
+                div.className = 'building-item locked'; div.id = `bitem-${id}`;
+                div.innerHTML = `<div class="b-icon">${b.icon}</div><div class="b-info"><div class="b-name">${b.name}</div><div class="b-cost" id="cost-${id}">0</div></div><div class="b-count" id="count-${id}"></div>`;
+                
+                div.onmousemove = (e) => {
+                    let count = validateNum(game.buildings[id] ? game.buildings[id].count : 0);
+                    let prod = formatNumber(b.baseCps * count);
+                    let txt = `<b>${b.name}</b><br><i style="color:#aaa; font-size:0.8rem">${b.desc}</i><br>Production actuelle : ${prod} CpS`;
+                    if(storeMode === 'sell') txt += `<br><span style="color:var(--danger)">Prix de revente : +${formatNumber(getBuildingSellCost(id))}</span>`;
+                    showTooltip(e, txt);
+                };
+                div.onmouseleave = hideTooltip;
+
+                div.addEventListener('click', () => {
+                    if(storeMode === 'buy') {
+                        let cost = getBuildingBuyCost(id);
+                        if (game.cookies >= cost) { game.cookies -= cost; game.buildings[id].count++; unsavedProgress = true; recalculateStats(); updateUI(); }
+                    } else { 
+                        if(game.buildings[id].count > 0) {
+                            let cost = getBuildingSellCost(id);
+                            game.cookies += cost; game.buildings[id].count--; unsavedProgress = true; recalculateStats(); updateUI();
+                        }
+                    }
+                });
+                storeContainer.appendChild(div);
+            }
+        }
+
+        function spawnCrack(x, y) {
+            let crack = document.createElement('div');
+            crack.className = 'crack-effect';
+            crack.style.left = (x - 40) + 'px'; 
+            crack.style.top = (y - 40) + 'px';
+            document.querySelector('.cookie-container').appendChild(crack);
+            setTimeout(() => crack.remove(), 200);
+        }
+
+        function spawnCrumb(x, y) {
+            let crumb = document.createElement('div');
+            crumb.className = 'crumb';
+            let tx = (Math.random() * 100 - 50) + 'px'; let ty = (Math.random() * 100 - 50) + 'px';
+            crumb.style.setProperty('--tx', tx); crumb.style.setProperty('--ty', ty);
+            crumb.style.left = x + 'px'; crumb.style.top = y + 'px';
+            document.querySelector('.cookie-container').appendChild(crumb);
+            setTimeout(() => crumb.remove(), 500);
+        }
+
+        bigCookieBtn.addEventListener('mousedown', (e) => {
+            if(!game.username || game.banned) return; 
+            game.cookies += clickPower; game.totalCookies += clickPower; unsavedProgress = true;
+            
+            const rect = bigCookieBtn.getBoundingClientRect();
+            let x = (e.clientX === 0) ? rect.width/2 : e.clientX - rect.left;
+            let y = (e.clientY === 0) ? rect.height/2 : e.clientY - rect.top;
+            
+            const p = document.createElement('div');
+            p.className = 'click-particle'; p.innerText = `+${formatNumber(clickPower)}`;
+            p.style.left = `${x}px`; p.style.top = `${y}px`;
+            document.querySelector('.cookie-container').appendChild(p);
+            setTimeout(() => { p.remove(); }, 1000);
+
+            spawnCrack(x, y);
+            for(let i=0; i<2; i++) spawnCrumb(x, y);
+            updateUI();
+        });
+
+        function spawnGoldenCookie() {
+            const delay = Math.random() * (2*60000) + (4*60000); 
+            setTimeout(() => {
+                if(Math.random() <= 0.90 && !game.banned && game.username) { 
+                    goldenCookie.style.display = 'block';
+                    const container = document.querySelector('.cookie-container');
+                    const maxX = container.offsetWidth - 90;
+                    const maxY = container.offsetHeight - 90;
+                    goldenCookie.style.left = Math.random() * maxX + 'px';
+                    goldenCookie.style.top = Math.random() * maxY + 'px';
+                    
+                    let hideTimeout = setTimeout(() => { 
+                        goldenCookie.style.display = 'none'; 
+                        spawnGoldenCookie(); 
+                    }, 15000);
+                    
+                    goldenCookie.onclick = () => {
+                        clearTimeout(hideTimeout); 
+                        goldenCookie.style.display = 'none';
+                        
+                        isGoldenFrenzy = true;
+                        mainCookieImg.src = imgCookieGolden;
+                        mainCookieImg.style.filter = "drop-shadow(0 0 30px gold)";
+                        ccWrapper.classList.add('golden-frenzy');
+                        recalculateStats(); updateUI();
+                        
+                        setTimeout(() => {
+                            isGoldenFrenzy = false;
+                            mainCookieImg.src = imgCookieBase;
+                            mainCookieImg.style.filter = "drop-shadow(0 0 15px rgba(210, 105, 30, 0.4))";
+                            ccWrapper.classList.remove('golden-frenzy');
+                            recalculateStats(); updateUI();
+                        }, 60000); 
+
+                        spawnGoldenCookie();
+                    }
+                } else {
+                    spawnGoldenCookie(); 
+                }
+            }, delay);
+        }
+
+        function generateUniqueCode(pseudo) { return `${pseudo}-${Math.floor(Math.random() * 90000) + 10000}`; }
+
+        async function saveGameToServer() {
+            if(!game.saveCode || game.username.startsWith("Invité") || game.banned) return;
+            game.cookies = validateNum(game.cookies);
+            try {
+                await setDoc(doc(db, "stmg_saves", game.saveCode), { saveData: JSON.stringify(game), lastUpdate: new Date().toISOString() });
+                await setDoc(doc(db, "stmg_leaderboard", game.saveCode), {
+                    username: game.username,
+                    displayName: game.displayName || game.username,
+                    score: Math.floor(game.cookies),
+                    cps: Math.floor(currentCps),
+                    playtime: game.playtime,
+                    banned: game.banned
+                });
+                saveLocal(); unsavedProgress = false; reminderText.style.display = 'none';
+            } catch(e) { console.error("Erreur save server", e); }
+        }
+
+        document.getElementById('btnSaveData').addEventListener('click', async () => {
+            let btn = document.getElementById('btnSaveData');
+            btn.innerText = "⏳ Sauvegarde..."; btn.disabled = true;
+            await saveGameToServer();
+            await loadLeaderboards();
+            alert("✅ Partie sauvegardée en ligne !");
+            btn.innerHTML = "💾 Sauvegarde Manuelle"; btn.disabled = false;
+        });
+
+        function setupRealtimeListener() {
+            if(!game.saveCode) return;
+            if(realtimeListener) realtimeListener(); 
+            
+            realtimeListener = onSnapshot(doc(db, "stmg_leaderboard", game.saveCode), async (docSnap) => {
+                if(docSnap.exists()) {
+                    const data = docSnap.data();
+                    if(data.banned && !game.banned) {
+                        game.banned = true;
+                        document.getElementById('banScreen').style.display = 'flex';
+                    } else if (!data.banned && game.banned) {
+                        game.banned = false;
+                        document.getElementById('banScreen').style.display = 'none';
+                    }
+                    if (data.adminEditTimestamp && data.adminEditTimestamp > (game.lastAdminSync || 0)) {
+                        game.lastAdminSync = data.adminEditTimestamp;
+                        const saveSnap = await getDoc(doc(db, "stmg_saves", game.saveCode));
+                        if(saveSnap.exists()) {
+                            let parsed = JSON.parse(saveSnap.data().saveData);
+                            parsed.lastAdminSync = data.adminEditTimestamp; 
+                            game = { ...defaultSave, ...parsed, buildings: { ...defaultSave.buildings, ...parsed.buildings } };
+                            if(!game.upgradesBought) game.upgradesBought = [];
+                            saveLocal(); recalculateStats(); updateUI();
+                            alert("⚠️ Vos données ont été modifiées en direct par un Administrateur !");
+                        }
+                    }
+                }
+            });
+        }
+
+        document.getElementById('btnSignUp').addEventListener('click', async () => {
+            const input = document.getElementById('usernameInput').value.trim();
+            if(input.length < 3) { alert("Pseudo de 3 caractères minimum."); return; }
+            document.getElementById('btnSignUp').innerText = "Vérification...";
+            try {
+                const q = query(collection(db, "stmg_leaderboard"), where("username", "==", input));
+                const snap = await getDocs(q);
+                if(!snap.empty) {
+                    alert("⚠️ Ce pseudo est déjà pris !");
+                    document.getElementById('btnSignUp').innerText = "S'inscrire"; return;
+                }
+                game.username = input;
+                game.displayName = input;
+
+                if(input === "admin1234" || input === "adminSSE22") {
+                    game.saveCode = input;   
+                } else {
+                    game.saveCode = generateUniqueCode(input);
+                }
+
+                saveLocal(); await saveGameToServer(); setupRealtimeListener();
+                finishLogin();
+            } catch(e) { alert("Erreur serveur."); document.getElementById('btnSignUp').innerText = "S'inscrire"; }
+        });
+
+        document.getElementById('btnLoginCode').addEventListener('click', () => {
+            let code = prompt("Colle ton Code Secret :");
+            if(code) processImport(code);
+        });
+
+        async function processImport(code) {
+            if(code === ".....................................") {
+                document.getElementById('gameSection').style.display = 'none'; 
+                document.getElementById('adminPanel').style.display = 'block'; 
+                loadAdminData(); return;
+            }
+            try {
+                const docSnap = await getDoc(doc(db, "stmg_saves", code));
+                if (docSnap.exists()) {
+                    let parsed = JSON.parse(docSnap.data().saveData);
+                    game = { ...defaultSave, ...parsed, buildings: { ...defaultSave.buildings, ...parsed.buildings } };
+                    if(!game.upgradesBought) game.upgradesBought = []; 
+                    game.saveCode = code; 
+
+                    if(game.password && game.password !== "") {
+                        window.tempGame = game;
+                        document.getElementById('pwdModal').style.display = 'flex';
+                        document.getElementById('btnVerifyPwd').onclick = () => {
+                            if(document.getElementById('checkPwd').value === game.password) {
+                                document.getElementById('pwdModal').style.display = 'none';
+                                finishLogin();
+                            } else alert("Mot de passe incorrect");
+                        };
+                        return;
+                    }
+                    saveLocal(); recalculateStats(); updateUI(); usernameOverlay.style.display = 'none';
+                    setupRealtimeListener(); finishLogin();
+                } else { alert("❌ Code introuvable."); }
+            } catch(e) { alert("Erreur de connexion."); }
+        }
+
+        function finishLogin() {
+            usernameOverlay.style.display = 'none';
+            document.getElementById('chatWidget').style.display = 'flex';
+            btnGear.style.display = 'inline-block';
+            if(game.username === "admin1234" || game.username === "adminSSE22") {
+                isAdmin = true;
+                btnOpenAdmin.style.display = 'inline-block';
+            }
+            recalculateStats(); updateUI(); loadLeaderboards();
+        }
+
+        document.getElementById('btnGuest').addEventListener('click', () => {
+            game.username = "Invité"; game.saveCode = ""; 
+            usernameOverlay.style.display = 'none';
+            recalculateStats(); updateUI(); loadLeaderboards();
+        });
+
+        btnGear.addEventListener('click', () => {
+            document.getElementById('setDisplayName').value = game.displayName || game.username;
+            document.getElementById('setPwd').value = game.password || "";
+            document.getElementById('settingsModal').style.display = 'flex';
+        });
+
+        document.getElementById('btnSaveSettings').addEventListener('click', async () => {
+            game.displayName = document.getElementById('setDisplayName').value.trim() || game.username;
+            game.password = document.getElementById('setPwd').value.trim();
+            document.getElementById('settingsModal').style.display = 'none';
+            await saveGameToServer();
+            updateUI();
+        });
+
+        btnOpenAdmin.addEventListener('click', () => {
+            document.getElementById('gameSection').style.display = 'none';
+            document.getElementById('adminPanel').style.display = 'block';
+            loadAdminData();
+        });
+
+        document.getElementById('btnCloseAdmin').addEventListener('click', () => {
+            document.getElementById('adminPanel').style.display = 'none';
+            document.getElementById('gameSection').style.display = 'block';
+        });
+
+        async function loadAdminData() {
+            const sTable = document.querySelector('#adminSavesTable tbody'); 
+            sTable.innerHTML = '';
+            try {
+                const lSnap = await getDocs(collection(db, "stmg_leaderboard"));
+                lSnap.forEach(d => {
+                    let isBan = d.data().banned;
+                    let banBtn = isBan ? `<button class="btn-ban" style="color:green; border-color:green;" onclick="window.banDoc('${d.id}', false)">Débannir</button>` : `<button class="btn-ban" onclick="window.banDoc('${d.id}', true)">Ban</button>`;
+                    sTable.innerHTML += `<tr>
+                        <td><span style="font-size:0.7rem; color:#aaa;">${d.id}</span></td>
+                        <td style="${isBan?'text-decoration:line-through;color:red;':''}">${d.data().displayName || d.data().username}</td>
+                        <td>${formatNumber(d.data().score)}</td>
+                        <td>${formatNumber(d.data().cps||0)}</td>
+                        <td><button class="btn-edit" onclick="window.openEditModal('${d.id}')">Éditer Compte</button> <button class="btn-delete" onclick="window.delDoc('${d.id}')">Suppr.</button> ${banBtn}</td>
+                    </tr>`;
+                });
+            } catch(e){ sTable.innerHTML = '<tr><td colspan="5">Erreur Firebase</td></tr>'; }
+        }
+
+        window.delDoc = async function(id) {
+            if(confirm("Supprimer " + id + " ?")) {
+                await deleteDoc(doc(db, "stmg_saves", id)); 
+                await deleteDoc(doc(db, "stmg_leaderboard", id)); 
+                loadAdminData(); 
+            }
+        };
+
+        window.banDoc = async function(id, status) {
+            if(confirm(status ? "Bannir ce joueur ?" : "Débannir ce joueur ?")) {
+                await updateDoc(doc(db, "stmg_leaderboard", id), { banned: status });
+                const saveRef = doc(db, "stmg_saves", id); 
+                const s = await getDoc(saveRef);
+                if(s.exists()) {
+                    let p = JSON.parse(s.data().saveData); 
+                    p.banned = status;
+                    await updateDoc(saveRef, { saveData: JSON.stringify(p) });
+                }
+                loadAdminData();
+            }
+        };
+
+        window.openEditModal = async function(id) {
+            const s = await getDoc(doc(db, "stmg_saves", id));
+            if(s.exists()) {
+                let adminTempEditData = JSON.parse(s.data().saveData);
+                document.getElementById('editPlayerName').innerText = adminTempEditData.username || adminTempEditData.displayName;
+                let html = `<div class="edit-group"><label>Cookies :</label><input type="number" id="edit_cookies" value="${Math.floor(validateNum(adminTempEditData.cookies))}"></div>
+                <div class="edit-group"><label>Temps de jeu (sec) :</label><input type="number" id="edit_playtime" value="${validateNum(adminTempEditData.playtime)}"></div>`;
+                for(let key in buildingData) {
+                    let count = adminTempEditData.buildings[key] ? validateNum(adminTempEditData.buildings[key].count) : 0;
+                    html += `<div class="edit-group"><label>${buildingData[key].name} :</label><input type="number" id="edit_b_${key}" value="${count}"></div>`;
+                }
+                document.getElementById('editFormContent').innerHTML = html;
+                document.getElementById('adminEditModal').style.display = 'block';
+                document.getElementById('btnSaveAdminEdit').onclick = async () => {
+                    adminTempEditData.cookies = validateNum(parseInt(document.getElementById('edit_cookies').value));
+                    adminTempEditData.playtime = validateNum(parseInt(document.getElementById('edit_playtime').value));
+                    for(let key in buildingData) {
+                        let val = validateNum(parseInt(document.getElementById(`edit_b_${key}`).value));
+                        if(!adminTempEditData.buildings[key]) adminTempEditData.buildings[key] = { count: 0 };
+                        adminTempEditData.buildings[key].count = val;
+                    }
+                    let newCps = calculateCpsForSave(adminTempEditData);
+                    await updateDoc(doc(db, "stmg_saves", id), { saveData: JSON.stringify(adminTempEditData) });
+                    await updateDoc(doc(db, "stmg_leaderboard", id), { 
+                        score: adminTempEditData.cookies, 
+                        playtime: adminTempEditData.playtime,
+                        cps: Math.floor(newCps),
+                        adminEditTimestamp: Date.now() 
+                    });
+                    document.getElementById('adminEditModal').style.display = 'none';
+                    alert("Compte modifié !");
+                    loadAdminData(); 
+                    loadLeaderboards(); 
+                };
+            }
+        };
+
+        function startChat() {
+            const q = query(collection(db, "stmg_chat"), orderBy("timestamp", "desc"), limit(30));
+            chatListener = onSnapshot(q, (snap) => {
+                const box = document.getElementById('chatBox'); 
+                box.innerHTML = '';
+                let msgs = []; 
+                snap.forEach(d => { msgs.push({id:d.id, ...d.data()}); });
+                msgs.reverse().forEach(m => {
+                    let banBtn = isAdmin ? `<button style="background:red;color:white;border:none;padding:2px 6px;font-size:0.7rem;border-radius:3px;margin-left:8px;" onclick="banChatMessage('${m.id}','${m.userId}')">BAN</button>` : '';
+                    box.innerHTML += `<div class="chat-msg"><strong>${m.displayName} :</strong> ${m.text} ${banBtn}</div>`;
+                });
+                box.scrollTop = box.scrollHeight;
+            });
+        }
+
+        document.getElementById('btnSendChat').addEventListener('click', async () => {
+            const txt = document.getElementById('chatInput').value.trim();
+            if(!txt) return;
+            await setDoc(doc(collection(db, "stmg_chat")), {
+                userId: game.username,
+                displayName: game.displayName || game.username,
+                text: txt,
+                timestamp: serverTimestamp()
+            });
+            document.getElementById('chatInput').value = '';
+        });
+
+        window.banChatMessage = async (msgId, userId) => {
+            if(!isAdmin) return;
+            if(confirm("Bannir ce message et le joueur ?")) {
+                await deleteDoc(doc(db, "stmg_chat", msgId));
+                await updateDoc(doc(db, "stmg_leaderboard", userId), { banned: true });
+            }
+        };
+
+        async function loadLeaderboards() {
+            try {
+                const qCook = query(collection(db, "stmg_leaderboard"), where("banned", "==", false), orderBy("score", "desc"), limit(10));
+                const snapCook = await getDocs(qCook);
+                document.getElementById('lbCookies').innerHTML = ''; let rank = 1;
+                snapCook.forEach(d => {
+                    let html = `<div class="lb-row ${rank===1?'top-1':rank===2?'top-2':rank===3?'top-3':''}"><div class="lb-rank">#${rank}</div><div class="lb-name" title="${d.data().username}">${d.data().displayName || d.data().username}</div><div class="lb-score">${formatNumber(d.data().score)}</div></div>`;
+                    document.getElementById('lbCookies').innerHTML += html; rank++;
+                });
+
+                const qCps = query(collection(db, "stmg_leaderboard"), where("banned", "==", false), orderBy("cps", "desc"), limit(10));
+                const snapCps = await getDocs(qCps);
+                document.getElementById('lbCps').innerHTML = ''; rank = 1;
+                snapCps.forEach(d => {
+                    let html = `<div class="lb-row ${rank===1?'top-1':rank===2?'top-2':rank===3?'top-3':''}"><div class="lb-rank">#${rank}</div><div class="lb-name" title="${d.data().username}">${d.data().displayName || d.data().username}</div><div class="lb-score">${formatNumber(d.data().cps||0)}/s</div></div>`;
+                    document.getElementById('lbCps').innerHTML += html; rank++;
+                });
+
+                const qTime = query(collection(db, "stmg_leaderboard"), where("banned", "==", false), orderBy("playtime", "desc"), limit(10));
+                const snapTime = await getDocs(qTime);
+                document.getElementById('lbPlaytime').innerHTML = ''; rank = 1;
+                snapTime.forEach(d => {
+                    let html = `<div class="lb-row ${rank===1?'top-1':rank===2?'top-2':rank===3?'top-3':''}"><div class="lb-rank">#${rank}</div><div class="lb-name" title="${d.data().username}">${d.data().displayName || d.data().username}</div><div class="lb-score">${formatTime(d.data().playtime||0)}</div></div>`;
+                    document.getElementById('lbPlaytime').innerHTML += html; rank++;
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        function saveLocal() { localStorage.setItem('danCookieSave_v6', JSON.stringify(game)); }
+
+        function loadLocalGame() {
+            let saved = localStorage.getItem('danCookieSave_v6');
+            if (saved) {
+                try {
+                    let parsed = JSON.parse(saved);
+                    game = { ...defaultSave, ...parsed, buildings: { ...defaultSave.buildings, ...parsed.buildings } };
+                    if(!game.upgradesBought) game.upgradesBought = [];
+                } catch(e) {}
+            }
+            if(game.username) {
+                setupRealtimeListener();
+                if(game.banned) { document.getElementById('banScreen').style.display = 'flex'; return; }
+                usernameOverlay.style.display = 'none'; 
+                finishLogin();
+            } else { 
+                usernameOverlay.style.display = 'flex'; 
+            }
+        }
+
+        document.getElementById('btnReset').addEventListener('click', () => {
+            if(confirm("Effacer ton cache local ? (Ton compte restera sur le serveur si tu as ton code)")) {
+                game = JSON.parse(JSON.stringify(defaultSave)); 
+                localStorage.removeItem('danCookieSave_v6'); 
+                location.reload(); 
+            }
+        });
+
+        setInterval(() => {
+            if (currentCps > 0 && game.username && !game.banned) {
+                let toAdd = currentCps / 10; 
+                game.cookies += validateNum(toAdd); 
+                game.totalCookies += validateNum(toAdd); 
+                updateUI();
+            }
+        }, 100);
+        
+        setInterval(() => {
+            if(game.username && !game.username.startsWith("Invité") && !game.banned) game.playtime++; 
+            if(unsavedProgress && game.saveCode) reminderText.style.display = 'block';
+        }, 1000);
+
+        window.addEventListener('beforeunload', () => { 
+            if(unsavedProgress && !game.banned) saveGameToServer(); 
+        });
+
+        document.getElementById('btnImportFooter').addEventListener('click', () => { 
+            let code = prompt("Colle ton Code Secret :"); 
+            if(code) processImport(code); 
+        });
+
+        document.getElementById('btnShowCode').addEventListener('click', () => {
+            if(game.saveCode) prompt("Voici ton Code Secret. Copie-le :", game.saveCode); 
+            else alert("Tu es en Invité !");
+        });
+
+        initStore();
+        loadLocalGame();
+        loadLeaderboards();
+        spawnGoldenCookie();
+    </script>
+</body>
+</html>
