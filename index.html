@@ -188,7 +188,7 @@
         #adminEditModal h3 { font-family: 'Orbitron', sans-serif; color: var(--primary); margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px;}
         .edit-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; background: #222; padding: 8px; border-radius: 5px;}
         .edit-group label { flex: 1; }
-        .edit-group input { background: #000; color: #fff; border: 1px solid var(--secondary); padding: 5px; width: 120px; text-align: right; border-radius: 3px; font-family: inherit;}
+        .edit-group input, .edit-group select { background: #000; color: #fff; border: 1px solid var(--secondary); padding: 5px; width: 140px; text-align: right; border-radius: 3px; font-family: inherit;}
 
         .lb-container { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 60px; justify-content: center; width: 100%; max-width: 1200px;}
         .leaderboard-wrapper { flex: 1; min-width: 300px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 20px; }
@@ -248,6 +248,24 @@
         .coc-chat-input:focus { box-shadow: 0 0 10px rgba(88,166,255,0.4); }
         .coc-chat-send { background: var(--primary); color: #000; border: none; padding: 0 15px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s; }
         .coc-chat-send:hover { box-shadow: 0 0 10px var(--primary); transform: scale(1.05); }
+
+        .text-rainbow {
+            background-image: linear-gradient(to left, violet, indigo, blue, green, yellow, orange, red);
+            -webkit-background-clip: text;
+            color: transparent;
+            animation: rainbowAnimation 3s linear infinite;
+            background-size: 200% 200%;
+            font-weight: bold;
+        }
+        @keyframes rainbowAnimation { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+        
+        .text-golden-aura {
+            color: #fffacd;
+            text-shadow: 0 0 5px gold, 0 0 10px goldenrod, 0 0 15px darkgoldenrod;
+            animation: goldenShine 1.5s infinite alternate;
+            font-weight: bold;
+        }
+        @keyframes goldenShine { 0% { text-shadow: 0 0 5px gold, 0 0 10px goldenrod, 0 0 15px darkgoldenrod; } 100% { text-shadow: 0 0 10px #ffe066, 0 0 20px gold, 0 0 30px #ffcc00; } }
 
         @media (max-width: 768px) { 
             .cards-grid { grid-template-columns: 1fr; } 
@@ -362,11 +380,32 @@
             <div style="text-align: center; margin-bottom: 20px;">
                 <button id="btnCloseAdmin" class="cc-btn primary-btn">Fermer & Retourner au Jeu</button>
             </div>
+            
+            <div id="adminGroupSection" style="margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 20px;">
+                <h3 style="color: var(--secondary); margin-bottom: 15px;">👑 Gestion des Groupes</h3>
+                <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap;">
+                    <input type="text" id="newGroupName" class="cc-input" placeholder="Nom du groupe" style="width: 200px;">
+                    <select id="newGroupColor" class="cc-input" style="width: 200px; padding: 10px;">
+                        <option value="#ffffff">Blanc</option>
+                        <option value="#ff5f56">Rouge</option>
+                        <option value="#58a6ff">Bleu</option>
+                        <option value="#27c93f">Vert</option>
+                        <option value="#bc8cff">Violet</option>
+                        <option value="#ffbd2e">Orange</option>
+                        <option value="#ff69b4">Rose</option>
+                        <option value="rainbow">Rainbow (Modé)</option>
+                        <option value="golden-aura">Golden Aura (Modé)</option>
+                    </select>
+                    <button id="btnCreateGroup" class="cc-btn primary-btn">Créer le groupe</button>
+                </div>
+                <div id="adminGroupsList" style="text-align: left; max-height: 150px; overflow-y: auto; background: rgba(0,0,0,0.5); border-radius: 10px; padding: 10px;"></div>
+            </div>
+
             <h3 style="color: var(--primary);">Sauvegardes Serveur & Sanctions</h3>
             <div style="overflow-x: auto;">
                 <table class="admin-table" id="adminSavesTable">
-                    <thead><tr><th>ID (Code)</th><th>Pseudo</th><th>Cookies</th><th>CpS</th><th>Action</th></tr></thead>
-                    <tbody><tr><td colspan="5">Chargement...</td></tr></tbody>
+                    <thead><tr><th>ID (Code)</th><th>Pseudo</th><th>Groupe</th><th>Cookies</th><th>CpS</th><th>Action</th></tr></thead>
+                    <tbody><tr><td colspan="6">Chargement...</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -445,8 +484,8 @@
                     <div id="lbCps"><p style="text-align:center; color:#8b949e;">Chargement...</p></div>
                 </div>
                 <div class="leaderboard-wrapper">
-                    <div class="lb-title">⏱️ Addicts (Temps de jeu)</div>
-                    <div id="lbPlaytime"><p style="text-align:center; color:#8b949e;">Chargement...</p></div>
+                    <div class="lb-title">🛡️ Top Groupes</div>
+                    <div id="lbGroups"><p style="text-align:center; color:#8b949e;">Chargement...</p></div>
                 </div>
             </div>
         </div>
@@ -480,7 +519,7 @@
         const db = getFirestore(app);
 
         const defaultSave = {
-            username: "", saveCode: "", displayName: "", password: "", cookies: 0, totalCookies: 0, upgradesBought: [], playtime: 0, banned: false, lastAdminSync: 0, lastGCSync: 0,
+            username: "", saveCode: "", displayName: "", password: "", cookies: 0, totalCookies: 0, upgradesBought: [], playtime: 0, banned: false, lastAdminSync: 0, lastGCSync: 0, groupId: null,
             buildings: { cursor: {count:0}, grandma:{count:0}, farm:{count:0}, mine:{count:0}, factory:{count:0}, bank:{count:0}, temple:{count:0}, wizard:{count:0}, shipment:{count:0}, alch:{count:0}, portal:{count:0}, time:{count:0}, prism:{count:0} }
         };
 
@@ -521,6 +560,7 @@
         let realtimeListener = null;
         let chatListener = null;
         let lastCursorCount = -1;
+        let groupsMap = {}; 
 
         const imgCookieBase = "https://png.pngtree.com/png-vector/20250425/ourmid/pngtree-chocolate-chip-cookie-icon-white-background-png-image_16100260.png";
         const imgCookieGolden = "https://i.ibb.co/Y4fx1dPt/image-removebg-preview-2.png";
@@ -540,6 +580,97 @@
         const ccWrapper = document.getElementById('ccWrapper');
         const btnGear = document.getElementById('btnGear');
         const btnOpenAdmin = document.getElementById('btnOpenAdmin');
+
+        async function fetchGroups() {
+            try {
+                const snap = await getDocs(collection(db, "stmg_groups"));
+                groupsMap = {};
+                snap.forEach(d => { groupsMap[d.id] = d.data(); });
+            } catch(e) { console.error("Erreur chargement groupes:", e); }
+        }
+
+        function getGroupHTML(groupId) {
+            if (!groupId || !groupsMap[groupId]) return "";
+            let g = groupsMap[groupId];
+            let safeName = g.name.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            if (g.color === 'rainbow') return ` <span class="text-rainbow">[${safeName}]</span>`;
+            if (g.color === 'golden-aura') return ` <span class="text-golden-aura">[${safeName}]</span>`;
+            return ` <span style="color:${g.color}; font-weight:bold;">[${safeName}]</span>`;
+        }
+
+        document.getElementById('btnCreateGroup').addEventListener('click', async () => {
+            let name = document.getElementById('newGroupName').value.trim();
+            let color = document.getElementById('newGroupColor').value;
+            
+            if(!name) {
+                alert("Erreur : Tu dois donner un nom au groupe !");
+                return;
+            }
+            
+            let btn = document.getElementById('btnCreateGroup');
+            btn.innerText = "Création...";
+            btn.disabled = true;
+
+            try {
+                let id = "grp_" + Date.now();
+                await setDoc(doc(db, "stmg_groups", id), { name, color });
+                document.getElementById('newGroupName').value = '';
+                await fetchGroups();
+                renderAdminGroups();
+                loadAdminData(); 
+                
+                btn.innerText = "Créer le groupe";
+                btn.disabled = false;
+                alert("✅ Le groupe " + name + " a été créé avec succès !");
+            } catch (e) {
+                console.error(e);
+                alert("❌ Erreur lors de la création du groupe.");
+                btn.innerText = "Créer le groupe";
+                btn.disabled = false;
+            }
+        });
+
+        function renderAdminGroups() {
+            let html = '';
+            for(let id in groupsMap) {
+                html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; background:rgba(255,255,255,0.05); padding:8px; border-radius:5px;">
+                    <span style="color:#fff;">ID: <small style="color:#aaa;">${id}</small> | Rendu: ${getGroupHTML(id)}</span>
+                    <button class="btn-delete" onclick="window.delGroup('${id}')">Suppr.</button>
+                </div>`;
+            }
+            if(Object.keys(groupsMap).length === 0) html = "<p style='color:#aaa;'>Aucun groupe créé.</p>";
+            document.getElementById('adminGroupsList').innerHTML = html;
+        }
+
+        window.delGroup = async function(id) {
+            if(confirm("Supprimer ce groupe ? Les joueurs le perdront.")) {
+                await deleteDoc(doc(db, "stmg_groups", id));
+                await fetchGroups();
+                renderAdminGroups();
+                loadAdminData(); 
+            }
+        };
+
+        window.updatePlayerGroup = async function(userId, newGroupId) {
+            try {
+                let finalGroupId = newGroupId === "" ? null : newGroupId;
+                
+                await updateDoc(doc(db, "stmg_leaderboard", userId), { groupId: finalGroupId });
+                
+                const s = await getDoc(doc(db, "stmg_saves", userId));
+                if(s.exists()) {
+                    let p = JSON.parse(s.data().saveData);
+                    p.groupId = finalGroupId;
+                    await updateDoc(doc(db, "stmg_saves", userId), { saveData: JSON.stringify(p) });
+                }
+                console.log("Groupe mis à jour pour " + userId);
+            } catch (e) {
+                alert("Erreur lors de la mise à jour du groupe.");
+                console.error(e);
+            }
+        };
+
+        // -------------------------
 
         document.getElementById('chatToggleBtn').addEventListener('click', () => {
             const panel = document.getElementById('cocChatPanel');
@@ -565,12 +696,6 @@
             let suffix = units[unitIndex];
             if (parseFloat(shortVal) >= 2 && suffix !== "") suffix += "s"; 
             return shortVal + suffix;
-        }
-
-        function formatTime(sec) {
-            let h = Math.floor(sec / 3600);
-            let m = Math.floor((sec % 3600) / 60);
-            return `${h}h ${m}m`;
         }
 
         document.getElementById('btnModeBuy').onclick = (e) => { storeMode = 'buy'; e.target.classList.add('active'); document.getElementById('btnModeSell').classList.remove('sell-active'); updateUI(); };
@@ -682,7 +807,7 @@
             if(game.banned) { document.getElementById('banScreen').style.display = 'flex'; return; }
 
             displayCookies.innerText = formatNumber(game.cookies);
-            playerNameDisplay.innerText = game.displayName || game.username;
+            playerNameDisplay.innerHTML = (game.displayName || game.username) + getGroupHTML(game.groupId);
             
             for (let id in buildingData) {
                 const elCost = document.getElementById(`cost-${id}`);
@@ -867,6 +992,7 @@
                     score: Math.floor(game.cookies),
                     cps: Math.floor(currentCps),
                     playtime: game.playtime,
+                    groupId: game.groupId || null,
                     banned: game.banned
                 }, { merge: true }); 
                 saveLocal(); unsavedProgress = false; reminderText.style.display = 'none';
@@ -889,6 +1015,7 @@
             realtimeListener = onSnapshot(doc(db, "stmg_leaderboard", game.saveCode), async (docSnap) => {
                 if(docSnap.exists()) {
                     const data = docSnap.data();
+                    
                     if(data.banned && !game.banned) {
                         game.banned = true;
                         document.getElementById('banScreen').style.display = 'flex';
@@ -904,6 +1031,12 @@
                         if (!isFirstLoad && !game.banned) {
                             showGoldenCookie();
                         }
+                    }
+
+                    if (data.groupId !== undefined && data.groupId !== game.groupId) {
+                        game.groupId = data.groupId;
+                        saveLocal();
+                        updateUI(); 
                     }
 
                     if (data.adminEditTimestamp && data.adminEditTimestamp > (game.lastAdminSync || 0)) {
@@ -943,6 +1076,7 @@
                 }
 
                 saveLocal(); await saveGameToServer(); setupRealtimeListener();
+                await fetchGroups();
                 finishLogin();
             } catch(e) { alert("Erreur serveur."); document.getElementById('btnSignUp').innerText = "S'inscrire"; }
         });
@@ -956,6 +1090,8 @@
             if(code === "...............................................................................") {
                 document.getElementById('gameSection').style.display = 'none'; 
                 document.getElementById('adminPanel').style.display = 'block'; 
+                await fetchGroups();
+                renderAdminGroups();
                 loadAdminData(); return;
             }
             try {
@@ -969,21 +1105,24 @@
                     if(game.password && game.password !== "") {
                         window.tempGame = game;
                         document.getElementById('pwdModal').style.display = 'flex';
-                        document.getElementById('btnVerifyPwd').onclick = () => {
+                        document.getElementById('btnVerifyPwd').onclick = async () => {
                             if(document.getElementById('checkPwd').value === game.password) {
                                 document.getElementById('pwdModal').style.display = 'none';
+                                await fetchGroups();
                                 finishLogin();
                             } else alert("Mot de passe incorrect");
                         };
                         return;
                     }
                     saveLocal(); recalculateStats(); updateUI(); usernameOverlay.style.display = 'none';
-                    setupRealtimeListener(); finishLogin();
+                    setupRealtimeListener(); 
+                    await fetchGroups();
+                    finishLogin();
                 } else { alert("❌ Code introuvable."); }
             } catch(e) { alert("Erreur de connexion."); }
         }
 
-        function finishLogin() {
+        async function finishLogin() {
             usernameOverlay.style.display = 'none';
             document.getElementById('cocChatPanel').style.display = 'flex'; 
             btnGear.style.display = 'inline-block';
@@ -992,12 +1131,13 @@
                 btnOpenAdmin.style.display = 'inline-block';
             }
             startChat();
-            recalculateStats(); updateUI(); loadLeaderboards();
+            recalculateStats(); updateUI(); await loadLeaderboards();
         }
 
-        document.getElementById('btnGuest').addEventListener('click', () => {
+        document.getElementById('btnGuest').addEventListener('click', async () => {
             game.username = "Invité"; game.saveCode = ""; 
             usernameOverlay.style.display = 'none';
+            await fetchGroups();
             recalculateStats(); updateUI(); loadLeaderboards();
         });
 
@@ -1015,9 +1155,11 @@
             updateUI();
         });
 
-        btnOpenAdmin.addEventListener('click', () => {
+        btnOpenAdmin.addEventListener('click', async () => {
             document.getElementById('gameSection').style.display = 'none';
             document.getElementById('adminPanel').style.display = 'block';
+            await fetchGroups();
+            renderAdminGroups();
             loadAdminData();
         });
 
@@ -1027,20 +1169,32 @@
         });
 
         async function loadAdminData() {
+            await fetchGroups(); 
             const sTable = document.querySelector('#adminSavesTable tbody'); 
             sTable.innerHTML = '';
+            
             try {
                 const lSnap = await getDocs(collection(db, "stmg_leaderboard"));
                 lSnap.forEach(d => {
-                    let isBan = d.data().banned;
+                    let dat = d.data();
+                    let isBan = dat.banned;
+                    
                     let banBtn = isBan ? `<button class="btn-ban" style="color:green; border-color:green;" onclick="window.banDoc('${d.id}', false)">Débannir</button>` : `<button class="btn-ban" onclick="window.banDoc('${d.id}', true)">Ban</button>`;
                     let gcBtn = `<button title="Envoyer un Cookie Doré" style="background:transparent; border:none; cursor:pointer; margin-left:5px; vertical-align:middle; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" onclick="window.sendGoldenCookie('${d.id}')"><img src="${imgCookieGolden}" style="width:22px; height:22px; filter: drop-shadow(0 0 5px gold);"></button>`;
                     
+                    let groupOptions = `<option value="">-- Aucun --</option>`;
+                    for(let gId in groupsMap) {
+                        let sel = (dat.groupId === gId) ? "selected" : "";
+                        groupOptions += `<option value="${gId}" ${sel}>${groupsMap[gId].name}</option>`;
+                    }
+                    let groupSelectHTML = `<select onchange="window.updatePlayerGroup('${d.id}', this.value)" style="background:#000; color:#fff; border:1px solid #58a6ff; border-radius:3px; padding:4px; font-size:0.8rem;">${groupOptions}</select>`;
+
                     sTable.innerHTML += `<tr>
                         <td><span style="font-size:0.7rem; color:#aaa;">${d.id}</span></td>
-                        <td style="${isBan?'text-decoration:line-through;color:red;':''}">${d.data().displayName || d.data().username}</td>
-                        <td>${formatNumber(d.data().score)}</td>
-                        <td>${formatNumber(d.data().cps||0)}</td>
+                        <td style="${isBan?'text-decoration:line-through;color:red;':''}">${dat.displayName || dat.username}</td>
+                        <td>${groupSelectHTML}</td>
+                        <td>${formatNumber(dat.score)}</td>
+                        <td>${formatNumber(dat.cps||0)}</td>
                         <td>
                             <button class="btn-edit" onclick="window.openEditModal('${d.id}')">Éditer</button> 
                             <button class="btn-delete" onclick="window.delDoc('${d.id}')">Suppr.</button> 
@@ -1049,7 +1203,7 @@
                         </td>
                     </tr>`;
                 });
-            } catch(e){ sTable.innerHTML = '<tr><td colspan="5">Erreur Firebase</td></tr>'; }
+            } catch(e){ sTable.innerHTML = '<tr><td colspan="6">Erreur Firebase</td></tr>'; }
         }
 
         window.delDoc = async function(id) {
@@ -1091,7 +1245,9 @@
             if(s.exists()) {
                 let adminTempEditData = JSON.parse(s.data().saveData);
                 document.getElementById('editPlayerName').innerText = adminTempEditData.username || adminTempEditData.displayName;
-                let html = `<div class="edit-group"><label>Cookies :</label><input type="number" id="edit_cookies" value="${Math.floor(validateNum(adminTempEditData.cookies))}"></div>
+                
+                let html = `
+                <div class="edit-group"><label>Cookies :</label><input type="number" id="edit_cookies" value="${Math.floor(validateNum(adminTempEditData.cookies))}"></div>
                 <div class="edit-group"><label>Temps de jeu (sec) :</label><input type="number" id="edit_playtime" value="${validateNum(adminTempEditData.playtime)}"></div>`;
                 for(let key in buildingData) {
                     let count = adminTempEditData.buildings[key] ? validateNum(adminTempEditData.buildings[key].count) : 0;
@@ -1099,6 +1255,7 @@
                 }
                 document.getElementById('editFormContent').innerHTML = html;
                 document.getElementById('adminEditModal').style.display = 'block';
+                
                 document.getElementById('btnSaveAdminEdit').onclick = async () => {
                     adminTempEditData.cookies = validateNum(parseInt(document.getElementById('edit_cookies').value));
                     adminTempEditData.playtime = validateNum(parseInt(document.getElementById('edit_playtime').value));
@@ -1132,9 +1289,10 @@
                 snap.forEach(d => { msgs.push({id:d.id, ...d.data()}); });
                 msgs.reverse().forEach(m => {
                     let adminBtns = isAdmin ? `<button style="background:orange;color:white;border:none;padding:2px 6px;font-size:0.7rem;border-radius:3px;margin-left:8px;cursor:pointer;" onclick="deleteChatMessage('${m.id}')">SUPPR</button> <button style="background:red;color:white;border:none;padding:2px 6px;font-size:0.7rem;border-radius:3px;margin-left:4px;cursor:pointer;" onclick="banChatMessage('${m.id}','${m.userId}')">BAN</button>` : '';
+                    let grpTag = m.groupId ? getGroupHTML(m.groupId) : "";
                     box.innerHTML += `
                         <div class="coc-chat-msg">
-                            <div class="coc-chat-author"><span>${m.displayName}</span> <div>${adminBtns}</div></div>
+                            <div class="coc-chat-author"><span>${m.displayName}${grpTag}</span> <div>${adminBtns}</div></div>
                             <div>${m.text}</div>
                         </div>
                     `;
@@ -1149,6 +1307,7 @@
             await setDoc(doc(collection(db, "stmg_chat")), {
                 userId: game.username,
                 displayName: game.displayName || game.username,
+                groupId: game.groupId || null,
                 text: txt,
                 timestamp: serverTimestamp()
             });
@@ -1181,8 +1340,12 @@
                 const qCook = query(collection(db, "stmg_leaderboard"), where("banned", "==", false), orderBy("score", "desc"), limit(10));
                 const snapCook = await getDocs(qCook);
                 document.getElementById('lbCookies').innerHTML = ''; let rank = 1;
+                
+                let groupScores = {}; 
+
                 snapCook.forEach(d => {
-                    let html = `<div class="lb-row ${rank===1?'top-1':rank===2?'top-2':rank===3?'top-3':''}"><div class="lb-rank">#${rank}</div><div class="lb-name" title="${d.data().username}">${d.data().displayName || d.data().username}</div><div class="lb-score">${formatNumber(d.data().score)}</div></div>`;
+                    let grpStr = d.data().groupId ? getGroupHTML(d.data().groupId) : '';
+                    let html = `<div class="lb-row ${rank===1?'top-1':rank===2?'top-2':rank===3?'top-3':''}"><div class="lb-rank">#${rank}</div><div class="lb-name" title="${d.data().username}">${d.data().displayName || d.data().username}${grpStr}</div><div class="lb-score">${formatNumber(d.data().score)}</div></div>`;
                     document.getElementById('lbCookies').innerHTML += html; rank++;
                 });
 
@@ -1190,23 +1353,35 @@
                 const snapCps = await getDocs(qCps);
                 document.getElementById('lbCps').innerHTML = ''; rank = 1;
                 snapCps.forEach(d => {
-                    let html = `<div class="lb-row ${rank===1?'top-1':rank===2?'top-2':rank===3?'top-3':''}"><div class="lb-rank">#${rank}</div><div class="lb-name" title="${d.data().username}">${d.data().displayName || d.data().username}</div><div class="lb-score">${formatNumber(d.data().cps||0)}/s</div></div>`;
+                    let grpStr = d.data().groupId ? getGroupHTML(d.data().groupId) : '';
+                    let html = `<div class="lb-row ${rank===1?'top-1':rank===2?'top-2':rank===3?'top-3':''}"><div class="lb-rank">#${rank}</div><div class="lb-name" title="${d.data().username}">${d.data().displayName || d.data().username}${grpStr}</div><div class="lb-score">${formatNumber(d.data().cps||0)}/s</div></div>`;
                     document.getElementById('lbCps').innerHTML += html; rank++;
                 });
 
-                const qTime = query(collection(db, "stmg_leaderboard"), where("banned", "==", false), orderBy("playtime", "desc"), limit(10));
-                const snapTime = await getDocs(qTime);
-                document.getElementById('lbPlaytime').innerHTML = ''; rank = 1;
-                snapTime.forEach(d => {
-                    let html = `<div class="lb-row ${rank===1?'top-1':rank===2?'top-2':rank===3?'top-3':''}"><div class="lb-rank">#${rank}</div><div class="lb-name" title="${d.data().username}">${d.data().displayName || d.data().username}</div><div class="lb-score">${formatTime(d.data().playtime||0)}</div></div>`;
-                    document.getElementById('lbPlaytime').innerHTML += html; rank++;
+                const allPlayersSnap = await getDocs(query(collection(db, "stmg_leaderboard"), where("banned", "==", false)));
+                allPlayersSnap.forEach(d => {
+                    let dat = d.data();
+                    if(dat.groupId && groupsMap[dat.groupId]) {
+                        if(!groupScores[dat.groupId]) groupScores[dat.groupId] = 0;
+                        groupScores[dat.groupId] += dat.score;
+                    }
                 });
+                
+                let sortedGroups = Object.keys(groupScores).map(id => ({id, score: groupScores[id]})).sort((a,b) => b.score - a.score).slice(0, 10);
+                document.getElementById('lbGroups').innerHTML = ''; 
+                let rankG = 1;
+                sortedGroups.forEach(g => {
+                     let html = `<div class="lb-row ${rankG===1?'top-1':rankG===2?'top-2':rankG===3?'top-3':''}"><div class="lb-rank">#${rankG}</div><div class="lb-name">${getGroupHTML(g.id)}</div><div class="lb-score">${formatNumber(g.score)}</div></div>`;
+                     document.getElementById('lbGroups').innerHTML += html; rankG++;
+                });
+                if(sortedGroups.length === 0) document.getElementById('lbGroups').innerHTML = '<p style="text-align:center; color:#8b949e;">Aucun groupe actif pour le moment</p>';
+
             } catch (e) { console.error(e); }
         }
 
         function saveLocal() { localStorage.setItem('danCookieSave_v6', JSON.stringify(game)); }
 
-        function loadLocalGame() {
+        async function loadLocalGame() {
             let saved = localStorage.getItem('danCookieSave_v6');
             if (saved) {
                 try {
@@ -1219,6 +1394,7 @@
                 setupRealtimeListener();
                 if(game.banned) { document.getElementById('banScreen').style.display = 'flex'; return; }
                 usernameOverlay.style.display = 'none'; 
+                await fetchGroups();
                 finishLogin();
             } else { 
                 usernameOverlay.style.display = 'flex'; 
@@ -1263,7 +1439,6 @@
 
         initStore();
         loadLocalGame();
-        loadLeaderboards();
         spawnGoldenCookieLoop(); 
     </script>
 </body>
