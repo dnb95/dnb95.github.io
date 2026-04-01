@@ -265,8 +265,16 @@
             animation: goldenShine 1.5s infinite alternate;
             font-weight: bold;
         }
-        @keyframes goldenShine { 0% { text-shadow: 0 0 5px gold, 0 0 10px goldenrod, 0 0 15px darkgoldenrod; } 100% { text-shadow: 0 0 10px #ffe066, 0 0 20px gold, 0 0 30px #ffcc00; } }
-
+       @keyframes goldenShine { 0% { text-shadow: 0 0 5px gold, 0 0 10px goldenrod, 0 0 15px darkgoldenrod; } 100% { text-shadow: 0 0 10px #ffe066, 0 0 20px gold, 0 0 30px #ffcc00; } }
+      
+        .text-aura {
+            color: #DAB1DA;
+            text-shadow: 0 0 5px gold, 0 0 10px goldenrod, 0 0 15px darkgoldenrod;
+            animation: Shine 1.5s infinite alternate;
+            font-weight: bold;
+        }
+        @keyframes Shine { 0% { text-shadow: 0 0 5px gold, 0 0 10px goldenrod, 0 0 15px darkgoldenrod; } 100% { text-shadow: 0 0 10px #81D8D0, 0 0 20px gold, 0 0 30px #6DB5AE; } }
+        
         @media (max-width: 768px) { 
             .cards-grid { grid-template-columns: 1fr; } 
             .cc-left { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); padding-right: 0; padding-bottom: 20px; } 
