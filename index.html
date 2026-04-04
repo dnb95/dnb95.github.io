@@ -61,16 +61,13 @@
         .bio-flipper-container { perspective: 1000px; width: 100%; max-width: 800px; margin: 0 auto 60px; }
         .bio-flipper { transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1); transform-style: preserve-3d; position: relative; width: 100%; will-change: transform; }
         .bio-flipper.flipped { transform: rotateY(180deg); }
-
         .bio-section { margin: 0; backface-visibility: hidden; position: relative; width: 100%; background: rgba(5, 8, 11, 0.9); border: 1px solid var(--primary); border-radius: 10px; padding: 2px; box-shadow: var(--neon-glow); }
         .bio-section.back { position: absolute; top: 0; left: 0; transform: rotateY(180deg); }
-        
         .terminal-header { background: rgba(88, 166, 255, 0.2); padding: 10px; display: flex; gap: 10px; border-bottom: 1px solid var(--primary); justify-content: space-between; align-items: center; }
         .dot { width: 12px; height: 12px; border-radius: 50%; } .red { background: #ff5f56; } .yellow { background: #ffbd2e; } .green { background: #27c93f; }
         .flip-btn { cursor: pointer; font-size: 1.2rem; transition: transform 0.3s; }
         .flip-btn:hover { transform: rotate(90deg); }
         .bio-section.back .flip-btn:hover { transform: rotate(-90deg); }
-        
         .bio-content { padding: 30px; display: flex; align-items: center; gap: 30px; flex-wrap: wrap; }
         .bio-avatar { width: 120px; height: 120px; border-radius: 50%; border: 3px solid var(--primary); object-fit: cover; box-shadow: 0 0 20px rgba(88, 166, 255, 0.4); }
         .bio-text p { font-family: 'Courier New', monospace; font-size: 1.1rem; color: var(--primary); }
@@ -86,29 +83,15 @@
         .cc-input:focus { outline: none; box-shadow: 0 0 10px var(--primary); }
         
         .cc-left { flex: 1; min-width: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 20px; position: relative; }
-        
-        .liquid-bg-container {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            overflow: hidden; z-index: 0; border-radius: 20px 0 0 20px; pointer-events: none;
-        }
-        .wave {
-            position: absolute; left: 50%; width: 250%; height: 250%;
-            background: var(--primary);
-            box-shadow: inset 0 0 50px rgba(0,0,0,0.3); 
-            animation: spin 10s linear infinite;
-            transition: background 1s ease, bottom 0.5s ease, opacity 0.5s ease;
-        }
+        .liquid-bg-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; z-index: 0; border-radius: 20px 0 0 20px; pointer-events: none; }
+        .wave { position: absolute; left: 50%; width: 250%; height: 250%; background: var(--primary); box-shadow: inset 0 0 50px rgba(0,0,0,0.3); animation: spin 10s linear infinite; transition: background 1s ease, bottom 0.5s ease, opacity 0.5s ease; }
         .wave.wave1 { animation-duration: 12s; bottom: -185%; opacity: 0.15; border-radius: 43%; transform-origin: 49% 51%; }
         .wave.wave2 { animation-duration: 15s; bottom: -195%; opacity: 0.10; border-radius: 46%; transform-origin: 51% 49%; }
         .wave.wave3 { animation-duration: 18s; bottom: -180%; opacity: 0.20; border-radius: 41%; transform-origin: 50% 50%; }
         .wave.wave4 { animation-duration: 22s; bottom: -190%; opacity: 0.12; border-radius: 44%; transform-origin: 52% 48%; }
-        
         @keyframes spin { 100% { transform: translate(-50%, 0) rotate(360deg); } 0% { transform: translate(-50%, 0) rotate(0deg); } }
         .cc-left > :not(.liquid-bg-container) { position: relative; z-index: 2; }
 
-        .cc-right { flex: 1.5; min-width: 350px; display: flex; flex-direction: column; gap: 10px; max-height: 600px; overflow-y: auto; padding-left: 10px; position: relative; -ms-overflow-style: none; scrollbar-width: none; }
-        .cc-right::-webkit-scrollbar { display: none; } 
-        
         .cc-stats { text-align: center; margin-bottom: 30px; }
         .cc-welcome { color: var(--secondary); font-size: 0.9rem; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; justify-content: center; flex-wrap: wrap; }
         .cc-cookies-count { font-family: 'Orbitron', sans-serif; font-size: 2.2rem; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
@@ -127,17 +110,20 @@
 
         .crack-effect { position: absolute; width: 80px; height: 80px; background: radial-gradient(circle, rgba(0,0,0,0.6) 0%, transparent 70%); border-radius: 50%; pointer-events: none; z-index: 6; animation: crackFade 0.2s ease-out forwards; }
         @keyframes crackFade { 0% { opacity: 1; transform: scale(0.5); } 100% { opacity: 0; transform: scale(1.5); } }
-
         .crumb { position: absolute; background: #8b5a2b; border-radius: 50%; width: 8px; height: 8px; z-index: 3; pointer-events: none; animation: scatter 0.5s ease-out forwards; }
         @keyframes scatter { 0% { transform: scale(1) translate(0, 0); opacity: 1; } 100% { transform: scale(0) translate(var(--tx), var(--ty)); opacity: 0; } }
-
         .click-particle { position: absolute; color: white; font-weight: bold; font-size: 1.5rem; pointer-events: none; animation: floatUp 1s ease-out forwards; text-shadow: 0 0 5px black; z-index: 10; }
         @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-50px) scale(1.5); } }
         
-        .buy-sell-toggle { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 10px; }
-        .bs-btn { background: transparent; border: none; color: #aaa; padding: 5px 20px; border-radius: 5px; cursor: pointer; font-family: 'Orbitron', sans-serif; transition: 0.2s; }
+        .cc-right { flex: 1.5; min-width: 350px; display: flex; flex-direction: column; gap: 10px; max-height: 600px; overflow-y: auto; padding-left: 10px; position: relative; -ms-overflow-style: none; scrollbar-width: none; }
+        .cc-right::-webkit-scrollbar { display: none; } 
+        
+        .buy-sell-toggle { display: flex; justify-content: center; gap: 5px; margin-bottom: 15px; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 10px; flex-wrap: wrap; }
+        .bs-btn { background: transparent; border: none; color: #aaa; padding: 5px 15px; border-radius: 5px; cursor: pointer; font-family: 'Orbitron', sans-serif; transition: 0.2s; font-size: 0.85rem; }
         .bs-btn.active { background: var(--primary); color: #000; font-weight: bold; box-shadow: 0 0 10px var(--primary); }
         .bs-btn.sell-active { background: var(--danger); color: #fff; font-weight: bold; box-shadow: 0 0 10px var(--danger); }
+        .bs-btn.wheel-active { background: #ffbd2e; color: #000; font-weight: bold; box-shadow: 0 0 10px #ffbd2e; }
+        .bs-btn.comp-active { background: var(--secondary); color: #000; font-weight: bold; box-shadow: 0 0 10px var(--secondary); }
 
         .upgrades-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 10px; padding-bottom: 5px; }
         .upgrades-container { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
@@ -145,39 +131,89 @@
         .upgrade-item:hover { border-color: var(--secondary); background: rgba(188, 140, 255, 0.2); }
         .upgrade-item.locked { opacity: 0.3; filter: grayscale(100%); cursor: not-allowed; }
         
-        .tooltip { position: fixed; background: rgba(5, 8, 11, 0.95); border: 1px solid var(--secondary); border-radius: 5px; padding: 10px; color: #fff; font-size: 0.85rem; pointer-events: none; z-index: 1000; opacity: 0; transition: opacity 0.1s; width: max-content; max-width: 250px; box-shadow: 0 5px 15px rgba(0,0,0,0.8); }
-
-        .building-item { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(90deg, rgba(22, 27, 34, 0.8), rgba(22, 27, 34, 0.4)); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; transition: 0.2s; position: relative; overflow: hidden; cursor: pointer; }
+        .building-item { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(90deg, rgba(22, 27, 34, 0.8), rgba(22, 27, 34, 0.4)); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; transition: 0.2s; position: relative; overflow: hidden; cursor: pointer; margin-bottom: 8px; }
         .building-item:hover { border-color: var(--primary); background: linear-gradient(90deg, rgba(88, 166, 255, 0.2), rgba(22, 27, 34, 0.6)); }
         .building-item.locked { opacity: 0.5; filter: grayscale(100%); cursor: not-allowed; }
         .b-icon { font-size: 2rem; margin-right: 15px; }
         .b-info { flex: 1; display: flex; flex-direction: column; } .b-name { font-weight: bold; font-size: 1.2rem; color: #fff; } .b-cost { font-size: 0.9rem; color: #27c93f; display: flex; align-items: center; gap: 5px; } .b-cost.too-expensive { color: #ff5f56; }
         .b-count { font-family: 'Orbitron', sans-serif; font-size: 2rem; color: rgba(255,255,255,0.2); font-weight: bold; }
         
+        #panelWheel {
+            display: none; flex-direction: column; align-items: center; justify-content: center; 
+            min-height: 400px; background: linear-gradient(145deg, rgba(255,189,46,0.1), rgba(0,0,0,0.6)); 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 15px; padding: 30px; position: relative; overflow: hidden;
+        }
+        
+        #panelComps {
+            display: none; flex-direction: column; min-height: 400px; 
+            background: linear-gradient(145deg, rgba(188,140,255,0.1), rgba(0,0,0,0.6)); 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 15px; padding: 20px;
+        }
+        
         .cc-controls { width: 100%; display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
         .cc-btn { background: rgba(0,0,0,0.5); border: 1px solid var(--secondary); color: var(--secondary); padding: 8px 15px; border-radius: 5px; font-family: 'Montserrat', sans-serif; font-size: 0.9rem; transition: 0.2s; cursor: pointer; }
         .cc-btn:hover { background: var(--secondary); color: #000; box-shadow: 0 0 10px var(--secondary); }
         .cc-btn.primary-btn { border-color: var(--primary); color: var(--primary); font-weight: bold; } .cc-btn.primary-btn:hover { background: var(--primary); color: #000; box-shadow: 0 0 10px var(--primary); }
         .overlay-buttons { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-        
         #reminderText { color: #ffbd2e; font-size: 0.8rem; margin-top: 10px; display: none; width: 100%; text-align: center; animation: blinkWarning 1s infinite alternate; }
         @keyframes blinkWarning { 0% { opacity: 0.5; } 100% { opacity: 1; } }
 
-        #goldenCookie { 
-            position: absolute; 
-            width: 90px; 
-            height: 90px; 
-            background: url('https://i.ibb.co/Y4fx1dPt/image-removebg-preview-2.png') center/contain no-repeat; 
-            filter: drop-shadow(0 0 20px gold); 
-            z-index: 1000; 
-            cursor: pointer; 
-            display: none; 
-            animation: pulseGC 2s infinite; 
-        }
+        #goldenCookie { position: absolute; width: 90px; height: 90px; background: url('https://i.ibb.co/Y4fx1dPt/image-removebg-preview-2.png') center/contain no-repeat; filter: drop-shadow(0 0 20px gold); z-index: 1000; cursor: pointer; display: none; animation: pulseGC 2s infinite; }
         @keyframes pulseGC { 0% { transform: scale(1); } 50% { transform: scale(1.1); filter: drop-shadow(0 0 30px #fff); } 100% { transform: scale(1); } }
+
+        .companion-list { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+        .companion-card { display: flex; justify-content: space-between; align-items: center; background: rgba(22,27,34,0.8); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; transition: 0.2s; cursor: pointer; }
+        .companion-card:not(.locked-companion):hover { border-color: var(--secondary); background: rgba(188,140,255,0.2); }
+        .companion-card.equipped { border-color: var(--primary); box-shadow: 0 0 10px var(--primary); }
+        .comp-info { display: flex; align-items: center; gap: 15px; }
+        .comp-icon { width: 45px; height: 45px; border-radius: 50%; border: 1px solid var(--primary); object-fit: cover; }
+        .comp-name { font-family: 'Orbitron', sans-serif; font-weight: bold; font-size: 1.1rem; color: #fff; }
+        .comp-rarity { font-size: 0.7rem; padding: 2px 6px; border-radius: 3px; font-weight: bold; margin-left: 5px; color: #000; }
+        .r-rare { background: #58a6ff; } .r-mythic { background: #bc8cff; } .r-secret { background: #ff5f56; }
+        
+        #activeCompanionImg { position: absolute; bottom: 20px; right: 20px; width: 70px; height: 70px; z-index: 20; border-radius: 50%; border: 3px solid var(--secondary); box-shadow: 0 0 20px rgba(188, 140, 255, 0.6); object-fit: cover; pointer-events: none; animation: companionBounce 3s ease-in-out infinite; display: none; }
+        @keyframes companionBounce { 0% { transform: translateY(0); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0); } }
+
+        #wheelModal {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.95); z-index: 10000; flex-direction: column; align-items: center; justify-content: center;
+            touch-action: none; user-select: none;
+        }
+        .fs-wheel-wrapper {
+            position: relative; width: 85vw; max-width: 600px; height: 85vw; max-height: 600px; margin: 20px auto;
+        }
+        .fs-wheel-circle {
+            width: 100%; height: 100%; border-radius: 50%;
+            background: conic-gradient(
+                #FF595E 0deg 60deg, 
+                #FFCA3A 60deg 120deg, 
+                #8AC926 120deg 180deg, 
+                #1982C4 180deg 240deg, 
+                #6A4C93 240deg 300deg, 
+                #F57C00 300deg 360deg
+            );
+            border: 10px solid #fff; box-shadow: 0 0 50px rgba(255,255,255,0.3);
+            position: relative; overflow: hidden;
+        }
+        .fs-wheel-circle::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 10%; height: 10%; background: #fff; border-radius: 50%; z-index: 2; box-shadow: 0 0 15px rgba(0,0,0,0.8); }
+        .fs-wheel-pointer { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 25px solid transparent; border-right: 25px solid transparent; border-top: 50px solid #fff; z-index: 3; filter: drop-shadow(0 5px 5px rgba(0,0,0,0.6)); }
+        
+        .fs-icon-container { 
+            position: absolute; top: 0; left: 50%; width: 140px; height: 50%; 
+            transform-origin: bottom center; margin-left: -70px; 
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            padding-top: 12%; z-index: 1; text-align: center;
+        }
+        .fs-icon-container img { width: 45px; height: 45px; margin-bottom: 8px; filter: drop-shadow(0 0 5px rgba(0,0,0,0.8)); }
+        
+        .fs-slice-text { color: white; font-family: 'Orbitron', sans-serif; font-size: 1rem; font-weight: bold; text-shadow: 1px 1px 3px black, 0 0 10px rgba(255,255,255,0.5); line-height: 1.2; margin-bottom: 5px; }
+        .fs-slice-odds { color: #ffd700; font-size: 0.85rem; font-weight: bold; text-shadow: 1px 1px 2px black; background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 10px; border: 1px solid rgba(255,215,0,0.3);}
+        
+        .ic-1 { transform: rotate(30deg); } .ic-2 { transform: rotate(90deg); } .ic-3 { transform: rotate(150deg); } .ic-4 { transform: rotate(210deg); } .ic-5 { transform: rotate(270deg); } .ic-6 { transform: rotate(330deg); } 
 
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 5000; align-items: center; justify-content: center; }
         .modal-content { background: #111; padding: 30px; border: 1px solid var(--primary); border-radius: 10px; width: 90%; max-width: 450px; text-align: center; max-height: 80vh; overflow-y: auto; }
+        .tooltip { position: fixed; background: rgba(5, 8, 11, 0.95); border: 1px solid var(--secondary); border-radius: 5px; padding: 10px; color: #fff; font-size: 0.85rem; pointer-events: none; z-index: 1000; opacity: 0; transition: opacity 0.1s; width: max-content; max-width: 250px; box-shadow: 0 5px 15px rgba(0,0,0,0.8); }
 
         #adminPanel { display: none; width: 100%; max-width: 1000px; margin: 0 auto; background: rgba(0,0,0,0.9); border: 1px solid #ff5f56; border-radius: 10px; padding: 30px; box-shadow: 0 0 30px rgba(255, 95, 86, 0.4); }
         .admin-table { width: 100%; border-collapse: collapse; margin-top: 20px; color: #fff; font-size: 0.9rem; }
@@ -190,7 +226,7 @@
         #adminEditModal h3 { font-family: 'Orbitron', sans-serif; color: var(--primary); margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px;}
         .edit-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; background: #222; padding: 8px; border-radius: 5px;}
         .edit-group label { flex: 1; }
-        .edit-group input, .edit-group select { background: #000; color: #fff; border: 1px solid var(--secondary); padding: 5px; width: 140px; text-align: right; border-radius: 3px; font-family: inherit;}
+        .edit-group input[type="number"], .edit-group select { background: #000; color: #fff; border: 1px solid var(--secondary); padding: 5px; width: 140px; text-align: right; border-radius: 3px; font-family: inherit;}
 
         .lb-container { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 60px; justify-content: center; width: 100%; max-width: 1200px;}
         .leaderboard-wrapper { flex: 1; min-width: 300px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 20px; }
@@ -206,44 +242,15 @@
 
         #banScreen { display: none; position: fixed; top:0; left:0; width: 100%; height: 100%; background: #000; z-index: 9999; color: red; flex-direction: column; align-items: center; justify-content: center; font-family: 'Courier New', monospace; text-align: center;}
 
-        #cocChatPanel {
-            position: fixed;
-            top: 50%;
-            left: 0;
-            transform: translateY(-50%) translateX(-100%);
-            width: 350px;
-            height: 70vh;
-            background: rgba(5, 8, 11, 0.95);
-            border: 2px solid var(--primary);
-            border-left: none;
-            border-radius: 0 15px 15px 0;
-            z-index: 2000;
-            display: none;
-            flex-direction: column;
-            box-shadow: 10px 0 20px rgba(88,166,255,0.2);
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
+        #cocChatPanel { position: fixed; top: 50%; left: 0; transform: translateY(-50%) translateX(-100%); width: 350px; height: 70vh; background: rgba(5, 8, 11, 0.95); border: 2px solid var(--primary); border-left: none; border-radius: 0 15px 15px 0; z-index: 2000; display: none; flex-direction: column; box-shadow: 10px 0 20px rgba(88,166,255,0.2); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         #cocChatPanel.open { transform: translateY(-50%) translateX(0); }
-
-        .chat-toggle-tab {
-            position: absolute; top: 50%; right: -40px; transform: translateY(-50%);
-            width: 40px; height: 80px; background: rgba(5, 8, 11, 0.95);
-            border: 2px solid var(--primary); border-left: none; border-radius: 0 10px 10px 0;
-            display: flex; align-items: center; justify-content: center; cursor: pointer;
-            box-shadow: 5px 0 10px rgba(88,166,255,0.2); color: var(--primary); font-size: 1.5rem;
-            font-weight: bold; font-family: 'Orbitron', sans-serif; transition: background 0.3s, color 0.3s;
-        }
+        .chat-toggle-tab { position: absolute; top: 50%; right: -40px; transform: translateY(-50%); width: 40px; height: 80px; background: rgba(5, 8, 11, 0.95); border: 2px solid var(--primary); border-left: none; border-radius: 0 10px 10px 0; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 5px 0 10px rgba(88,166,255,0.2); color: var(--primary); font-size: 1.5rem; font-weight: bold; font-family: 'Orbitron', sans-serif; transition: background 0.3s, color 0.3s; }
         .chat-toggle-tab:hover { background: var(--primary); color: #000; }
         .coc-chat-header { background: linear-gradient(90deg, rgba(88, 166, 255, 0.2), transparent); color: #fff; padding: 15px; font-family: 'Orbitron', sans-serif; font-size: 1.2rem; text-align: center; border-bottom: 1px solid var(--primary); border-radius: 0 13px 0 0; font-weight: bold; letter-spacing: 2px; }
         .coc-chat-body { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; }
-        .coc-chat-body::-webkit-scrollbar { width: 5px; }
-        .coc-chat-body::-webkit-scrollbar-track { background: transparent; }
-        .coc-chat-body::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 5px; }
-
+        .coc-chat-body::-webkit-scrollbar { width: 5px; } .coc-chat-body::-webkit-scrollbar-track { background: transparent; } .coc-chat-body::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 5px; }
         .coc-chat-msg { background: rgba(255,255,255,0.05); padding: 10px 12px; border-radius: 10px; border-left: 3px solid var(--secondary); font-size: 0.9rem; word-wrap: break-word; animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
         .coc-chat-author { color: var(--secondary); font-weight: bold; font-family: 'Orbitron', sans-serif; font-size: 0.8rem; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
         .coc-chat-input-area { padding: 15px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; gap: 10px; background: rgba(0,0,0,0.5); border-radius: 0 0 15px 0; }
         .coc-chat-input { flex: 1; background: rgba(255,255,255,0.1); border: 1px solid var(--primary); color: #fff; padding: 10px; border-radius: 5px; outline: none; font-family: 'Montserrat', sans-serif; }
@@ -251,36 +258,12 @@
         .coc-chat-send { background: var(--primary); color: #000; border: none; padding: 0 15px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s; }
         .coc-chat-send:hover { box-shadow: 0 0 10px var(--primary); transform: scale(1.05); }
 
-        .text-rainbow {
-            background-image: linear-gradient(to left, violet, indigo, blue, green, yellow, orange, red);
-            -webkit-background-clip: text;
-            color: transparent;
-            animation: rainbowAnimation 3s linear infinite;
-            background-size: 200% 200%;
-            font-weight: bold;
-        }
+        .text-rainbow { background-image: linear-gradient(to left, violet, indigo, blue, green, yellow, orange, red); -webkit-background-clip: text; color: transparent; animation: rainbowAnimation 3s linear infinite; background-size: 200% 200%; font-weight: bold; }
         @keyframes rainbowAnimation { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
-        
-        .text-golden-aura {
-            color: #fffacd;
-            text-shadow: 0 0 5px gold, 0 0 10px goldenrod, 0 0 15px darkgoldenrod;
-            animation: goldenShine 1.5s infinite alternate;
-            font-weight: bold;
-        }
-       @keyframes goldenShine { 0% { text-shadow: 0 0 5px gold, 0 0 10px goldenrod, 0 0 15px darkgoldenrod; } 100% { text-shadow: 0 0 10px #ffe066, 0 0 20px gold, 0 0 30px #ffcc00; } }
-      
-        .text-aura {
-            background-image: linear-gradient(to right, #bc8cff, #ffffff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 5px #81D8D0) drop-shadow(0 0 10px #6DB5AE);
-            animation: auraPulse 1.5s infinite alternate;
-            font-weight: bold;
-        }
-        @keyframes auraPulse { 
-            0% { filter: drop-shadow(0 0 2px #81D8D0); } 
-            100% { filter: drop-shadow(0 0 8px #81D8D0) drop-shadow(0 0 15px #6DB5AE); } 
-        }
+        .text-golden-aura { color: #fffacd; text-shadow: 0 0 5px gold, 0 0 10px goldenrod, 0 0 15px darkgoldenrod; animation: goldenShine 1.5s infinite alternate; font-weight: bold; }
+        @keyframes goldenShine { 0% { text-shadow: 0 0 5px gold, 0 0 10px goldenrod, 0 0 15px darkgoldenrod; } 100% { text-shadow: 0 0 10px #ffe066, 0 0 20px gold, 0 0 30px #ffcc00; } }
+        .text-aura { background-image: linear-gradient(to right, #bc8cff, #ffffff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 5px #81D8D0) drop-shadow(0 0 10px #6DB5AE); animation: auraPulse 1.5s infinite alternate; font-weight: bold; }
+        @keyframes auraPulse { 0% { filter: drop-shadow(0 0 2px #81D8D0); } 100% { filter: drop-shadow(0 0 8px #81D8D0) drop-shadow(0 0 15px #6DB5AE); } }
         
         @media (max-width: 768px) { 
             .cards-grid { grid-template-columns: 1fr; } 
@@ -297,6 +280,46 @@
         <h1 style="font-size: 3rem; margin-bottom: 20px;">❌ ACCÈS REFUSÉ ❌</h1>
         <p style="font-size: 1.2rem; color: #aaa;">Ce compte a été placé sur liste noire par l'administrateur.</p>
         <button class="cc-btn" style="margin-top:40px; border-color:white; color:white; font-size: 1.2rem;" onclick="localStorage.removeItem('danCookieSave_v6'); location.reload();">Déconnexion & Retour à l'accueil</button>
+    </div>
+
+    <div id="wheelModal">
+        <h2 style="color: #fff; font-family: 'Orbitron'; text-shadow: 0 0 20px var(--primary); margin-bottom: 10px; font-size: 2.5rem;">La Roue Cosmique</h2>
+        <p id="swipeText" style="color: var(--secondary); font-size: 1.2rem; margin-bottom: 30px; animation: blinkWarning 1s infinite alternate;">👇 Glisse l'écran vers le bas pour tourner ! 👇</p>
+        <div class="fs-wheel-wrapper">
+            <div class="fs-wheel-pointer"></div>
+            <div class="fs-wheel-circle" id="fsWheelVisual">
+                <div class="fs-icon-container ic-1">
+                    <div class="fs-slice-text">150B<br>Cookies</div>
+                    <div class="fs-slice-odds">~29%</div>
+                    <img src="https://png.pngtree.com/png-vector/20250425/ourmid/pngtree-chocolate-chip-cookie-icon-white-background-png-image_16100260.png" title="150 Billions">
+                </div>
+                <div class="fs-icon-container ic-2">
+                    <div class="fs-slice-text">250B<br>Cookies</div>
+                    <div class="fs-slice-odds">30%</div>
+                    <img src="https://i.ibb.co/Y4fx1dPt/image-removebg-preview-2.png" title="250 Billions">
+                </div>
+                <div class="fs-icon-container ic-3">
+                    <div class="fs-slice-text" style="color: #000; text-shadow: none;">AlgaZ<br>(Rare)</div>
+                    <div class="fs-slice-odds" style="background: rgba(255,255,255,0.7); color:#000;">10%</div>
+                    <img src="https://i.ibb.co/1tBJRDdc/Alga2.png" title="AlgaZ (Rare)">
+                </div>
+                <div class="fs-icon-container ic-4">
+                    <div class="fs-slice-text">150B<br>Cookies</div>
+                    <div class="fs-slice-odds">~29%</div>
+                    <img src="https://png.pngtree.com/png-vector/20250425/ourmid/pngtree-chocolate-chip-cookie-icon-white-background-png-image_16100260.png" title="150 Billions">
+                </div>
+                <div class="fs-icon-container ic-5">
+                    <div class="fs-slice-text">Dan<br>(Mythique)</div>
+                    <div class="fs-slice-odds">~2%</div>
+                    <img src="https://i.ibb.co/pvQshrdY/m-12.png" title="Dan (Mythique)">
+                </div>
+                <div class="fs-icon-container ic-6">
+                    <div class="fs-slice-text">Jayden<br>(Secret)</div>
+                    <div class="fs-slice-odds">0.0003%</div>
+                    <img src="https://i.ibb.co/qM5P7xxK/m-13.png" title="Jayden (Secret)">
+                </div>
+            </div>
+        </div>
     </div>
 
     <div id="settingsModal" class="modal">
@@ -473,6 +496,8 @@
                     
                     <div class="cookie-container">
                         <div id="orbitingCursors" class="orbiting-cursors"></div>
+                        <img id="activeCompanionImg" src="" alt="Compagnon">
+                        
                         <button class="big-cookie-btn" id="bigCookie">
                             <img src="https://png.pngtree.com/png-vector/20250425/ourmid/pngtree-chocolate-chip-cookie-icon-white-background-png-image_16100260.png" alt="Big Cookie" class="big-cookie-img" draggable="false" id="mainCookieImg">
                         </button>
@@ -482,17 +507,42 @@
 
                 <div class="cc-right">
                     <div class="buy-sell-toggle">
-                        <button class="bs-btn active" id="btnModeBuy">Acheter</button>
-                        <button class="bs-btn" id="btnModeSell">Vendre</button>
+                        <button class="bs-btn active" id="tabBuy">Acheter</button>
+                        <button class="bs-btn" id="tabSell">Vendre</button>
+                        <button class="bs-btn" id="tabWheel" style="color: #ffbd2e;">Roue 🎡</button>
+                        <button class="bs-btn" id="tabComps" style="display:none; color: #bc8cff;">Compagnons 🐾</button>
                     </div>
                     
-                    <div class="upgrades-header">
-                        <span style="font-family: 'Orbitron'; color: var(--secondary); font-size: 0.9rem;">AMÉLIORATIONS</span>
-                        <button id="btnHistory" class="cc-btn" style="padding: 2px 10px; font-size: 0.8rem;">📜 Voir achetés</button>
+                    <div id="panelStore">
+                        <div class="upgrades-header">
+                            <span style="font-family: 'Orbitron'; color: var(--secondary); font-size: 0.9rem;">AMÉLIORATIONS</span>
+                            <button id="btnHistory" class="cc-btn" style="padding: 2px 10px; font-size: 0.8rem;">📜 Voir achetés</button>
+                        </div>
+                        <div class="upgrades-container" id="upgradesContainer"></div>
+                        <div id="storeContainer" style="position: relative;"></div>
                     </div>
-                    <div class="upgrades-container" id="upgradesContainer"></div>
-                    
-                    <div id="storeContainer" style="position: relative;"></div>
+
+                    <div id="panelWheel">
+                        <div style="position: absolute; font-size: 200px; opacity: 0.05; right: -30px; bottom: -30px; transform: rotate(-15deg); pointer-events: none;">🎡</div>
+                        <h3 style="color: var(--secondary); font-family: 'Orbitron'; margin-bottom: 10px; font-size: 2.2rem; text-shadow: 0 0 15px var(--secondary); text-align: center;">La Roue Cosmique</h3>
+                        <p style="color: #e6edf3; margin-bottom: 30px; font-size: 0.9rem; max-width: 90%; line-height: 1.5; text-align: center;">Achète un tour pour débloquer des sommes astronomiques ou des compagnons exclusifs !</p>
+                        
+                        <div style="background: rgba(0,0,0,0.6); padding: 15px 30px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 30px;">
+                            <p id="spinTimerText" style="color: #fff; font-weight: bold; font-size: 1.2rem; margin: 0;">Tours dispo : 2/2</p>
+                        </div>
+                        
+                        <button class="cc-btn primary-btn" id="btnSpin1" style="font-size: 1.3rem; padding: 15px 30px; border-radius: 50px; box-shadow: 0 0 20px var(--primary); display: flex; flex-direction: column; align-items: center; gap: 5px;">
+                            <span>TOURNER LA ROUE</span>
+                            <span style="font-size: 0.8rem; font-weight: normal; color: rgba(255,255,255,0.8);">Prix : 200 Billions</span>
+                        </button>
+                    </div>
+
+                    <div id="panelComps">
+                        <h3 style="color: var(--secondary); font-family: 'Orbitron'; text-align: center; font-size: 1.5rem; margin-bottom: 5px;">Tes Compagnons</h3>
+                        <p style="text-align: center; color: #8b949e; font-size: 0.8rem; margin-bottom: 15px;">Clique sur un compagnon pour l'équiper (un seul à la fois).</p>
+                        <div class="companion-list" id="compListContainer"></div>
+                    </div>
+
                 </div>
                 
                 <div id="gameTooltip" class="tooltip"></div>
@@ -553,6 +603,7 @@
 
         const defaultSave = {
             username: "", saveCode: "", displayName: "", password: "", cookies: 0, totalCookies: 0, upgradesBought: [], banned: false, lastAdminSync: 0, lastGCSync: 0, lastForceSave: 0, groupId: null,
+            spinsLeft: 2, lastSpinReset: 0, companions: [], equippedCompanion: null,
             buildings: { cursor: {count:0}, grandma:{count:0}, farm:{count:0}, mine:{count:0}, factory:{count:0}, bank:{count:0}, temple:{count:0}, wizard:{count:0}, shipment:{count:0}, alch:{count:0}, portal:{count:0}, time:{count:0}, prism:{count:0}, clone:{count:0}, brain:{count:0}, corrupted_cursor:{count:0}, void_portal:{count:0}, cthulhu:{count:0} }
         };
 
@@ -589,6 +640,12 @@
             { id: 'up9', icon: '👀', cost: 1000, desc: "C'est Dan qui donne c'est carré ! Production globale +71%", type: 'global_mult', val: 1.71 }
         ];
 
+        const companionsDB = {
+            algaz: { id: 'algaz', name: 'AlgaZ', icon: 'https://i.ibb.co/1tBJRDdc/Alga2.png', cpsMult: 1.25, clickBonus: 1000000, gcMult: 1, desc: "x1.25 CpS | +1M Puissance de Clic", rarity: "Rare", rClass: "r-rare" },
+            dan: { id: 'dan', name: 'Dan', icon: 'https://i.ibb.co/pvQshrdY/m-12.png', cpsMult: 1.75, clickBonus: 0, gcMult: 2, desc: "x1.75 CpS | Apparition Cookies Dorés x2", rarity: "Mythique", rClass: "r-mythic" },
+            jayden: { id: 'jayden', name: 'Jayden', icon: 'https://i.ibb.co/qM5P7xxK/m-13.png', cpsMult: 2.0, clickBonus: 3000000, gcMult: 2, desc: "x2.00 CpS | +3M Clic | Cookies Dorés x2", rarity: "Secret", rClass: "r-secret" }
+        };
+
         let game = JSON.parse(JSON.stringify(defaultSave));
         let currentCps = 0; let clickPower = 1;
         let storeMode = 'buy'; 
@@ -600,6 +657,11 @@
         let lastCursorCount = -1;
         let groupsMap = {}; 
         let groupCpsBonus = 0; 
+        
+        let isSpinning = false;
+        let wheelPendingPrize = null;
+        let wheelStartPos = 0;
+        let wheelStartPosX = 0;
 
         const imgCookieBase = "https://png.pngtree.com/png-vector/20250425/ourmid/pngtree-chocolate-chip-cookie-icon-white-background-png-image_16100260.png";
         const imgCookieGolden = "https://i.ibb.co/Y4fx1dPt/image-removebg-preview-2.png";
@@ -609,8 +671,20 @@
         const displayCpsBonus = document.getElementById('cpsBonusDisplay');
         const displayClickPower = document.getElementById('clickPowerDisplay');
         const bigCookieBtn = document.getElementById('bigCookie');
+        
+        const tabBuy = document.getElementById('tabBuy');
+        const tabSell = document.getElementById('tabSell');
+        const tabWheel = document.getElementById('tabWheel');
+        const tabComps = document.getElementById('tabComps');
+        
+        const panelStore = document.getElementById('panelStore');
+        const panelWheel = document.getElementById('panelWheel');
+        const panelComps = document.getElementById('panelComps');
         const storeContainer = document.getElementById('storeContainer');
         const upgradesContainer = document.getElementById('upgradesContainer');
+        const compListContainer = document.getElementById('compListContainer');
+        const activeCompanionImg = document.getElementById('activeCompanionImg');
+
         const playerNameDisplay = document.getElementById('playerNameDisplay');
         const usernameOverlay = document.getElementById('usernameOverlay');
         const tooltip = document.getElementById('gameTooltip');
@@ -623,6 +697,27 @@
         const btnHistory = document.getElementById('btnHistory');
         const historyModal = document.getElementById('historyModal');
         const historyList = document.getElementById('historyList');
+
+        function switchTab(tabId) {
+            tabBuy.classList.remove('active', 'sell-active', 'wheel-active', 'comp-active');
+            tabSell.classList.remove('active', 'sell-active', 'wheel-active', 'comp-active');
+            tabWheel.classList.remove('active', 'sell-active', 'wheel-active', 'comp-active');
+            tabComps.classList.remove('active', 'sell-active', 'wheel-active', 'comp-active');
+            
+            panelStore.style.display = 'none';
+            panelWheel.style.display = 'none';
+            panelComps.style.display = 'none';
+
+            if(tabId === 'buy') { tabBuy.classList.add('active'); storeMode = 'buy'; panelStore.style.display = 'block'; updateUI(); }
+            else if(tabId === 'sell') { tabSell.classList.add('sell-active'); storeMode = 'sell'; panelStore.style.display = 'block'; updateUI(); }
+            else if(tabId === 'wheel') { tabWheel.classList.add('wheel-active'); panelWheel.style.display = 'flex'; checkSpinTimer(); }
+            else if(tabId === 'comps') { tabComps.classList.add('comp-active'); panelComps.style.display = 'flex'; renderCompanions(); }
+        }
+
+        tabBuy.onclick = () => switchTab('buy');
+        tabSell.onclick = () => switchTab('sell');
+        tabWheel.onclick = () => switchTab('wheel');
+        tabComps.onclick = () => switchTab('comps');
 
         document.getElementById('checkPwd').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -652,31 +747,20 @@
             let name = document.getElementById('newGroupName').value.trim();
             let color = document.getElementById('newGroupColor').value;
             
-            if(!name) {
-                alert("Erreur : Tu dois donner un nom au groupe !");
-                return;
-            }
+            if(!name) { alert("Erreur : Tu dois donner un nom au groupe !"); return; }
             
             let btn = document.getElementById('btnCreateGroup');
-            btn.innerText = "Création...";
-            btn.disabled = true;
+            btn.innerText = "Création..."; btn.disabled = true;
 
             try {
                 let id = "grp_" + Date.now();
                 await setDoc(doc(db, "stmg_groups", id), { name, color });
                 document.getElementById('newGroupName').value = '';
-                await fetchGroups();
-                renderAdminGroups();
-                loadAdminData(); 
-                
-                btn.innerText = "Créer le groupe";
-                btn.disabled = false;
+                await fetchGroups(); renderAdminGroups(); loadAdminData(); 
+                btn.innerText = "Créer le groupe"; btn.disabled = false;
                 alert("✅ Le groupe " + name + " a été créé avec succès !");
             } catch (e) {
-                console.error(e);
-                alert("❌ Erreur lors de la création du groupe.");
-                btn.innerText = "Créer le groupe";
-                btn.disabled = false;
+                alert("❌ Erreur création groupe."); btn.innerText = "Créer le groupe"; btn.disabled = false;
             }
         });
 
@@ -695,9 +779,7 @@
         window.delGroup = async function(id) {
             if(confirm("Supprimer ce groupe ? Les joueurs le perdront.")) {
                 await deleteDoc(doc(db, "stmg_groups", id));
-                await fetchGroups();
-                renderAdminGroups();
-                loadAdminData(); 
+                await fetchGroups(); renderAdminGroups(); loadAdminData(); 
             }
         };
 
@@ -706,53 +788,33 @@
                 let sel = document.getElementById('grp_sel_' + userId);
                 let newGroupId = sel.value;
                 let finalGroupId = newGroupId === "" ? null : newGroupId;
-                
                 await updateDoc(doc(db, "stmg_leaderboard", userId), { groupId: finalGroupId });
-                alert("Groupe mis à jour ! La sauvegarde locale du joueur se synchronisera toute seule.");
-            } catch (e) {
-                alert("Erreur lors de la mise à jour du groupe.");
-                console.error(e);
-            }
+                alert("Groupe mis à jour !");
+            } catch (e) { alert("Erreur lors de la maj."); }
         };
 
         document.getElementById('btnForceSaveAll').addEventListener('click', async () => {
             if(!isAdmin) return;
             if(confirm("⚠️ ATTENTION : Cela va forcer la sauvegarde de TOUS les joueurs actuellement connectés.\nÀ n'utiliser qu'avant une maintenance.\nContinuer ?")) {
                 let btn = document.getElementById('btnForceSaveAll');
-                btn.innerText = "Envoi du signal..."; btn.disabled = true;
-                
+                btn.innerText = "Envoi..."; btn.disabled = true;
                 try {
                     const snap = await getDocs(collection(db, "stmg_leaderboard"));
                     const now = Date.now();
                     const updatePromises = [];
-                    
-                    snap.forEach(d => {
-                        if(!d.data().banned) {
-                            updatePromises.push(updateDoc(doc(db, "stmg_leaderboard", d.id), { forceSave: now }));
-                        }
-                    });
-                    
+                    snap.forEach(d => { if(!d.data().banned) updatePromises.push(updateDoc(doc(db, "stmg_leaderboard", d.id), { forceSave: now })); });
                     await Promise.all(updatePromises);
-                    alert("✅ Signal de sauvegarde envoyé à tous les joueurs actifs ! Vous pouvez couper les serveurs.");
-                } catch(e) {
-                    alert("Erreur lors de l'envoi du signal.");
-                    console.error(e);
-                }
-                
+                    alert("✅ Signal envoyé !");
+                } catch(e) { alert("Erreur envoi signal."); }
                 btn.innerText = "⚠️ Forcer Sauvegarde Globale"; btn.disabled = false;
             }
         });
-
 
         document.getElementById('chatToggleBtn').addEventListener('click', () => {
             const panel = document.getElementById('cocChatPanel');
             const btn = document.getElementById('chatToggleBtn');
             panel.classList.toggle('open');
-            if (panel.classList.contains('open')) {
-                btn.innerText = '❰';
-            } else {
-                btn.innerText = '❱';
-            }
+            btn.innerText = panel.classList.contains('open') ? '❰' : '❱';
         });
 
         btnHistory.addEventListener('click', () => {
@@ -766,12 +828,8 @@
                         historyList.innerHTML += `
                             <div style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.05); padding:10px; border-radius:5px;">
                                 <div style="font-size:2rem;">${up.icon}</div>
-                                <div>
-                                    <div style="color:#fff; font-weight:bold;">${up.desc}</div>
-                                    <div style="color:#aaa; font-size:0.8rem;">Coût : ${formatNumber(up.cost)}</div>
-                                </div>
-                            </div>
-                        `;
+                                <div><div style="color:#fff; font-weight:bold;">${up.desc}</div><div style="color:#aaa; font-size:0.8rem;">Coût : ${formatNumber(up.cost)}</div></div>
+                            </div>`;
                     }
                 });
             }
@@ -793,9 +851,6 @@
             return shortVal + suffix;
         }
 
-        document.getElementById('btnModeBuy').onclick = (e) => { storeMode = 'buy'; e.target.classList.add('active'); document.getElementById('btnModeSell').classList.remove('sell-active'); updateUI(); };
-        document.getElementById('btnModeSell').onclick = (e) => { storeMode = 'sell'; e.target.classList.add('sell-active'); document.getElementById('btnModeBuy').classList.remove('active'); updateUI(); };
-
         function getBuildingBuyCost(id) { return Math.ceil(buildingData[id].baseCost * Math.pow(1.15, validateNum(game.buildings[id].count))); }
         function getBuildingSellCost(id) { 
             let count = validateNum(game.buildings[id].count);
@@ -807,8 +862,12 @@
 
         function calculateCpsForSave(saveObj) {
             let bMults = { cursor: 1, grandma: 1, farm: 1, mine: 1, factory: 1, bank: 1, temple: 1, wizard: 1, shipment: 1, alch: 1, portal: 1, time: 1, prism: 1, clone: 1, brain: 1, corrupted_cursor: 1, void_portal: 1, cthulhu: 1 };
-            let gMult = 1;
+            let gMult = 1; let compCpsMult = 1;
             
+            if(saveObj.equippedCompanion && companionsDB[saveObj.equippedCompanion]) {
+                compCpsMult = companionsDB[saveObj.equippedCompanion].cpsMult;
+            }
+
             if(saveObj.upgradesBought) {
                 saveObj.upgradesBought.forEach(upId => {
                     let up = upgradeData.find(u => u.id === upId);
@@ -828,12 +887,20 @@
                     }
                 }
             }
-            return validateNum(cps * gMult) + validateNum(groupCpsBonus); 
+            return validateNum(cps * gMult * compCpsMult) + validateNum(groupCpsBonus); 
         }
 
         function recalculateStats() {
             let bMults = { cursor: 1, grandma: 1, farm: 1, mine: 1, factory: 1, bank: 1, temple: 1, wizard: 1, shipment: 1, alch: 1, portal: 1, time: 1, prism: 1, clone: 1, brain: 1, corrupted_cursor: 1, void_portal: 1, cthulhu: 1 };
             let cMult = 1; let gMult = 1;
+            
+            let compCpsMult = 1;
+            let compClickBonus = 0;
+
+            if(game.equippedCompanion && companionsDB[game.equippedCompanion]) {
+                compCpsMult = companionsDB[game.equippedCompanion].cpsMult;
+                compClickBonus = companionsDB[game.equippedCompanion].clickBonus;
+            }
 
             if(game.upgradesBought) {
                 game.upgradesBought.forEach(upId => {
@@ -857,11 +924,11 @@
             }
             
             let bonusSecu = validateNum(groupCpsBonus);
-            currentCps = validateNum(cps * gMult) + bonusSecu;
+            currentCps = validateNum(cps * gMult * compCpsMult) + bonusSecu;
             
             let cursorCount = (game.buildings && game.buildings.cursor) ? validateNum(game.buildings.cursor.count) : 0;
             
-            clickPower = validateNum((1 + cursorCount + Math.floor(currentCps * 0.05)) * cMult);
+            clickPower = validateNum((1 + cursorCount + Math.floor(currentCps * 0.05)) * cMult) + compClickBonus;
             if(isGoldenFrenzy) clickPower *= 2;
             
             displayCps.innerText = formatNumber(currentCps);
@@ -943,6 +1010,68 @@
             }
         }
 
+        function renderCompanions() {
+            if(!game.companions) game.companions = [];
+            if(game.companions.length > 0) tabComps.style.display = 'inline-block';
+            
+            compListContainer.innerHTML = '';
+            
+            if(game.equippedCompanion && companionsDB[game.equippedCompanion]) {
+                activeCompanionImg.src = companionsDB[game.equippedCompanion].icon;
+                activeCompanionImg.style.display = 'block';
+            } else {
+                activeCompanionImg.style.display = 'none';
+            }
+
+            game.companions.forEach(cId => {
+                let c = companionsDB[cId];
+                if(c) {
+                    let isEq = game.equippedCompanion === cId;
+                    let div = document.createElement('div');
+                    div.className = `companion-card ${isEq ? 'equipped' : ''}`;
+                    div.innerHTML = `
+                        <div class="comp-info">
+                            <img src="${c.icon}" class="comp-icon">
+                            <div>
+                                <div class="comp-name">${c.name} <span class="comp-rarity ${c.rClass}">${c.rarity}</span></div>
+                                <div style="color:#aaa; font-size:0.8rem;">${c.desc}</div>
+                            </div>
+                        </div>
+                        <div style="font-size: 1.5rem;">${isEq ? '✅' : ''}</div>
+                    `;
+                    div.onclick = () => {
+                        game.equippedCompanion = isEq ? null : cId;
+                        unsavedProgress = true;
+                        saveGameToServer(); 
+                        recalculateStats();
+                        renderCompanions();
+                        updateUI();
+                    };
+                    compListContainer.appendChild(div);
+                }
+            });
+
+            if(game.companions.length > 0) {
+                for(let i = 0; i < 15; i++) {
+                    let div = document.createElement('div');
+                    div.className = `companion-card locked-companion`;
+                    div.style.opacity = '0.5';
+                    div.style.cursor = 'not-allowed';
+                    div.innerHTML = `
+                        <div class="comp-info">
+                            <img src="https://oise-echecs.fr/wp-content/uploads/2020/05/point-interrogation.png" class="comp-icon" style="filter: grayscale(100%); border-color: #555;">
+                            <div>
+                                <div class="comp-name" style="color: #ccc;">??? <span class="comp-rarity" style="background:#444; color:#aaa;">???</span></div>
+                                <div style="color:#777; font-size:0.8rem;">Compagnon inconnu</div>
+                            </div>
+                        </div>
+                        <div style="font-size: 1.5rem; filter: grayscale(100%);">🔒</div>
+                    `;
+                    compListContainer.appendChild(div);
+                }
+            }
+        }
+
         function updateUI() {
             game.cookies = validateNum(game.cookies); 
             if(game.banned) { document.getElementById('banScreen').style.display = 'flex'; return; }
@@ -950,48 +1079,52 @@
             displayCookies.innerText = formatNumber(game.cookies);
             playerNameDisplay.innerHTML = (game.displayName || game.username) + getGroupHTML(game.groupId);
             
-            for (let id in buildingData) {
-                const elCost = document.getElementById(`cost-${id}`);
-                const elItem = document.getElementById(`bitem-${id}`);
-                const elCount = document.getElementById(`count-${id}`);
-                if(!game.buildings[id]) game.buildings[id] = {count: 0}; 
+            if(game.companions && game.companions.length > 0) { tabComps.style.display = 'inline-block'; }
+            
+            if(panelStore.style.display !== 'none') {
+                for (let id in buildingData) {
+                    const elCost = document.getElementById(`cost-${id}`);
+                    const elItem = document.getElementById(`bitem-${id}`);
+                    const elCount = document.getElementById(`count-${id}`);
+                    if(!game.buildings[id]) game.buildings[id] = {count: 0}; 
 
-                if(elCost && elItem && elCount) {
-                    elCount.innerText = game.buildings[id].count > 0 ? game.buildings[id].count : '';
-                    if(storeMode === 'buy') {
-                        const cost = getBuildingBuyCost(id);
-                        elCost.innerText = formatNumber(cost);
-                        elCost.style.color = '#27c93f';
-                        if(game.cookies >= cost) { elItem.classList.remove('locked'); elCost.classList.remove('too-expensive'); } 
-                        else { elItem.classList.add('locked'); elCost.classList.add('too-expensive'); }
-                    } else { 
-                        const cost = getBuildingSellCost(id);
-                        elCost.innerText = "+" + formatNumber(cost);
-                        elCost.style.color = 'var(--danger)';
-                        elCost.classList.remove('too-expensive');
-                        if(game.buildings[id].count > 0) { elItem.classList.remove('locked'); }
-                        else { elItem.classList.add('locked'); }
+                    if(elCost && elItem && elCount) {
+                        elCount.innerText = game.buildings[id].count > 0 ? game.buildings[id].count : '';
+                        if(storeMode === 'buy') {
+                            const cost = getBuildingBuyCost(id);
+                            elCost.innerText = formatNumber(cost);
+                            elCost.style.color = '#27c93f';
+                            if(game.cookies >= cost) { elItem.classList.remove('locked'); elCost.classList.remove('too-expensive'); } 
+                            else { elItem.classList.add('locked'); elCost.classList.add('too-expensive'); }
+                        } else { 
+                            const cost = getBuildingSellCost(id);
+                            elCost.innerText = "+" + formatNumber(cost);
+                            elCost.style.color = 'var(--danger)';
+                            elCost.classList.remove('too-expensive');
+                            if(game.buildings[id].count > 0) { elItem.classList.remove('locked'); }
+                            else { elItem.classList.add('locked'); }
+                        }
                     }
                 }
+                
+                upgradesContainer.innerHTML = '';
+                upgradeData.forEach(up => {
+                    if(!hasUpgrade(up.id)) {
+                        let uDiv = document.createElement('div');
+                        uDiv.className = game.cookies >= up.cost ? 'upgrade-item' : 'upgrade-item locked';
+                        uDiv.innerText = up.icon;
+                        uDiv.onmousemove = (e) => showTooltip(e, `<b>${up.desc}</b><br>Coût d'achat: <span style="color:#27c93f">${formatNumber(up.cost)}</span>`);
+                        uDiv.onmouseleave = hideTooltip;
+                        uDiv.onclick = () => {
+                            if(game.cookies >= up.cost) {
+                                game.cookies -= up.cost; game.upgradesBought.push(up.id);
+                                hideTooltip(); unsavedProgress = true; recalculateStats(); updateUI();
+                            }
+                        };
+                        upgradesContainer.appendChild(uDiv);
+                    }
+                });
             }
-            
-            upgradesContainer.innerHTML = '';
-            upgradeData.forEach(up => {
-                if(!hasUpgrade(up.id)) {
-                    let uDiv = document.createElement('div');
-                    uDiv.className = game.cookies >= up.cost ? 'upgrade-item' : 'upgrade-item locked';
-                    uDiv.innerText = up.icon;
-                    uDiv.onmousemove = (e) => showTooltip(e, `<b>${up.desc}</b><br>Coût d'achat: <span style="color:#27c93f">${formatNumber(up.cost)}</span>`);
-                    uDiv.onmouseleave = hideTooltip;
-                    uDiv.onclick = () => {
-                        if(game.cookies >= up.cost) {
-                            game.cookies -= up.cost; game.upgradesBought.push(up.id);
-                            hideTooltip(); unsavedProgress = true; recalculateStats(); updateUI();
-                        }
-                    };
-                    upgradesContainer.appendChild(uDiv);
-                }
-            });
 
             document.title = `${formatNumber(game.cookies)} cookies`;
             updateLiquidColor(); 
@@ -1071,7 +1204,8 @@
 
             spawnCrack(x, y);
             for(let i=0; i<2; i++) spawnCrumb(x, y);
-            updateUI(); 
+            
+            if (panelStore.style.display !== 'block') { displayCookies.innerText = formatNumber(game.cookies); } else { updateUI(); }
         });
 
         function showGoldenCookie() {
@@ -1111,13 +1245,134 @@
         }
 
         function spawnGoldenCookieLoop() {
-            const delay = Math.random() * (2*60000) + (4*60000); 
+            let gcMult = 1;
+            if(game.equippedCompanion && companionsDB[game.equippedCompanion]) {
+                gcMult = companionsDB[game.equippedCompanion].gcMult;
+            }
+            
+            const delay = (Math.random() * (2*60000) + (4*60000)) / gcMult; 
+            
             setTimeout(() => {
                 if(Math.random() <= 0.90 && !game.banned && game.username) { 
                     showGoldenCookie();
                 }
                 spawnGoldenCookieLoop(); 
             }, delay);
+        }
+
+        function checkSpinTimer() {
+            let textEl = document.getElementById('spinTimerText');
+            let btn1 = document.getElementById('btnSpin1');
+
+            if(game.spinsLeft === undefined) { game.spinsLeft = 2; game.lastSpinReset = 0; }
+            
+            if (game.spinsLeft < 2 && Date.now() > game.lastSpinReset) {
+                game.spinsLeft = 2;
+                game.lastSpinReset = 0;
+            }
+
+            if (game.spinsLeft === 2) {
+                textEl.innerText = "Tours dispo : 2/2";
+            } else if (game.spinsLeft === 1) {
+                let diff = Math.ceil((game.lastSpinReset - Date.now()) / 1000);
+                if(diff < 0) diff = 0;
+                let m = Math.floor(diff / 60); let s = diff % 60;
+                textEl.innerText = `Tours dispo : 1/2 (Recharge dans ${m}:${s.toString().padStart(2, '0')})`;
+            } else {
+                let diff = Math.ceil((game.lastSpinReset - Date.now()) / 1000);
+                if(diff < 0) diff = 0;
+                let m = Math.floor(diff / 60); let s = diff % 60;
+                textEl.innerText = `Tours dispo : 0/2 (Recharge dans ${m}:${s.toString().padStart(2, '0')})`;
+            }
+
+            btn1.disabled = game.spinsLeft < 1 || game.cookies < 200000000000 || isSpinning;
+        }
+
+        function getWheelPrize() {
+            let r = Math.random() * 100;
+            if (r <= 0.0003) return { id: 'jayden', deg: 30, name: 'Compagnon JAYDEN (Secret !!)' };
+            if (r <= 2.0003) return { id: 'dan', deg: 90, name: 'Compagnon DAN (Mythique)' };
+            if (r <= 12.0003) return { id: 'algaz', deg: 210, name: 'Compagnon ALGAZ (Rare)' };
+            if (r <= 42.0003) return { id: '250b', deg: 270, name: '250 Billions Cookies' };
+            return Math.random() > 0.5 ? { id: '150b', deg: 330, name: '150 Billions Cookies' } : { id: '150b', deg: 150, name: '150 Billions Cookies' };
+        }
+
+        document.getElementById('btnSpin1').addEventListener('click', () => {
+            if(game.spinsLeft < 1 || game.cookies < 200000000000 || isSpinning) return;
+            game.cookies -= 200000000000;
+            game.spinsLeft -= 1;
+            if(game.lastSpinReset === 0) game.lastSpinReset = Date.now() + (5 * 60 * 1000);
+            
+            saveGameToServer(); 
+            
+            wheelPendingPrize = getWheelPrize();
+            
+            let wheel = document.getElementById('fsWheelVisual');
+            wheel.style.transition = 'none';
+            wheel.style.transform = `rotate(0deg)`;
+            
+            document.getElementById('wheelModal').style.display = 'flex';
+            document.getElementById('swipeText').innerText = "👇 Glisse l'écran vers le bas pour tourner ! 👇";
+            
+            updateUI();
+            checkSpinTimer();
+        });
+
+        const wheelModal = document.getElementById('wheelModal');
+        const wheelVisual = document.getElementById('fsWheelVisual');
+        const swipeText = document.getElementById('swipeText');
+
+        function handleSwipeStart(e) {
+            if(isSpinning || !wheelPendingPrize) return;
+            wheelStartPos = e.touches ? e.touches[0].clientY : e.clientY;
+            wheelStartPosX = e.touches ? e.touches[0].clientX : e.clientX;
+        }
+        
+        function handleSwipeEnd(e) {
+            if(isSpinning || !wheelPendingPrize) return;
+            let endY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+            let endX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+            
+            let diffY = Math.abs(endY - wheelStartPos);
+            let diffX = Math.abs(endX - wheelStartPosX);
+            
+            if (diffY > 40 || diffX > 40) {
+                isSpinning = true;
+                swipeText.innerText = "La roue tourne...";
+                
+                let targetDeg = (360 * 5) + wheelPendingPrize.deg; 
+                
+                wheelVisual.style.transition = 'transform 4s cubic-bezier(0.15, 0.9, 0.25, 1)';
+                wheelVisual.style.transform = `rotate(${targetDeg}deg)`;
+                
+                setTimeout(() => {
+                    isSpinning = false;
+                    document.getElementById('wheelModal').style.display = 'none';
+                    
+                    alert("🎉 Tu as gagné : \n- " + wheelPendingPrize.name);
+                    awardPrize(wheelPendingPrize);
+                    
+                    wheelPendingPrize = null;
+                    saveGameToServer();
+                    recalculateStats();
+                    updateUI();
+                    renderCompanions();
+                }, 4200);
+            }
+        }
+
+        wheelModal.addEventListener('mousedown', handleSwipeStart);
+        wheelModal.addEventListener('touchstart', handleSwipeStart);
+        wheelModal.addEventListener('mouseup', handleSwipeEnd);
+        wheelModal.addEventListener('touchend', handleSwipeEnd);
+
+        function awardPrize(prize) {
+            if(prize.id === '150b') { game.cookies += 150000000000; game.totalCookies += 150000000000; }
+            else if(prize.id === '250b') { game.cookies += 250000000000; game.totalCookies += 250000000000; }
+            else {
+                if(!game.companions) game.companions = [];
+                if(!game.companions.includes(prize.id)) game.companions.push(prize.id);
+            }
         }
 
         function generateUniqueCode(pseudo) { return `${pseudo}-${Math.floor(Math.random() * 90000) + 10000}`; }
@@ -1200,7 +1455,7 @@
                             parsed.lastAdminSync = data.adminEditTimestamp; 
                             game = { ...defaultSave, ...parsed, buildings: { ...defaultSave.buildings, ...parsed.buildings } };
                             if(!game.upgradesBought) game.upgradesBought = [];
-                            saveLocal(); recalculateStats(); updateUI();
+                            saveLocal(); recalculateStats(); updateUI(); renderCompanions();
                             alert("⚠️ Vos données ont été modifiées en direct par un Administrateur !");
                         }
                     }
@@ -1253,6 +1508,7 @@
                     let parsed = JSON.parse(docSnap.data().saveData);
                     game = { ...defaultSave, ...parsed, buildings: { ...defaultSave.buildings, ...parsed.buildings } };
                     if(!game.upgradesBought) game.upgradesBought = []; 
+                    if(!game.companions) game.companions = [];
                     game.saveCode = code; 
 
                     if(game.password && game.password !== "") {
@@ -1286,6 +1542,7 @@
             }
             startChat();
             await loadLeaderboards(); 
+            renderCompanions();
             recalculateStats(); updateUI(); 
         }
 
@@ -1293,6 +1550,7 @@
             game.username = "Invité"; game.saveCode = ""; 
             usernameOverlay.style.display = 'none';
             await fetchGroups();
+            renderCompanions();
             recalculateStats(); updateUI(); loadLeaderboards();
         });
 
@@ -1401,8 +1659,16 @@
                 let adminTempEditData = JSON.parse(s.data().saveData);
                 document.getElementById('editPlayerName').innerText = adminTempEditData.username || adminTempEditData.displayName;
                 
-                let html = `
-                <div class="edit-group"><label>Cookies :</label><input type="number" id="edit_cookies" value="${Math.floor(validateNum(adminTempEditData.cookies))}"></div>`;
+                let html = `<div class="edit-group"><label>Cookies :</label><input type="number" id="edit_cookies" value="${Math.floor(validateNum(adminTempEditData.cookies))}"></div>`;
+                
+                let compHtml = `<div class="edit-group" style="flex-direction:column; align-items:flex-start;"><label>Compagnons possédés :</label><div style="display:flex; gap:10px; margin-top:5px;">`;
+                ['algaz', 'dan', 'jayden'].forEach(c => {
+                    let checked = (adminTempEditData.companions || []).includes(c) ? "checked" : "";
+                    compHtml += `<label><input type="checkbox" id="edit_comp_${c}" ${checked}> ${companionsDB[c].name}</label>`;
+                });
+                compHtml += `</div></div><hr style="border-color:#333; margin:10px 0;">`;
+                html += compHtml;
+
                 for(let key in buildingData) {
                     let count = adminTempEditData.buildings[key] ? validateNum(adminTempEditData.buildings[key].count) : 0;
                     html += `<div class="edit-group"><label>${buildingData[key].name} :</label><input type="number" id="edit_b_${key}" value="${count}"></div>`;
@@ -1412,6 +1678,15 @@
                 
                 document.getElementById('btnSaveAdminEdit').onclick = async () => {
                     adminTempEditData.cookies = validateNum(parseInt(document.getElementById('edit_cookies').value));
+                    
+                    adminTempEditData.companions = [];
+                    ['algaz', 'dan', 'jayden'].forEach(c => {
+                        if(document.getElementById(`edit_comp_${c}`).checked) adminTempEditData.companions.push(c);
+                    });
+                    if (adminTempEditData.equippedCompanion && !adminTempEditData.companions.includes(adminTempEditData.equippedCompanion)) {
+                        adminTempEditData.equippedCompanion = null;
+                    }
+
                     for(let key in buildingData) {
                         let val = validateNum(parseInt(document.getElementById(`edit_b_${key}`).value));
                         if(!adminTempEditData.buildings[key]) adminTempEditData.buildings[key] = { count: 0 };
@@ -1550,6 +1825,7 @@
                     let parsed = JSON.parse(saved);
                     game = { ...defaultSave, ...parsed, buildings: { ...defaultSave.buildings, ...parsed.buildings } };
                     if(!game.upgradesBought) game.upgradesBought = [];
+                    if(!game.companions) game.companions = [];
                 } catch(e) {}
             }
             if(game.username) {
@@ -1570,6 +1846,10 @@
                 location.reload(); 
             }
         });
+
+        setInterval(() => {
+            if(panelWheel.style.display === 'flex') { checkSpinTimer(); }
+        }, 1000);
 
         setInterval(() => {
             if (currentCps > 0 && game.username && !game.banned) {
@@ -1608,4 +1888,4 @@
         spawnGoldenCookieLoop(); 
     </script>
 </body>
-</html>
+</html> 
