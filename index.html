@@ -55,8 +55,6 @@
         .card-project { background: linear-gradient(145deg, rgba(88, 166, 255, 0.1), rgba(22, 27, 34, 0.8)); }
         .card-insta { background: linear-gradient(145deg, rgba(193, 53, 132, 0.1), rgba(22, 27, 34, 0.8)); }
         .card-linkedin { background: linear-gradient(145deg, rgba(10, 102, 194, 0.1), rgba(22, 27, 34, 0.8)); }
-        .card-insta:hover { border-color: #C13584; box-shadow: 0 10px 30px rgba(193, 53, 132, 0.4); }
-        .card-linkedin:hover { border-color: #0A66C2; box-shadow: 0 10px 30px rgba(10, 102, 194, 0.4); }
 
         .bio-flipper-container { perspective: 1000px; width: 100%; max-width: 800px; margin: 0 auto 60px; }
         .bio-flipper { transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1); transform-style: preserve-3d; position: relative; width: 100%; will-change: transform; }
@@ -124,6 +122,7 @@
         .bs-btn.sell-active { background: var(--danger); color: #fff; font-weight: bold; box-shadow: 0 0 10px var(--danger); }
         .bs-btn.wheel-active { background: #ffbd2e; color: #000; font-weight: bold; box-shadow: 0 0 10px #ffbd2e; }
         .bs-btn.comp-active { background: var(--secondary); color: #000; font-weight: bold; box-shadow: 0 0 10px var(--secondary); }
+        .bs-btn.trade-active { background: #27c93f; color: #000; font-weight: bold; box-shadow: 0 0 10px #27c93f; }
 
         .upgrades-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 10px; padding-bottom: 5px; }
         .upgrades-container { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
@@ -138,18 +137,14 @@
         .b-info { flex: 1; display: flex; flex-direction: column; } .b-name { font-weight: bold; font-size: 1.2rem; color: #fff; } .b-cost { font-size: 0.9rem; color: #27c93f; display: flex; align-items: center; gap: 5px; } .b-cost.too-expensive { color: #ff5f56; }
         .b-count { font-family: 'Orbitron', sans-serif; font-size: 2rem; color: rgba(255,255,255,0.2); font-weight: bold; }
         
-        #panelWheel {
-            display: none; flex-direction: column; align-items: center; justify-content: center; 
-            min-height: 400px; background: linear-gradient(145deg, rgba(255,189,46,0.1), rgba(0,0,0,0.6)); 
-            border: 1px solid rgba(255,255,255,0.1); border-radius: 15px; padding: 30px; position: relative; overflow: hidden;
-        }
-        
-        #panelComps {
+        #panelWheel, #panelComps, #panelTrade {
             display: none; flex-direction: column; min-height: 400px; 
-            background: linear-gradient(145deg, rgba(188,140,255,0.1), rgba(0,0,0,0.6)); 
             border: 1px solid rgba(255,255,255,0.1); border-radius: 15px; padding: 20px;
         }
-        
+        #panelWheel { background: linear-gradient(145deg, rgba(255,189,46,0.1), rgba(0,0,0,0.6)); align-items: center; justify-content: center; position: relative; overflow: hidden; }
+        #panelComps { background: linear-gradient(145deg, rgba(188,140,255,0.1), rgba(0,0,0,0.6)); }
+        #panelTrade { background: linear-gradient(145deg, rgba(39,201,63,0.1), rgba(0,0,0,0.6)); }
+
         .cc-controls { width: 100%; display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
         .cc-btn { background: rgba(0,0,0,0.5); border: 1px solid var(--secondary); color: var(--secondary); padding: 8px 15px; border-radius: 5px; font-family: 'Montserrat', sans-serif; font-size: 0.9rem; transition: 0.2s; cursor: pointer; }
         .cc-btn:hover { background: var(--secondary); color: #000; box-shadow: 0 0 10px var(--secondary); }
@@ -169,9 +164,20 @@
         .comp-icon { width: 45px; height: 45px; border-radius: 50%; border: 1px solid var(--primary); object-fit: cover; }
         .comp-name { font-family: 'Orbitron', sans-serif; font-weight: bold; font-size: 1.1rem; color: #fff; }
         .comp-rarity { font-size: 0.7rem; padding: 2px 6px; border-radius: 3px; font-weight: bold; margin-left: 5px; color: #000; }
-        .r-rare { background: #58a6ff; } .r-mythic { background: #bc8cff; } .r-secret { background: #ff5f56; }
         
-        #activeCompanionImg { position: absolute; bottom: 20px; right: 20px; width: 70px; height: 70px; z-index: 20; border-radius: 50%; border: 3px solid var(--secondary); box-shadow: 0 0 20px rgba(188, 140, 255, 0.6); object-fit: cover; pointer-events: none; animation: companionBounce 3s ease-in-out infinite; display: none; }
+        .r-rare { background: #58a6ff; } 
+        .r-mythic { background: #bc8cff; } 
+        .r-secret { background: #ff5f56; } 
+        .r-epic { background: #d845e8; color: #fff; }
+
+        .shiny-img { animation: shinyPulse 2s infinite alternate; }
+        @keyframes shinyPulse {
+            0% { filter: drop-shadow(0 0 5px violet); }
+            50% { filter: drop-shadow(0 0 15px cyan) hue-rotate(180deg); }
+            100% { filter: drop-shadow(0 0 25px yellow) hue-rotate(360deg); }
+        }
+        
+        #activeCompanionContainer { position: absolute; bottom: 20px; right: 20px; width: 70px; height: 70px; z-index: 20; border-radius: 50%; border: 3px solid var(--secondary); box-shadow: 0 0 20px rgba(188, 140, 255, 0.6); display: none; align-items: center; justify-content: center; background: #161b22; font-size: 40px; pointer-events: none; animation: companionBounce 3s ease-in-out infinite; overflow: hidden; }
         @keyframes companionBounce { 0% { transform: translateY(0); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0); } }
 
         #wheelModal {
@@ -221,6 +227,10 @@
         .btn-delete { background: #ff5f56; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-right: 5px;}
         .btn-edit { background: #ffbd2e; color: black; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-right: 5px;}
         .btn-ban { background: #000; color: #ff5f56; border: 1px solid #ff5f56; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-weight: bold;}
+
+        .trade-player-card { display: flex; justify-content: space-between; align-items: center; background: rgba(22,27,34,0.8); border: 1px solid rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 10px; margin-bottom: 8px; }
+        .trade-box { flex: 1; border: 1px solid var(--primary); padding: 15px; border-radius: 10px; background: rgba(0,0,0,0.4); }
+        .trade-box.ready { border-color: #27c93f; box-shadow: 0 0 10px rgba(39, 201, 63, 0.3); }
 
         #adminEditModal { display: none; position: fixed; top: 10%; left: 50%; transform: translateX(-50%); background: #111; border: 1px solid var(--primary); border-radius: 10px; padding: 25px; z-index: 2000; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; box-shadow: 0 0 30px #000; color: white; font-family: 'Courier New', Courier, monospace; }
         #adminEditModal h3 { font-family: 'Orbitron', sans-serif; color: var(--primary); margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px;}
@@ -282,41 +292,77 @@
         <button class="cc-btn" style="margin-top:40px; border-color:white; color:white; font-size: 1.2rem;" onclick="localStorage.removeItem('danCookieSave_v6'); location.reload();">Déconnexion & Retour à l'accueil</button>
     </div>
 
+    <div id="incomingTradeModal" class="modal">
+        <div class="modal-content">
+            <h3 style="color:#27c93f; font-family:'Orbitron'; margin-bottom:15px;">🤝 Demande d'échange !</h3>
+            <p style="margin-bottom:20px;"><span id="incomingTradeSender" style="font-weight:bold; color:#fff;">Joueur</span> aimerait faire un trade avec toi !</p>
+            <div style="display:flex; justify-content:space-between; gap:10px;">
+                <button class="cc-btn" style="flex:1; border-color:red; color:red;" id="btnDeclineTrade">Refuser</button>
+                <button class="cc-btn primary-btn" style="flex:1; background:#27c93f; color:#000; border-color:#27c93f;" id="btnAcceptTrade">Accepter</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="activeTradeModal" class="modal">
+        <div class="modal-content" style="max-width:700px;">
+            <h3 style="color:var(--secondary); font-family:'Orbitron'; margin-bottom:20px;">Échange avec <span id="tradeTargetName" style="color:#fff;">...</span></h3>
+            
+            <div style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:20px;">
+                <div class="trade-box" id="myTradeBox">
+                    <h4 style="color:var(--primary); margin-bottom:10px;">Ton Offre</h4>
+                    <input type="number" id="tradeMyCookiesInput" class="cc-input" style="width:100%; padding:8px; font-size:1rem; margin-bottom:10px;" placeholder="Nb Cookies..." min="0">
+                    <p style="font-size:0.8rem; color:#aaa; margin-bottom:5px;">Compagnons à donner :</p>
+                    <div id="tradeMyCompsList" style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:15px; max-height:100px; overflow-y:auto;">
+                        </div>
+                    <button class="cc-btn primary-btn" id="btnUpdateMyOffer" style="width:100%; margin-bottom:10px;">Mettre à jour l'offre</button>
+                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer; background:rgba(255,255,255,0.05); padding:10px; border-radius:5px;">
+                        <input type="checkbox" id="tradeMyReadyCheck" style="transform:scale(1.5);"> 
+                        <span style="font-weight:bold;">Je suis prêt !</span>
+                    </label>
+                </div>
+
+                <div class="trade-box" id="theirTradeBox" style="opacity:0.9;">
+                    <h4 style="color:#ffbd2e; margin-bottom:10px;">Son Offre</h4>
+                    <div style="background:rgba(0,0,0,0.5); padding:10px; border-radius:5px; margin-bottom:10px;">
+                        <span style="color:#aaa;">Cookies proposés :</span><br>
+                        <span id="tradeTheirCookiesDisplay" style="font-weight:bold; font-size:1.2rem;">0</span>
+                    </div>
+                    <div style="background:rgba(0,0,0,0.5); padding:10px; border-radius:5px; margin-bottom:15px;">
+                        <span style="color:#aaa;">Compagnons proposés :</span><br>
+                        <div id="tradeTheirCompsDisplay" style="font-weight:bold; font-size:0.9rem; margin-top:5px;">Aucun</div>
+                    </div>
+                    <div id="tradeTheirReadyStatus" style="padding:10px; text-align:center; border-radius:5px; background:rgba(255,0,0,0.2); color:#ff5f56; font-weight:bold;">
+                        ❌ Pas prêt
+                    </div>
+                </div>
+            </div>
+
+            <button class="cc-btn" id="btnCancelActiveTrade" style="border-color:#ff5f56; color:#ff5f56; width:100%;">Annuler l'échange</button>
+        </div>
+    </div>
+
     <div id="wheelModal">
         <h2 style="color: #fff; font-family: 'Orbitron'; text-shadow: 0 0 20px var(--primary); margin-bottom: 10px; font-size: 2.5rem;">La Roue Cosmique</h2>
         <p id="swipeText" style="color: var(--secondary); font-size: 1.2rem; margin-bottom: 30px; animation: blinkWarning 1s infinite alternate;">👇 Glisse l'écran vers le bas pour tourner ! 👇</p>
         <div class="fs-wheel-wrapper">
             <div class="fs-wheel-pointer"></div>
             <div class="fs-wheel-circle" id="fsWheelVisual">
-                <div class="fs-icon-container ic-1">
-                    <div class="fs-slice-text">150B<br>Cookies</div>
-                    <div class="fs-slice-odds">~29%</div>
-                    <img src="https://png.pngtree.com/png-vector/20250425/ourmid/pngtree-chocolate-chip-cookie-icon-white-background-png-image_16100260.png" title="150 Billions">
                 </div>
-                <div class="fs-icon-container ic-2">
-                    <div class="fs-slice-text">250B<br>Cookies</div>
-                    <div class="fs-slice-odds">30%</div>
-                    <img src="https://i.ibb.co/Y4fx1dPt/image-removebg-preview-2.png" title="250 Billions">
-                </div>
-                <div class="fs-icon-container ic-3">
-                    <div class="fs-slice-text" style="color: #000; text-shadow: none;">AlgaZ<br>(Rare)</div>
-                    <div class="fs-slice-odds" style="background: rgba(255,255,255,0.7); color:#000;">10%</div>
-                    <img src="https://i.ibb.co/1tBJRDdc/Alga2.png" title="AlgaZ (Rare)">
-                </div>
-                <div class="fs-icon-container ic-4">
-                    <div class="fs-slice-text">150B<br>Cookies</div>
-                    <div class="fs-slice-odds">~29%</div>
-                    <img src="https://png.pngtree.com/png-vector/20250425/ourmid/pngtree-chocolate-chip-cookie-icon-white-background-png-image_16100260.png" title="150 Billions">
-                </div>
-                <div class="fs-icon-container ic-5">
-                    <div class="fs-slice-text">Dan<br>(Mythique)</div>
-                    <div class="fs-slice-odds">~2%</div>
-                    <img src="https://i.ibb.co/pvQshrdY/m-12.png" title="Dan (Mythique)">
-                </div>
-                <div class="fs-icon-container ic-6">
-                    <div class="fs-slice-text">Jayden<br>(Secret)</div>
-                    <div class="fs-slice-odds">0.0003%</div>
-                    <img src="https://i.ibb.co/qM5P7xxK/m-13.png" title="Jayden (Secret)">
+        </div>
+    </div>
+
+    <div id="adminWheelModal" class="modal">
+        <div class="modal-content">
+            <h3 style="color:var(--secondary); font-family:'Orbitron'; margin-bottom:15px;">🎡 Gestion de la Roue : <span id="adminWheelPlayerName"></span></h3>
+            <div class="edit-group" style="justify-content:center; gap: 15px; margin-bottom:20px;">
+                <label style="flex:none; color:#aaa;">Tours restants :</label>
+                <input type="number" id="adminWheelSpins" class="cc-input" style="width: 80px; padding:5px; text-align:center;" min="0" max="100">
+            </div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <button class="cc-btn primary-btn" onclick="window.resetWheelTimerAdmin()">⏳ Reset Timer (0 sec)</button>
+                <div style="display:flex; justify-content:space-between; margin-top:15px;">
+                    <button class="cc-btn" onclick="document.getElementById('adminWheelModal').style.display='none'">Annuler</button>
+                    <button class="cc-btn primary-btn" id="btnSaveAdminWheel">Sauvegarder</button>
                 </div>
             </div>
         </div>
@@ -496,7 +542,7 @@
                     
                     <div class="cookie-container">
                         <div id="orbitingCursors" class="orbiting-cursors"></div>
-                        <img id="activeCompanionImg" src="" alt="Compagnon">
+                        <div id="activeCompanionContainer"></div>
                         
                         <button class="big-cookie-btn" id="bigCookie">
                             <img src="https://png.pngtree.com/png-vector/20250425/ourmid/pngtree-chocolate-chip-cookie-icon-white-background-png-image_16100260.png" alt="Big Cookie" class="big-cookie-img" draggable="false" id="mainCookieImg">
@@ -511,6 +557,7 @@
                         <button class="bs-btn" id="tabSell">Vendre</button>
                         <button class="bs-btn" id="tabWheel" style="color: #ffbd2e;">Roue 🎡</button>
                         <button class="bs-btn" id="tabComps" style="display:none; color: #bc8cff;">Compagnons 🐾</button>
+                        <button class="bs-btn" id="tabTrade" style="color: #27c93f;">Trade 🤝</button>
                     </div>
                     
                     <div id="panelStore">
@@ -525,7 +572,7 @@
                     <div id="panelWheel">
                         <div style="position: absolute; font-size: 200px; opacity: 0.05; right: -30px; bottom: -30px; transform: rotate(-15deg); pointer-events: none;">🎡</div>
                         <h3 style="color: var(--secondary); font-family: 'Orbitron'; margin-bottom: 10px; font-size: 2.2rem; text-shadow: 0 0 15px var(--secondary); text-align: center;">La Roue Cosmique</h3>
-                        <p style="color: #e6edf3; margin-bottom: 30px; font-size: 0.9rem; max-width: 90%; line-height: 1.5; text-align: center;">Achète un tour pour débloquer des sommes astronomiques ou des compagnons exclusifs !</p>
+                        <p style="color: #e6edf3; margin-bottom: 30px; font-size: 0.9rem; max-width: 90%; line-height: 1.5; text-align: center;">Achète un tour pour débloquer des sommes astronomiques ou des compagnons exclusifs !<br><i style="color:#aaa; font-size:0.8rem;">(Les compagnons obtenus se retirent de la roue)</i></p>
                         
                         <div style="background: rgba(0,0,0,0.6); padding: 15px 30px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 30px;">
                             <p id="spinTimerText" style="color: #fff; font-weight: bold; font-size: 1.2rem; margin: 0;">Tours dispo : 2/2</p>
@@ -541,6 +588,25 @@
                         <h3 style="color: var(--secondary); font-family: 'Orbitron'; text-align: center; font-size: 1.5rem; margin-bottom: 5px;">Tes Compagnons</h3>
                         <p style="text-align: center; color: #8b949e; font-size: 0.8rem; margin-bottom: 15px;">Clique sur un compagnon pour l'équiper (un seul à la fois).</p>
                         <div class="companion-list" id="compListContainer"></div>
+                    </div>
+
+                    <div id="panelTrade">
+                        <h3 style="color: #27c93f; font-family: 'Orbitron'; text-align: center; font-size: 1.5rem; margin-bottom: 10px;">Marché Noir (Trades) 🤝</h3>
+                        
+                        <div style="background:rgba(0,0,0,0.5); padding:15px; border-radius:10px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.1); font-size:0.85rem; color:#aaa; line-height:1.4;">
+                            <h4 style="color:var(--secondary); margin-bottom:5px;">📜 Règles de la galaxie :</h4>
+                            <ul style="padding-left:20px;">
+                                <li>Tu ne peux échanger que ce que tu <b>possèdes</b> (Cookies / Compagnons).</li>
+                                <li>Une fois l'échange validé par les deux joueurs, il est <b>définitif</b>.</li>
+                                <li>Les escroqueries interstellaires ne sont pas remboursées par l'Admin.</li>
+                                <li>Sois vigilant, vérifie toujours l'offre de l'autre !</li>
+                            </ul>
+                        </div>
+                        
+                        <h4 style="color:#fff; margin-bottom:10px;">Joueurs Connectés :</h4>
+                        <div id="tradePlayersList" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
+                            <p style="text-align:center; color:#8b949e;">Chargement des joueurs...</p>
+                        </div>
                     </div>
 
                 </div>
@@ -641,9 +707,10 @@
         ];
 
         const companionsDB = {
-            algaz: { id: 'algaz', name: 'AlgaZ', icon: 'https://i.ibb.co/1tBJRDdc/Alga2.png', cpsMult: 1.25, clickBonus: 1000000, gcMult: 1, desc: "x1.25 CpS | +1M Puissance de Clic", rarity: "Rare", rClass: "r-rare" },
-            dan: { id: 'dan', name: 'Dan', icon: 'https://i.ibb.co/pvQshrdY/m-12.png', cpsMult: 1.75, clickBonus: 0, gcMult: 2, desc: "x1.75 CpS | Apparition Cookies Dorés x2", rarity: "Mythique", rClass: "r-mythic" },
-            jayden: { id: 'jayden', name: 'Jayden', icon: 'https://i.ibb.co/qM5P7xxK/m-13.png', cpsMult: 2.0, clickBonus: 3000000, gcMult: 2, desc: "x2.00 CpS | +3M Clic | Cookies Dorés x2", rarity: "Secret", rClass: "r-secret" }
+            algaz: { id: 'algaz', name: 'AlgaZ', icon: '💥', cpsMult: 1.25, clickBonus: 1000000, gcMult: 1, desc: "x1.25 CpS | +1M Puissance de Clic", rarity: "Épique", rClass: "r-epic" },
+            dan: { id: 'dan', name: 'Dan', icon: '💣', cpsMult: 1.75, clickBonus: 0, gcMult: 2, desc: "x1.75 CpS | Apparition Cookies Dorés x2", rarity: "Mythique", rClass: "r-mythic" },
+            jayden: { id: 'jayden', name: 'Jayden', icon: 'https://i.ibb.co/qM5P7xxK/m-13.png', cpsMult: 2.0, clickBonus: 3000000, gcMult: 2, desc: "x2.00 CpS | +3M Clic | Cookies Dorés x2", rarity: "Secret", rClass: "r-secret" },
+            jayden_shiny: { id: 'jayden_shiny', name: 'Jayden ✨', icon: 'https://i.ibb.co/qM5P7xxK/m-13.png', cpsMult: 2.5, clickBonus: 5000000, gcMult: 3, desc: "x2.50 CpS | +5M Clic | Cookies Dorés x3 | SHINY ✨", rarity: "Secret+", rClass: "r-secret shiny-img" }
         };
 
         let game = JSON.parse(JSON.stringify(defaultSave));
@@ -662,6 +729,15 @@
         let wheelPendingPrize = null;
         let wheelStartPos = 0;
         let wheelStartPosX = 0;
+        let currentWheelEditId = null;
+        let currentWheelEditData = null;
+
+        let tradeListenerSender = null;
+        let tradeListenerReceiver = null;
+        let currentTradeDocId = null;
+        let currentTradeData = null;
+        let isTradeModalOpen = false;
+        let allLeaderboardPlayers = [];
 
         const imgCookieBase = "https://png.pngtree.com/png-vector/20250425/ourmid/pngtree-chocolate-chip-cookie-icon-white-background-png-image_16100260.png";
         const imgCookieGolden = "https://i.ibb.co/Y4fx1dPt/image-removebg-preview-2.png";
@@ -676,14 +752,17 @@
         const tabSell = document.getElementById('tabSell');
         const tabWheel = document.getElementById('tabWheel');
         const tabComps = document.getElementById('tabComps');
+        const tabTrade = document.getElementById('tabTrade');
         
         const panelStore = document.getElementById('panelStore');
         const panelWheel = document.getElementById('panelWheel');
         const panelComps = document.getElementById('panelComps');
+        const panelTrade = document.getElementById('panelTrade');
+        
         const storeContainer = document.getElementById('storeContainer');
         const upgradesContainer = document.getElementById('upgradesContainer');
         const compListContainer = document.getElementById('compListContainer');
-        const activeCompanionImg = document.getElementById('activeCompanionImg');
+        const activeCompanionContainer = document.getElementById('activeCompanionContainer');
 
         const playerNameDisplay = document.getElementById('playerNameDisplay');
         const usernameOverlay = document.getElementById('usernameOverlay');
@@ -699,25 +778,29 @@
         const historyList = document.getElementById('historyList');
 
         function switchTab(tabId) {
-            tabBuy.classList.remove('active', 'sell-active', 'wheel-active', 'comp-active');
-            tabSell.classList.remove('active', 'sell-active', 'wheel-active', 'comp-active');
-            tabWheel.classList.remove('active', 'sell-active', 'wheel-active', 'comp-active');
-            tabComps.classList.remove('active', 'sell-active', 'wheel-active', 'comp-active');
+            tabBuy.classList.remove('active', 'sell-active', 'wheel-active', 'comp-active', 'trade-active');
+            tabSell.classList.remove('active', 'sell-active', 'wheel-active', 'comp-active', 'trade-active');
+            tabWheel.classList.remove('active', 'sell-active', 'wheel-active', 'comp-active', 'trade-active');
+            tabComps.classList.remove('active', 'sell-active', 'wheel-active', 'comp-active', 'trade-active');
+            tabTrade.classList.remove('active', 'sell-active', 'wheel-active', 'comp-active', 'trade-active');
             
             panelStore.style.display = 'none';
             panelWheel.style.display = 'none';
             panelComps.style.display = 'none';
+            panelTrade.style.display = 'none';
 
             if(tabId === 'buy') { tabBuy.classList.add('active'); storeMode = 'buy'; panelStore.style.display = 'block'; updateUI(); }
             else if(tabId === 'sell') { tabSell.classList.add('sell-active'); storeMode = 'sell'; panelStore.style.display = 'block'; updateUI(); }
-            else if(tabId === 'wheel') { tabWheel.classList.add('wheel-active'); panelWheel.style.display = 'flex'; checkSpinTimer(); }
+            else if(tabId === 'wheel') { tabWheel.classList.add('wheel-active'); panelWheel.style.display = 'flex'; checkSpinTimer(); renderWheelVisuals(); }
             else if(tabId === 'comps') { tabComps.classList.add('comp-active'); panelComps.style.display = 'flex'; renderCompanions(); }
+            else if(tabId === 'trade') { tabTrade.classList.add('trade-active'); panelTrade.style.display = 'flex'; renderTradePlayersList(); }
         }
 
         tabBuy.onclick = () => switchTab('buy');
         tabSell.onclick = () => switchTab('sell');
         tabWheel.onclick = () => switchTab('wheel');
         tabComps.onclick = () => switchTab('comps');
+        tabTrade.onclick = () => switchTab('trade');
 
         document.getElementById('checkPwd').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -741,6 +824,291 @@
             if (g.color === 'golden-aura') return ` <span class="text-golden-aura">[${safeName}]</span>`;
             if (g.color === 'aura') return ` <span class="text-aura">[${safeName}]</span>`;
             return ` <span style="color:${g.color}; font-weight:bold;">[${safeName}]</span>`;
+        }
+
+        function setupTradeListeners() {
+            if(!game.saveCode) return;
+            
+            if(tradeListenerReceiver) tradeListenerReceiver();
+            const qReceiver = query(collection(db, "stmg_trades"), where("receiverId", "==", game.saveCode));
+            tradeListenerReceiver = onSnapshot(qReceiver, (snap) => {
+                snap.forEach(d => {
+                    let t = d.data();
+                    if(t.status === 'pending') {
+                        document.getElementById('incomingTradeSender').innerText = t.senderName;
+                        document.getElementById('incomingTradeModal').style.display = 'flex';
+                        currentTradeDocId = d.id;
+                    }
+                    if(t.status === 'active') {
+                        document.getElementById('incomingTradeModal').style.display = 'none';
+                        currentTradeDocId = d.id;
+                        currentTradeData = t;
+                        if (!isTradeModalOpen) {
+                            openActiveTradeModal();
+                        } else {
+                            syncTradeUI(false); 
+                        }
+                    }
+                    if(t.status === 'completed' || t.status === 'cancelled') {
+                        if(isTradeModalOpen && currentTradeDocId === d.id) {
+                            document.getElementById('activeTradeModal').style.display = 'none';
+                            isTradeModalOpen = false;
+                            if(t.status === 'completed' && !t.receiverProcessed) processTradeCompletion(d.id, t, false);
+                            else if(t.status === 'cancelled') alert("L'échange a été annulé.");
+                        }
+                    }
+                });
+            });
+
+            if(tradeListenerSender) tradeListenerSender();
+            const qSender = query(collection(db, "stmg_trades"), where("senderId", "==", game.saveCode));
+            tradeListenerSender = onSnapshot(qSender, (snap) => {
+                snap.forEach(d => {
+                    let t = d.data();
+                    if(t.status === 'active') {
+                        currentTradeDocId = d.id;
+                        currentTradeData = t;
+                        if (!isTradeModalOpen) {
+                            openActiveTradeModal();
+                        } else {
+                            syncTradeUI(true); 
+                        }
+                    }
+                    if(t.status === 'completed' || t.status === 'cancelled') {
+                        if(isTradeModalOpen && currentTradeDocId === d.id) {
+                            document.getElementById('activeTradeModal').style.display = 'none';
+                            isTradeModalOpen = false;
+                            if(t.status === 'completed' && !t.senderProcessed) processTradeCompletion(d.id, t, true);
+                            else if(t.status === 'cancelled') alert("L'échange a été annulé.");
+                        }
+                    }
+                });
+            });
+        }
+
+        function renderTradePlayersList() {
+            const listDiv = document.getElementById('tradePlayersList');
+            listDiv.innerHTML = '';
+            let validPlayers = allLeaderboardPlayers.filter(p => p.id !== game.saveCode && !p.banned);
+            
+            if(validPlayers.length === 0) {
+                listDiv.innerHTML = '<p style="text-align:center; color:#aaa;">Aucun joueur disponible.</p>';
+                return;
+            }
+
+            validPlayers.forEach(p => {
+                let d = document.createElement('div');
+                d.className = 'trade-player-card';
+                let gHTML = p.groupId ? getGroupHTML(p.groupId) : '';
+                d.innerHTML = `
+                    <div>
+                        <strong style="color:#fff;">${p.displayName || p.username}</strong>${gHTML}<br>
+                        <span style="font-size:0.8rem; color:var(--primary);">${formatNumber(p.score)} Cookies</span>
+                    </div>
+                    <button class="cc-btn" style="border-color:#27c93f; color:#27c93f; font-weight:bold; padding:5px 10px;">Proposer</button>
+                `;
+                d.querySelector('button').onclick = () => initTrade(p.id, p.displayName || p.username);
+                listDiv.appendChild(d);
+            });
+        }
+
+        async function initTrade(targetId, targetName) {
+            if(confirm(`Envoyer une demande d'échange à ${targetName} ?`)) {
+                try {
+                    let ref = doc(collection(db, "stmg_trades"));
+                    await setDoc(ref, {
+                        senderId: game.saveCode, senderName: game.displayName || game.username,
+                        receiverId: targetId, receiverName: targetName,
+                        status: 'pending',
+                        senderOffer: { cookies: 0, comps: [] },
+                        receiverOffer: { cookies: 0, comps: [] },
+                        senderReady: false, receiverReady: false,
+                        senderProcessed: false, receiverProcessed: false
+                    });
+                    alert("Demande envoyée ! En attente de réponse...");
+                } catch(e) {
+                    alert("Erreur lors de l'envoi de la demande.");
+                }
+            }
+        }
+
+        document.getElementById('btnDeclineTrade').onclick = async () => {
+            if(currentTradeDocId) {
+                await updateDoc(doc(db, "stmg_trades", currentTradeDocId), { status: 'cancelled' });
+                document.getElementById('incomingTradeModal').style.display = 'none';
+            }
+        };
+
+        document.getElementById('btnAcceptTrade').onclick = async () => {
+            if(currentTradeDocId) {
+                await updateDoc(doc(db, "stmg_trades", currentTradeDocId), { status: 'active' });
+            }
+        };
+
+        function openActiveTradeModal() {
+            if(!currentTradeData) return;
+            isTradeModalOpen = true;
+            let isSender = currentTradeData.senderId === game.saveCode;
+            let targetName = isSender ? currentTradeData.receiverName : currentTradeData.senderName;
+            
+            document.getElementById('tradeTargetName').innerText = targetName;
+            
+            const myCompsList = document.getElementById('tradeMyCompsList');
+            myCompsList.innerHTML = '';
+            if(!game.companions) game.companions = [];
+            game.companions.forEach(c => {
+                let compData = companionsDB[c];
+                if(compData) {
+                    let label = document.createElement('label');
+                    label.style.cssText = "display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.6); padding:5px; border-radius:5px; font-size:0.8rem; cursor:pointer;";
+                    label.innerHTML = `<input type="checkbox" value="${c}" class="trade-comp-check"> ${compData.name}`;
+                    myCompsList.appendChild(label);
+                }
+            });
+
+            syncTradeUI(isSender);
+            document.getElementById('activeTradeModal').style.display = 'flex';
+        }
+
+        function syncTradeUI(isSender) {
+            if(!currentTradeData) return;
+            
+            let myOffer = isSender ? currentTradeData.senderOffer : currentTradeData.receiverOffer;
+            let theirOffer = isSender ? currentTradeData.receiverOffer : currentTradeData.senderOffer;
+            let amIReady = isSender ? currentTradeData.senderReady : currentTradeData.receiverReady;
+            let areTheyReady = isSender ? currentTradeData.receiverReady : currentTradeData.senderReady;
+
+            document.getElementById('tradeTheirCookiesDisplay').innerText = formatNumber(theirOffer.cookies);
+            let theirCompsText = theirOffer.comps.map(c => companionsDB[c]?.name || c).join(', ');
+            document.getElementById('tradeTheirCompsDisplay').innerText = theirCompsText || "Aucun";
+            
+            let tBox = document.getElementById('theirTradeBox');
+            let tReady = document.getElementById('tradeTheirReadyStatus');
+            if(areTheyReady) {
+                tBox.classList.add('ready');
+                tReady.style.background = 'rgba(39,201,63,0.2)'; tReady.style.color = '#27c93f';
+                tReady.innerText = "✅ Prêt !";
+            } else {
+                tBox.classList.remove('ready');
+                tReady.style.background = 'rgba(255,0,0,0.2)'; tReady.style.color = '#ff5f56';
+                tReady.innerText = "❌ Pas prêt";
+            }
+
+            let myBox = document.getElementById('myTradeBox');
+            if(amIReady) {
+                myBox.classList.add('ready');
+                document.getElementById('tradeMyCookiesInput').disabled = true;
+                document.getElementById('btnUpdateMyOffer').disabled = true;
+                document.querySelectorAll('.trade-comp-check').forEach(cb => cb.disabled = true);
+            } else {
+                myBox.classList.remove('ready');
+                document.getElementById('tradeMyCookiesInput').disabled = false;
+                document.getElementById('btnUpdateMyOffer').disabled = false;
+                document.querySelectorAll('.trade-comp-check').forEach(cb => cb.disabled = false);
+            }
+            document.getElementById('tradeMyReadyCheck').checked = amIReady;
+        }
+
+        document.getElementById('btnUpdateMyOffer').onclick = async () => {
+            if(!currentTradeDocId || !currentTradeData) return;
+            
+            let cookiesInput = Math.floor(validateNum(document.getElementById('tradeMyCookiesInput').value));
+            if(cookiesInput > game.cookies) {
+                alert("Tu n'as pas assez de cookies !");
+                return;
+            }
+
+            let selectedComps = [];
+            document.querySelectorAll('.trade-comp-check:checked').forEach(cb => selectedComps.push(cb.value));
+
+            let isSender = currentTradeData.senderId === game.saveCode;
+            let updates = {};
+            if(isSender) {
+                updates.senderOffer = { cookies: cookiesInput, comps: selectedComps };
+                updates.receiverReady = false; 
+            } else {
+                updates.receiverOffer = { cookies: cookiesInput, comps: selectedComps };
+                updates.senderReady = false;
+            }
+
+            await updateDoc(doc(db, "stmg_trades", currentTradeDocId), updates);
+        };
+
+        document.getElementById('tradeMyReadyCheck').onchange = async (e) => {
+            if(!currentTradeDocId || !currentTradeData) return;
+            let ready = e.target.checked;
+            let isSender = currentTradeData.senderId === game.saveCode;
+            
+            let myOfferCookies = isSender ? currentTradeData.senderOffer.cookies : currentTradeData.receiverOffer.cookies;
+            if(ready && myOfferCookies > game.cookies) {
+                alert("Tu ne peux pas valider, tu n'as plus assez de cookies !");
+                e.target.checked = false;
+                return;
+            }
+
+            let updates = {};
+            if(isSender) updates.senderReady = ready;
+            else updates.receiverReady = ready;
+
+            let bothReady = isSender ? (ready && currentTradeData.receiverReady) : (ready && currentTradeData.senderReady);
+            if(bothReady) {
+                updates.status = 'completed';
+            }
+
+            await updateDoc(doc(db, "stmg_trades", currentTradeDocId), updates);
+        };
+
+        document.getElementById('btnCancelActiveTrade').onclick = async () => {
+            if(currentTradeDocId) {
+                await updateDoc(doc(db, "stmg_trades", currentTradeDocId), { status: 'cancelled' });
+            }
+        };
+
+        async function processTradeCompletion(docId, tradeData, isSender) {
+            let myOffer = isSender ? tradeData.senderOffer : tradeData.receiverOffer;
+            let theirOffer = isSender ? tradeData.receiverOffer : tradeData.senderOffer;
+
+            let cookiesGiven = validateNum(myOffer.cookies);
+            let cookiesReceived = validateNum(theirOffer.cookies);
+
+            game.cookies = validateNum(game.cookies) - cookiesGiven + cookiesReceived;
+            
+            if (game.cookies < 0) game.cookies = 0;
+            
+            if (cookiesReceived > 0) {
+                game.totalCookies = validateNum(game.totalCookies) + cookiesReceived;
+            }
+            
+            if(!game.companions) game.companions = [];
+            
+            if (myOffer.comps && Array.isArray(myOffer.comps)) {
+                myOffer.comps.forEach(c => {
+                    let index = game.companions.indexOf(c);
+                    if(index > -1) game.companions.splice(index, 1);
+                    if(game.equippedCompanion === c) game.equippedCompanion = null;
+                });
+            }
+
+            if (theirOffer.comps && Array.isArray(theirOffer.comps)) {
+                theirOffer.comps.forEach(c => {
+                    if(!game.companions.includes(c)) game.companions.push(c);
+                });
+            }
+
+            alert(`✅ Échange terminé !\nTu as envoyé : ${formatNumber(cookiesGiven)} cookies & ${myOffer.comps ? myOffer.comps.length : 0} compagnons.\nTu as reçu : ${formatNumber(cookiesReceived)} cookies & ${theirOffer.comps ? theirOffer.comps.length : 0} compagnons.`);
+
+            let updates = {};
+            if(isSender) updates.senderProcessed = true;
+            else updates.receiverProcessed = true;
+            await updateDoc(doc(db, "stmg_trades", docId), updates);
+
+            unsavedProgress = true;
+            await saveGameToServer(); 
+            
+            recalculateStats();
+            updateUI();
+            renderCompanions();
+            if(panelWheel.style.display === 'flex') renderWheelVisuals(); 
         }
 
         document.getElementById('btnCreateGroup').addEventListener('click', async () => {
@@ -1012,15 +1380,22 @@
 
         function renderCompanions() {
             if(!game.companions) game.companions = [];
-            if(game.companions.length > 0) tabComps.style.display = 'inline-block';
+            if(game.companions && game.companions.length > 0) {
+                tabComps.style.display = 'inline-block';
+            } 
             
             compListContainer.innerHTML = '';
             
             if(game.equippedCompanion && companionsDB[game.equippedCompanion]) {
-                activeCompanionImg.src = companionsDB[game.equippedCompanion].icon;
-                activeCompanionImg.style.display = 'block';
+                let c = companionsDB[game.equippedCompanion];
+                if(c.icon.startsWith('http')) {
+                    activeCompanionContainer.innerHTML = `<img src="${c.icon}" class="${c.rClass.includes('shiny') ? 'shiny-img' : ''}" style="width:100%; height:100%; object-fit:cover;">`;
+                } else {
+                    activeCompanionContainer.innerHTML = c.icon;
+                }
+                activeCompanionContainer.style.display = 'flex';
             } else {
-                activeCompanionImg.style.display = 'none';
+                activeCompanionContainer.style.display = 'none';
             }
 
             game.companions.forEach(cId => {
@@ -1029,9 +1404,14 @@
                     let isEq = game.equippedCompanion === cId;
                     let div = document.createElement('div');
                     div.className = `companion-card ${isEq ? 'equipped' : ''}`;
+                    
+                    let iconHtml = c.icon.startsWith('http') 
+                        ? `<img src="${c.icon}" class="comp-icon ${c.rClass.includes('shiny') ? 'shiny-img' : ''}">` 
+                        : `<div class="comp-icon" style="display:flex;align-items:center;justify-content:center;font-size:1.8rem;background:#000;">${c.icon}</div>`;
+                    
                     div.innerHTML = `
                         <div class="comp-info">
-                            <img src="${c.icon}" class="comp-icon">
+                            ${iconHtml}
                             <div>
                                 <div class="comp-name">${c.name} <span class="comp-rarity ${c.rClass}">${c.rarity}</span></div>
                                 <div style="color:#aaa; font-size:0.8rem;">${c.desc}</div>
@@ -1079,7 +1459,9 @@
             displayCookies.innerText = formatNumber(game.cookies);
             playerNameDisplay.innerHTML = (game.displayName || game.username) + getGroupHTML(game.groupId);
             
-            if(game.companions && game.companions.length > 0) { tabComps.style.display = 'inline-block'; }
+            if(game.companions && game.companions.length > 0) { 
+                tabComps.style.display = 'inline-block'; 
+            }
             
             if(panelStore.style.display !== 'none') {
                 for (let id in buildingData) {
@@ -1260,6 +1642,79 @@
             }, delay);
         }
 
+        function renderWheelVisuals() {
+            let wheel = document.getElementById('fsWheelVisual');
+            if(!game.companions) game.companions = [];
+            
+            let hasAlgaz = game.companions.includes('algaz');
+            let hasDan = game.companions.includes('dan');
+            let hasJayden = game.companions.includes('jayden') || game.companions.includes('jayden_shiny');
+
+            let html = '';
+
+            html += `<div class="fs-icon-container ic-1">
+                <div class="fs-slice-text">150B<br>Cookies</div>
+                <div class="fs-slice-odds">~29%</div>
+                <img src="${imgCookieBase}">
+            </div>`;
+
+            html += `<div class="fs-icon-container ic-2">
+                <div class="fs-slice-text">250B<br>Cookies</div>
+                <div class="fs-slice-odds">30%</div>
+                <img src="${imgCookieGolden}">
+            </div>`;
+
+            if(hasAlgaz) {
+                html += `<div class="fs-icon-container ic-3">
+                    <div class="fs-slice-text" style="color:#000; text-shadow:none;">150B<br>Cookies</div>
+                    <div class="fs-slice-odds" style="background:rgba(255,255,255,0.7); color:#000;">10%</div>
+                    <img src="${imgCookieBase}">
+                </div>`;
+            } else {
+                html += `<div class="fs-icon-container ic-3">
+                    <div class="fs-slice-text" style="color:#000; text-shadow:none;">AlgaZ<br>(Épique)</div>
+                    <div class="fs-slice-odds" style="background:rgba(255,255,255,0.7); color:#000;">10%</div>
+                    <div style="font-size: 40px; margin-bottom: 8px;">💥</div>
+                </div>`;
+            }
+
+            html += `<div class="fs-icon-container ic-4">
+                <div class="fs-slice-text">150B<br>Cookies</div>
+                <div class="fs-slice-odds">~29%</div>
+                <img src="${imgCookieBase}">
+            </div>`;
+
+            if(hasDan) {
+                html += `<div class="fs-icon-container ic-5">
+                    <div class="fs-slice-text">150B<br>Cookies</div>
+                    <div class="fs-slice-odds">~2%</div>
+                    <img src="${imgCookieBase}">
+                </div>`;
+            } else {
+                html += `<div class="fs-icon-container ic-5">
+                    <div class="fs-slice-text">Dan<br>(Mythique)</div>
+                    <div class="fs-slice-odds">~2%</div>
+                    <div style="font-size: 40px; margin-bottom: 8px;">💣</div>
+                </div>`;
+            }
+
+            if(hasJayden) {
+                html += `<div class="fs-icon-container ic-6">
+                    <div class="fs-slice-text">150B<br>Cookies</div>
+                    <div class="fs-slice-odds">0.0003%</div>
+                    <img src="${imgCookieBase}">
+                </div>`;
+            } else {
+                html += `<div class="fs-icon-container ic-6">
+                    <div class="fs-slice-text">Jayden<br>(Secret)</div>
+                    <div class="fs-slice-odds">0.0003%</div>
+                    <img src="https://i.ibb.co/qM5P7xxK/m-13.png">
+                </div>`;
+            }
+
+            wheel.innerHTML = html;
+        }
+
         function checkSpinTimer() {
             let textEl = document.getElementById('spinTimerText');
             let btn1 = document.getElementById('btnSpin1');
@@ -1289,20 +1744,36 @@
         }
 
         function getWheelPrize() {
+            if(!game.companions) game.companions = [];
+            let hasJayden = game.companions.includes('jayden') || game.companions.includes('jayden_shiny');
+            let hasDan = game.companions.includes('dan');
+            let hasAlgaz = game.companions.includes('algaz');
+
             let r = Math.random() * 100;
-            if (r <= 0.0003) return { id: 'jayden', deg: 30, name: 'Compagnon JAYDEN (Secret !!)' };
-            if (r <= 2.0003) return { id: 'dan', deg: 90, name: 'Compagnon DAN (Mythique)' };
-            if (r <= 12.0003) return { id: 'algaz', deg: 210, name: 'Compagnon ALGAZ (Rare)' };
+
+            if (!hasJayden && r <= 0.0003) {
+                if(Math.random() <= 0.10) {
+                    return { id: 'jayden_shiny', deg: 30, name: 'Compagnon JAYDEN (SHINY ✨)' };
+                }
+                return { id: 'jayden', deg: 30, name: 'Compagnon JAYDEN (Secret)' };
+            }
+            if (!hasDan && r <= 2.0003) return { id: 'dan', deg: 90, name: 'Compagnon DAN (Mythique)' };
+            if (!hasAlgaz && r <= 12.0003) return { id: 'algaz', deg: 210, name: 'Compagnon ALGAZ (Épique)' };
             if (r <= 42.0003) return { id: '250b', deg: 270, name: '250 Billions Cookies' };
+            
             return Math.random() > 0.5 ? { id: '150b', deg: 330, name: '150 Billions Cookies' } : { id: '150b', deg: 150, name: '150 Billions Cookies' };
         }
 
         document.getElementById('btnSpin1').addEventListener('click', () => {
             if(game.spinsLeft < 1 || game.cookies < 200000000000 || isSpinning) return;
-            game.cookies -= 200000000000;
+            
+            game.cookies = validateNum(game.cookies) - 200000000000;
             game.spinsLeft -= 1;
             if(game.lastSpinReset === 0) game.lastSpinReset = Date.now() + (5 * 60 * 1000);
             
+            recalculateStats();
+            updateUI();
+            checkSpinTimer();
             saveGameToServer(); 
             
             wheelPendingPrize = getWheelPrize();
@@ -1313,9 +1784,6 @@
             
             document.getElementById('wheelModal').style.display = 'flex';
             document.getElementById('swipeText').innerText = "👇 Glisse l'écran vers le bas pour tourner ! 👇";
-            
-            updateUI();
-            checkSpinTimer();
         });
 
         const wheelModal = document.getElementById('wheelModal');
@@ -1349,7 +1817,7 @@
                     isSpinning = false;
                     document.getElementById('wheelModal').style.display = 'none';
                     
-                    alert("🎉 Tu as gagné : \n- " + wheelPendingPrize.name);
+                    alert("🎉 Tu as gagné : \n- " + wheelPendingPrize.name + "\n\n(Ton solde a été mis à jour)");
                     awardPrize(wheelPendingPrize);
                     
                     wheelPendingPrize = null;
@@ -1357,6 +1825,7 @@
                     recalculateStats();
                     updateUI();
                     renderCompanions();
+                    renderWheelVisuals();
                 }, 4200);
             }
         }
@@ -1367,8 +1836,14 @@
         wheelModal.addEventListener('touchend', handleSwipeEnd);
 
         function awardPrize(prize) {
-            if(prize.id === '150b') { game.cookies += 150000000000; game.totalCookies += 150000000000; }
-            else if(prize.id === '250b') { game.cookies += 250000000000; game.totalCookies += 250000000000; }
+            if(prize.id === '150b') { 
+                game.cookies = validateNum(game.cookies) + 150000000000; 
+                game.totalCookies = validateNum(game.totalCookies) + 150000000000; 
+            }
+            else if(prize.id === '250b') { 
+                game.cookies = validateNum(game.cookies) + 250000000000; 
+                game.totalCookies = validateNum(game.totalCookies) + 250000000000; 
+            }
             else {
                 if(!game.companions) game.companions = [];
                 if(!game.companions.includes(prize.id)) game.companions.push(prize.id);
@@ -1456,7 +1931,7 @@
                             game = { ...defaultSave, ...parsed, buildings: { ...defaultSave.buildings, ...parsed.buildings } };
                             if(!game.upgradesBought) game.upgradesBought = [];
                             saveLocal(); recalculateStats(); updateUI(); renderCompanions();
-                            alert("⚠️ Vos données ont été modifiées en direct par un Administrateur !");
+                            alert("⚠️ Vos données (ou tours de roues) ont été modifiées en direct par un Administrateur !");
                         }
                     }
                 }
@@ -1483,7 +1958,7 @@
                     game.saveCode = generateUniqueCode(input);
                 }
 
-                saveLocal(); await saveGameToServer(); setupRealtimeListener();
+                saveLocal(); await saveGameToServer(); setupRealtimeListener(); setupTradeListeners();
                 await fetchGroups();
                 finishLogin();
             } catch(e) { alert("Erreur serveur."); document.getElementById('btnSignUp').innerText = "S'inscrire"; }
@@ -1525,7 +2000,7 @@
                         return;
                     }
                     saveLocal(); recalculateStats(); updateUI(); usernameOverlay.style.display = 'none';
-                    setupRealtimeListener(); 
+                    setupRealtimeListener(); setupTradeListeners();
                     await fetchGroups();
                     finishLogin();
                 } else { alert("❌ Code introuvable."); }
@@ -1594,7 +2069,8 @@
                     
                     let banBtn = isBan ? `<button class="btn-ban" style="color:green; border-color:green;" onclick="window.banDoc('${d.id}', false)">Débannir</button>` : `<button class="btn-ban" onclick="window.banDoc('${d.id}', true)">Ban</button>`;
                     let gcBtn = `<button title="Envoyer un Cookie Doré" style="background:transparent; border:none; cursor:pointer; margin-left:5px; vertical-align:middle; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" onclick="window.sendGoldenCookie('${d.id}')"><img src="${imgCookieGolden}" style="width:22px; height:22px; filter: drop-shadow(0 0 5px gold);"></button>`;
-                    
+                    let wheelBtn = `<button class="btn-edit" style="background:#d845e8; color:white; border:none; padding:4px 8px; margin-left:5px;" onclick="window.openWheelAdminModal('${d.id}')">🎡</button>`;
+
                     let groupOptions = `<option value="">-- Aucun --</option>`;
                     for(let gId in groupsMap) {
                         let sel = (dat.groupId === gId) ? "selected" : "";
@@ -1613,11 +2089,40 @@
                             <button class="btn-delete" onclick="window.delDoc('${d.id}')">Suppr.</button> 
                             ${banBtn}
                             ${gcBtn}
+                            ${wheelBtn}
                         </td>
                     </tr>`;
                 });
             } catch(e){ sTable.innerHTML = '<tr><td colspan="6">Erreur Firebase</td></tr>'; }
         }
+
+        window.openWheelAdminModal = async function(id) {
+            const s = await getDoc(doc(db, "stmg_saves", id));
+            if(s.exists()) {
+                currentWheelEditId = id;
+                currentWheelEditData = JSON.parse(s.data().saveData);
+                document.getElementById('adminWheelPlayerName').innerText = currentWheelEditData.displayName || currentWheelEditData.username;
+                document.getElementById('adminWheelSpins').value = currentWheelEditData.spinsLeft !== undefined ? currentWheelEditData.spinsLeft : 2;
+                document.getElementById('adminWheelModal').style.display = 'flex';
+            }
+        };
+
+        window.resetWheelTimerAdmin = function() {
+            if(currentWheelEditData) {
+                currentWheelEditData.lastSpinReset = 0;
+                alert("Le timer a été réinitialisé à 0s ! Pense à Sauvegarder.");
+            }
+        };
+
+        document.getElementById('btnSaveAdminWheel').addEventListener('click', async () => {
+            if(currentWheelEditData && currentWheelEditId) {
+                currentWheelEditData.spinsLeft = parseInt(document.getElementById('adminWheelSpins').value) || 0;
+                await updateDoc(doc(db, "stmg_saves", currentWheelEditId), { saveData: JSON.stringify(currentWheelEditData) });
+                await updateDoc(doc(db, "stmg_leaderboard", currentWheelEditId), { adminEditTimestamp: Date.now() });
+                document.getElementById('adminWheelModal').style.display = 'none';
+                alert("Paramètres de roue appliqués au joueur !");
+            }
+        });
 
         window.delDoc = async function(id) {
             if(confirm("Supprimer " + id + " ?")) {
@@ -1661,8 +2166,8 @@
                 
                 let html = `<div class="edit-group"><label>Cookies :</label><input type="number" id="edit_cookies" value="${Math.floor(validateNum(adminTempEditData.cookies))}"></div>`;
                 
-                let compHtml = `<div class="edit-group" style="flex-direction:column; align-items:flex-start;"><label>Compagnons possédés :</label><div style="display:flex; gap:10px; margin-top:5px;">`;
-                ['algaz', 'dan', 'jayden'].forEach(c => {
+                let compHtml = `<div class="edit-group" style="flex-direction:column; align-items:flex-start;"><label>Compagnons possédés :</label><div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:5px;">`;
+                ['algaz', 'dan', 'jayden', 'jayden_shiny'].forEach(c => {
                     let checked = (adminTempEditData.companions || []).includes(c) ? "checked" : "";
                     compHtml += `<label><input type="checkbox" id="edit_comp_${c}" ${checked}> ${companionsDB[c].name}</label>`;
                 });
@@ -1680,7 +2185,7 @@
                     adminTempEditData.cookies = validateNum(parseInt(document.getElementById('edit_cookies').value));
                     
                     adminTempEditData.companions = [];
-                    ['algaz', 'dan', 'jayden'].forEach(c => {
+                    ['algaz', 'dan', 'jayden', 'jayden_shiny'].forEach(c => {
                         if(document.getElementById(`edit_comp_${c}`).checked) adminTempEditData.companions.push(c);
                     });
                     if (adminTempEditData.equippedCompanion && !adminTempEditData.companions.includes(adminTempEditData.equippedCompanion)) {
@@ -1770,9 +2275,14 @@
                 
                 let groupScores = {}; 
 
+                allLeaderboardPlayers = []; 
+
                 snapCook.forEach(d => {
-                    let grpStr = d.data().groupId ? getGroupHTML(d.data().groupId) : '';
-                    let html = `<div class="lb-row ${rank===1?'top-1':rank===2?'top-2':rank===3?'top-3':''}"><div class="lb-rank">#${rank}</div><div class="lb-name" title="${d.data().username}">${d.data().displayName || d.data().username}${grpStr}</div><div class="lb-score">${formatNumber(d.data().score)}</div></div>`;
+                    let dat = d.data();
+                    allLeaderboardPlayers.push({id: d.id, ...dat});
+
+                    let grpStr = dat.groupId ? getGroupHTML(dat.groupId) : '';
+                    let html = `<div class="lb-row ${rank===1?'top-1':rank===2?'top-2':rank===3?'top-3':''}"><div class="lb-rank">#${rank}</div><div class="lb-name" title="${dat.username}">${dat.displayName || dat.username}${grpStr}</div><div class="lb-score">${formatNumber(dat.score)}</div></div>`;
                     document.getElementById('lbCookies').innerHTML += html; rank++;
                 });
 
@@ -1780,14 +2290,17 @@
                 const snapCps = await getDocs(qCps);
                 document.getElementById('lbCps').innerHTML = ''; rank = 1;
                 snapCps.forEach(d => {
-                    let grpStr = d.data().groupId ? getGroupHTML(d.data().groupId) : '';
-                    let html = `<div class="lb-row ${rank===1?'top-1':rank===2?'top-2':rank===3?'top-3':''}"><div class="lb-rank">#${rank}</div><div class="lb-name" title="${d.data().username}">${d.data().displayName || d.data().username}${grpStr}</div><div class="lb-score">${formatNumber(d.data().cps||0)}/s</div></div>`;
+                    let dat = d.data();
+                    let grpStr = dat.groupId ? getGroupHTML(dat.groupId) : '';
+                    let html = `<div class="lb-row ${rank===1?'top-1':rank===2?'top-2':rank===3?'top-3':''}"><div class="lb-rank">#${rank}</div><div class="lb-name" title="${dat.username}">${dat.displayName || dat.username}${grpStr}</div><div class="lb-score">${formatNumber(dat.cps||0)}/s</div></div>`;
                     document.getElementById('lbCps').innerHTML += html; rank++;
                 });
 
                 const allPlayersSnap = await getDocs(query(collection(db, "stmg_leaderboard"), where("banned", "==", false)));
                 allPlayersSnap.forEach(d => {
                     let dat = d.data();
+                    if(!allLeaderboardPlayers.find(p => p.id === d.id)) allLeaderboardPlayers.push({id: d.id, ...dat});
+                    
                     if(dat.groupId && groupsMap[dat.groupId]) {
                         if(!groupScores[dat.groupId]) groupScores[dat.groupId] = 0;
                         groupScores[dat.groupId] += dat.score;
@@ -1813,6 +2326,7 @@
                 
                 recalculateStats();
 
+                if(panelTrade.style.display === 'flex') renderTradePlayersList(); 
             } catch (e) { console.error(e); }
         }
 
@@ -1830,6 +2344,7 @@
             }
             if(game.username) {
                 setupRealtimeListener();
+                setupTradeListeners();
                 if(game.banned) { document.getElementById('banScreen').style.display = 'flex'; return; }
                 usernameOverlay.style.display = 'none'; 
                 await fetchGroups();
@@ -1888,4 +2403,4 @@
         spawnGoldenCookieLoop(); 
     </script>
 </body>
-</html> 
+</html>
