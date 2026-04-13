@@ -177,13 +177,14 @@
         [data-theme="light"] .cc-click-power { text-shadow: none; }
         
         .sugar-display {
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-            font-size: 1.1rem; font-weight: bold; color: #fff; text-shadow: 0 0 5px rgba(255,255,255,0.8);
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            font-size: 1.2rem; font-weight: bold; color: #fff; text-shadow: 0 0 5px rgba(255,255,255,0.8);
             background: rgba(0,0,0,0.3); padding: 5px 15px; border-radius: 20px; border: 1px solid var(--glass-border);
-            margin-top: -5px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+            margin-top: -5px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); cursor: help;
         }
         [data-theme="light"] .sugar-display { background: rgba(255,255,255,0.6); color: #111; text-shadow: none; }
-        .sugar-icon { width: 22px; height: 22px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+        .sugar-icon { width: 24px; height: 24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+        .sugar-texts { display: flex; flex-direction: column; align-items: flex-start; line-height: 1; }
 
         .cookie-container { position: relative; width: 250px; height: 250px; margin-top: 10px; z-index: 5; }
         .big-cookie-btn { background: none; border: none; outline: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; cursor: pointer; transition: transform 0.1s cubic-bezier(0.25, 0.8, 0.25, 1); }
@@ -312,7 +313,11 @@
             touch-action: none; user-select: none;
         }
         .fs-wheel-wrapper {
-            position: relative; width: 95vw; max-width: 650px; height: 95vw; max-height: 650px; margin: 20px auto;
+            position: relative; 
+            width: 95vw; 
+            max-width: 600px; 
+            aspect-ratio: 1 / 1; 
+            margin: 20px auto;
         }
         .fs-wheel-scale-wrapper {
             position: absolute; width: 100%; height: 100%; border-radius: 50%;
@@ -741,11 +746,14 @@
                         <div class="cc-cookies-count" id="cookiesDisplay">0</div>
                         <div class="cc-cps">cookies par seconde : <span id="cpsDisplay">0</span></div>
                         <div class="cc-cps-bonus" id="cpsBonusDisplay">+0 CpS (Bonus de Groupe)</div>
-                        <div class="cc-click-power" style="margin-top: 5px;">puissance de clic : <span id="clickPowerDisplay">1</span></div>
+                        <div class="cc-click-power" style="margin-top: 5px; margin-bottom: 5px;">puissance de clic : <span id="clickPowerDisplay">1</span></div>
                         
-                        <div class="sugar-display" style="display: none;" id="sugarContainerUI">
+                        <div class="sugar-display" style="display: none;" id="sugarContainerUI" title="Les morceaux de sucre poussent tout seuls une fois le milliard atteint ! 1 sucre = 1 heure.">
                             <img src="https://png.pngtree.com/png-vector/20231004/ourmid/pngtree-sugar-cube-sugar-cube-png-image_10069833.png" class="sugar-icon" alt="Sucre">
-                            <span id="sugarsDisplay">0</span>
+                            <div class="sugar-texts">
+                                <span id="sugarsDisplayCount">0</span>
+                                <span id="sugarsDisplayTimer" style="font-size: 0.65rem; color: rgba(255,255,255,0.7); font-weight: normal;">--:--</span>
+                            </div>
                         </div>
                     </div>
                     
@@ -951,8 +959,8 @@
 
         const defaultSave = {
             username: "", saveCode: "", displayName: "", password: "", cookies: 0, totalCookies: 0, upgradesBought: [], banned: false, lastAdminSync: 0, lastGCSync: 0, lastForceSave: 0, groupId: null,
-            spinsLeft: 2, lastSpinReset: 0, companions: [], equippedCompanion: null, sugars: 0,
-            buildings: { cursor: {count:0}, grandma:{count:0}, farm:{count:0}, mine:{count:0}, factory:{count:0}, bank:{count:0}, temple:{count:0}, wizard:{count:0}, shipment:{count:0}, alch:{count:0}, portal:{count:0}, time:{count:0}, prism:{count:0}, clone:{count:0}, brain:{count:0}, corrupted_cursor:{count:0}, void_portal:{count:0}, cthulhu:{count:0} }
+            spinsLeft: 2, lastSpinReset: 0, companions: [], equippedCompanion: null, sugars: 0, sugarTime: 0,
+            buildings: { cursor: {count:0, level:0}, grandma:{count:0, level:0}, farm:{count:0, level:0}, mine:{count:0, level:0}, factory:{count:0, level:0}, bank:{count:0, level:0}, temple:{count:0, level:0}, wizard:{count:0, level:0}, shipment:{count:0, level:0}, alch:{count:0, level:0}, portal:{count:0, level:0}, time:{count:0, level:0}, prism:{count:0, level:0}, clone:{count:0, level:0}, brain:{count:0, level:0}, corrupted_cursor:{count:0, level:0}, void_portal:{count:0, level:0}, cthulhu:{count:0, level:0} }
         };
 
         const buildingData = {
@@ -1038,7 +1046,8 @@
         const displayCpsBonus = document.getElementById('cpsBonusDisplay');
         const displayClickPower = document.getElementById('clickPowerDisplay');
         const bigCookieBtn = document.getElementById('bigCookie');
-        const displaySugars = document.getElementById('sugarsDisplay');
+        const displaySugarsCount = document.getElementById('sugarsDisplayCount');
+        const displaySugarsTimer = document.getElementById('sugarsDisplayTimer');
         const sugarContainerUI = document.getElementById('sugarContainerUI');
         
         const tabBuy = document.getElementById('tabBuy');
@@ -1595,12 +1604,29 @@
             return shortVal + suffix;
         }
 
-        function getBuildingBuyCost(id) { return Math.ceil(buildingData[id].baseCost * Math.pow(1.15, validateNum(game.buildings[id].count))); }
+        function getBuildingBuyCost(id) { 
+            let count = validateNum(game.buildings[id].count);
+            return Math.ceil(buildingData[id].baseCost * Math.pow(1.15, count)); 
+        }
+        
         function getBuildingSellCost(id) { 
             let count = validateNum(game.buildings[id].count);
             if(count === 0) return 0;
             return Math.ceil(buildingData[id].baseCost * Math.pow(1.15, count - 1) * 0.5); 
         }
+
+        window.buyBuildingLevel = function(id) {
+            if(!game.buildings[id].level) game.buildings[id].level = 0;
+            let cost = game.buildings[id].level + 1;
+            if(game.sugars >= cost) {
+                game.sugars -= cost;
+                game.buildings[id].level++;
+                unsavedProgress = true;
+                recalculateStats();
+                updateUI();
+                initStore(); 
+            }
+        };
 
         function hasUpgrade(id) { return game.upgradesBought.includes(id); }
 
@@ -1627,7 +1653,9 @@
                 for (let id in saveObj.buildings) {
                     if(saveObj.buildings[id] && buildingData[id]) { 
                         let bMulti = bMults[id] !== undefined ? bMults[id] : 1;
-                        cps += validateNum(saveObj.buildings[id].count) * buildingData[id].baseCps * bMulti;
+                        let level = saveObj.buildings[id].level || 0;
+                        let levelMult = 1 + (level * 0.01);
+                        cps += validateNum(saveObj.buildings[id].count) * buildingData[id].baseCps * bMulti * levelMult;
                     }
                 }
             }
@@ -1665,7 +1693,9 @@
                 for (let id in game.buildings) {
                     if(game.buildings[id] && buildingData[id]) {
                         let bMulti = bMults[id] !== undefined ? bMults[id] : 1;
-                        cps += validateNum(game.buildings[id].count) * buildingData[id].baseCps * bMulti;
+                        let level = game.buildings[id].level || 0;
+                        let levelMult = 1 + (level * 0.01);
+                        cps += validateNum(game.buildings[id].count) * buildingData[id].baseCps * bMulti * levelMult;
                     }
                 }
             }
@@ -1835,6 +1865,33 @@
             }
         }
 
+        function updateSugars() {
+            if (game.totalCookies >= 1000000000 || game.sugars > 0) {
+                if (!game.sugarTime) game.sugarTime = Date.now();
+                sugarContainerUI.style.display = 'flex';
+                
+                let elapsed = Date.now() - game.sugarTime;
+                let lumpTime = 3600000; 
+                
+                if (elapsed >= lumpTime) {
+                    let lumps = Math.floor(elapsed / lumpTime);
+                    game.sugars += lumps;
+                    game.sugarTime += lumps * lumpTime;
+                    saveLocal();
+                    if(game.username && !game.banned) saveGameToServer();
+                }
+                
+                let remaining = lumpTime - (Date.now() - game.sugarTime);
+                let m = Math.floor(remaining / 60000);
+                let s = Math.floor((remaining % 60000) / 1000);
+                
+                displaySugarsCount.innerText = game.sugars;
+                displaySugarsTimer.innerText = `Suivant : ${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            } else {
+                sugarContainerUI.style.display = 'none';
+            }
+        }
+
         function updateUI() {
             game.cookies = validateNum(game.cookies); 
             if(game.banned) { document.getElementById('banScreen').style.display = 'flex'; return; }
@@ -1842,17 +1899,27 @@
             displayCookies.innerText = formatNumber(game.cookies);
             playerNameDisplay.innerHTML = (game.displayName || game.username) + getGroupHTML(game.groupId);
             
-            if(game.sugars > 0) {
-                sugarContainerUI.style.display = 'flex';
-                displaySugars.innerText = game.sugars;
-            }
+            updateSugars();
             
             if(panelStore.style.display !== 'none') {
                 for (let id in buildingData) {
                     const elCost = document.getElementById(`cost-${id}`);
                     const elItem = document.getElementById(`bitem-${id}`);
                     const elCount = document.getElementById(`count-${id}`);
-                    if(!game.buildings[id]) game.buildings[id] = {count: 0}; 
+                    const lvlBox = document.getElementById(`lvlbox-${id}`);
+                    
+                    if(!game.buildings[id]) game.buildings[id] = {count: 0, level: 0}; 
+                    let level = game.buildings[id].level || 0;
+
+                    if(lvlBox) {
+                        if (game.totalCookies >= 1000000000 || game.sugars > 0 || level > 0) {
+                            let costToLevel = level + 1;
+                            let canAfford = game.sugars >= costToLevel;
+                            lvlBox.innerHTML = `<button class="cc-btn" style="padding: 2px 6px; font-size: 0.7rem; margin-left: 10px; border-color: ${canAfford ? 'var(--primary)' : 'var(--glass-border)'}; color: ${canAfford ? 'var(--primary)' : 'var(--text-muted)'};" onclick="event.stopPropagation(); window.buyBuildingLevel('${id}')" title="+1% CpS (Coût : ${costToLevel} sucres)">Lvl ${level} ⬆</button>`;
+                        } else {
+                            lvlBox.innerHTML = '';
+                        }
+                    }
 
                     if(elCost && elItem && elCount) {
                         elCount.innerText = game.buildings[id].count > 0 ? game.buildings[id].count : '';
@@ -1909,11 +1976,20 @@
                 let b = buildingData[id];
                 let div = document.createElement('div');
                 div.className = 'building-item locked'; div.id = `bitem-${id}`;
-                div.innerHTML = `<div class="b-icon">${b.icon}</div><div class="b-info"><div class="b-name">${b.name}</div><div class="b-cost" id="cost-${id}">0</div></div><div class="b-count" id="count-${id}"></div>`;
+                div.innerHTML = `<div class="b-icon">${b.icon}</div><div class="b-info"><div class="b-name" style="display:flex;align-items:center;">${b.name} <span id="lvlbox-${id}"></span></div><div class="b-cost" id="cost-${id}">0</div></div><div class="b-count" id="count-${id}"></div>`;
                 
                 div.onmousemove = (e) => {
                     let count = validateNum(game.buildings[id] ? game.buildings[id].count : 0);
-                    let prod = formatNumber(b.baseCps * count);
+                    let level = game.buildings[id] ? (game.buildings[id].level || 0) : 0;
+                    let levelMult = 1 + (level * 0.01);
+                    let bMulti = 1; 
+                    if(game.upgradesBought.includes('up2') && id === 'grandma') bMulti *= 2;
+                    if(game.upgradesBought.includes('up3') && id === 'farm') bMulti *= 2;
+                    if(game.upgradesBought.includes('up4') && id === 'mine') bMulti *= 2;
+                    if(game.upgradesBought.includes('up5') && id === 'factory') bMulti *= 2;
+                    if(game.upgradesBought.includes('up6') && id === 'bank') bMulti *= 2;
+                    
+                    let prod = formatNumber(b.baseCps * count * bMulti * levelMult);
                     let txt = `<b>${b.name}</b><br><i style="color:var(--text-muted); font-size:0.8rem">${b.desc}</i><br>Production actuelle : <span style="color:var(--primary);">${prod} CpS</span>`;
                     if(storeMode === 'sell') txt += `<br><span style="color:var(--danger)">Prix de revente : +${formatNumber(getBuildingSellCost(id))}</span>`;
                     showTooltip(e, txt);
@@ -1957,11 +2033,6 @@
         bigCookieBtn.addEventListener('mousedown', (e) => {
             if(!game.username || game.banned) return; 
             game.cookies += clickPower; game.totalCookies += clickPower; unsavedProgress = true;
-            
-            // Drop de sucre (2% de chance)
-            if(Math.random() <= 0.02) {
-                game.sugars = (game.sugars || 0) + 1;
-            }
             
             const rect = bigCookieBtn.getBoundingClientRect();
             let x = (e.clientX === 0) ? rect.width/2 : e.clientX - rect.left;
@@ -2386,6 +2457,7 @@
             startChat();
             await loadLeaderboards(); 
             renderCompanions();
+            initStore();
             recalculateStats(); updateUI(); 
         }
 
@@ -2395,6 +2467,7 @@
             topShortcutMenu.style.display = 'flex';
             await fetchGroups();
             renderCompanions();
+            initStore();
             recalculateStats(); updateUI(); loadLeaderboards();
         });
 
