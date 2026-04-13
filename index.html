@@ -140,11 +140,11 @@
         #usernameOverlay h3 { font-family: 'Orbitron', sans-serif; font-size: 2rem; color: var(--text-main); text-shadow: 0 0 20px var(--primary); }
         [data-theme="light"] #usernameOverlay h3 { text-shadow: none; }
         .cc-input { background: rgba(0,0,0,0.15); border: 1px solid var(--glass-border); color: var(--text-main); padding: 15px; border-radius: 8px; font-family: 'Montserrat', sans-serif; font-size: 1.2rem; width: 100%; max-width: 400px; text-align: center; transition: 0.3s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);}
-        [data-theme="light"] .cc-input { background: rgba(255,255,255,0.5); }
+        [data-theme="light"] .cc-input { background: rgba(255,255,255,0.5); color: #000; border-color: rgba(0,0,0,0.2); }
         .cc-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 15px var(--primary); }
         
-        .cc-left { flex: 1; min-width: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid var(--glass-border); padding-right: 20px; position: relative; }
-        .liquid-bg-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; z-index: 0; border-radius: 20px 0 0 20px; pointer-events: none; }
+        .cc-left { flex: 1; min-width: 380px; min-height: 550px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid var(--glass-border); padding: 20px; position: relative; }
+        .liquid-bg-container { position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; overflow: hidden; z-index: 0; border-radius: 20px 0 0 20px; pointer-events: none; }
         .wave { position: absolute; left: 50%; width: 250%; height: 250%; background: var(--primary); box-shadow: inset 0 0 50px rgba(0,0,0,0.3); animation: spin 10s linear infinite; transition: background 1s ease, bottom 0.5s ease, opacity 0.5s ease; mix-blend-mode: color-dodge; }
         [data-theme="light"] .wave { mix-blend-mode: overlay; opacity: 0.1 !important; }
         .wave.wave1 { animation-duration: 12s; bottom: -185%; opacity: 0.25; border-radius: 43%; transform-origin: 49% 51%; }
@@ -186,7 +186,7 @@
         .sugar-icon { width: 24px; height: 24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
         .sugar-texts { display: flex; flex-direction: column; align-items: flex-start; line-height: 1; }
 
-        .cookie-container { position: relative; width: 250px; height: 250px; margin-top: 10px; z-index: 5; }
+        .cookie-container { position: relative; width: 260px; height: 260px; margin-top: 10px; z-index: 5; }
         .big-cookie-btn { background: none; border: none; outline: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; cursor: pointer; transition: transform 0.1s cubic-bezier(0.25, 0.8, 0.25, 1); }
         .big-cookie-img { width: 100%; height: 100%; border-radius: 50%; filter: drop-shadow(0 0 20px rgba(210, 105, 30, 0.6)); mix-blend-mode: normal; transition: filter 0.3s ease; }
         .big-cookie-btn:active { transform: scale(0.93); }
@@ -250,12 +250,14 @@
         .cc-controls { width: 100%; display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--glass-border); }
         
         .cc-btn { background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: var(--text-main); padding: 8px 15px; border-radius: 8px; font-family: 'Montserrat', sans-serif; font-size: 0.9rem; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); cursor: pointer; font-weight: bold; backdrop-filter: blur(5px); box-shadow: 0 4px 6px rgba(0,0,0,0.1);}
-        [data-theme="light"] .cc-btn { background: rgba(255,255,255,0.6); }
+        [data-theme="light"] .cc-btn { background: rgba(255,255,255,0.6); color: #111; border-color: rgba(0,0,0,0.2); }
         .cc-btn:hover { background: rgba(255,255,255,0.1); transform: scale(1.05); box-shadow: 0 8px 15px rgba(0,0,0,0.2); }
         [data-theme="light"] .cc-btn:hover { background: #fff; }
         .cc-btn:active { transform: scale(0.95); }
         .cc-btn.primary-btn { border-color: var(--primary); color: #fff; background: rgba(var(--primary-rgb), 0.2); } 
         .cc-btn.primary-btn:hover { background: var(--primary); box-shadow: 0 0 15px var(--primary); color: #000;}
+        [data-theme="light"] .cc-btn.primary-btn { color: var(--primary); }
+        [data-theme="light"] .cc-btn.primary-btn:hover { color: #fff; }
         
         .overlay-buttons { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
         #reminderText { color: #ffbd2e; font-size: 0.8rem; margin-top: 10px; display: none; width: 100%; text-align: center; animation: blinkWarning 1s infinite alternate; font-weight: bold; text-shadow: 0 0 8px rgba(255,189,46,0.6); }
@@ -315,7 +317,7 @@
         .fs-wheel-wrapper {
             position: relative; 
             width: 95vw; 
-            max-width: 600px; 
+            max-width: 650px; 
             aspect-ratio: 1 / 1; 
             margin: 20px auto;
         }
@@ -356,12 +358,13 @@
 
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 5000; align-items: center; justify-content: center; }
         .modal-content { background: var(--glass-bg); padding: 30px; border-radius: 20px; border: 1px solid var(--primary); width: 90%; max-width: 450px; text-align: center; max-height: 80vh; overflow-y: auto; box-shadow: var(--shadow-soft), 0 0 20px var(--primary); }
-        [data-theme="light"] .modal-content { background: rgba(255,255,255,0.95); }
+        [data-theme="light"] .modal-content { background: rgba(255,255,255,0.95); border-color: rgba(0,0,0,0.2); box-shadow: 0 10px 30px rgba(0,0,0,0.2); color: #111; }
         
         .tooltip { position: fixed; background: rgba(10,12,16,0.95); backdrop-filter: blur(20px); border: 1px solid var(--secondary); border-radius: 12px; padding: 12px; color: #fff; font-size: 0.85rem; pointer-events: none; z-index: 6000; opacity: 0; transition: opacity 0.2s cubic-bezier(0.25, 0.8, 0.25, 1); width: max-content; max-width: 250px; box-shadow: 0 10px 25px rgba(0,0,0,0.8), 0 0 15px rgba(var(--secondary-rgb),0.3); font-family: 'Montserrat', sans-serif;}
 
-        #adminPanel { display: none; width: 100%; max-width: 1000px; margin: 0 auto; background: var(--glass-bg); backdrop-filter: blur(30px); border: 1px solid var(--danger); border-radius: 20px; padding: 30px; box-shadow: var(--shadow-soft), var(--danger-glow); }
+        #adminPanel { display: none; width: 100%; max-width: 1200px; margin: 0 auto; background: var(--glass-bg); backdrop-filter: blur(30px); border: 1px solid var(--danger); border-radius: 20px; padding: 30px; box-shadow: var(--shadow-soft), var(--danger-glow); }
         .admin-table { width: 100%; border-collapse: collapse; margin-top: 20px; color: var(--text-main); font-size: 0.9rem; }
+        [data-theme="light"] .admin-table { color: #111; }
         .admin-table th, .admin-table td { padding: 12px; border-bottom: 1px solid var(--glass-border); text-align: left; }
         .btn-delete, .btn-edit, .btn-ban { border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; margin-right: 5px; font-family: 'Montserrat', sans-serif; font-weight: bold; transition: transform 0.2s, box-shadow 0.2s;}
         .btn-delete { background: var(--danger); color: white; box-shadow: 0 0 10px rgba(255,59,48,0.4);}
@@ -376,11 +379,17 @@
         [data-theme="light"] .trade-box { background: rgba(255,255,255,0.6); }
         .trade-box.ready { border-color: #34C759; box-shadow: 0 0 20px rgba(52, 199, 89, 0.4); }
 
-        #adminEditModal { display: none; position: fixed; top: 10%; left: 50%; transform: translateX(-50%); background: var(--glass-bg); backdrop-filter: blur(30px); border: 1px solid var(--primary); border-radius: 20px; padding: 25px; z-index: 6000; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; box-shadow: var(--shadow-soft), 0 0 20px var(--primary); color: #fff; font-family: 'Courier New', monospace; }
+        #adminEditModal { display: none; position: fixed; top: 5%; left: 50%; transform: translateX(-50%); background: var(--glass-bg); backdrop-filter: blur(30px); border: 1px solid var(--primary); border-radius: 20px; padding: 25px; z-index: 6000; width: 95%; max-width: 900px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-soft), 0 0 20px var(--primary); color: #fff; font-family: 'Courier New', monospace; }
+        [data-theme="light"] #adminEditModal { background: rgba(255,255,255,0.95); color: #111; }
         #adminEditModal h3 { font-family: 'Orbitron', sans-serif; color: var(--primary); margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; text-shadow: 0 0 10px var(--primary);}
-        .edit-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);}
-        .edit-group label { flex: 1; font-family: 'Montserrat', sans-serif;}
+        .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 15px; }
+        .admin-card { background: rgba(0,0,0,0.4); padding: 15px; border-radius: 12px; border: 1px solid var(--glass-border); }
+        [data-theme="light"] .admin-card { background: rgba(255,255,255,0.6); }
+        .edit-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);}
+        [data-theme="light"] .edit-group { background: rgba(255,255,255,0.8); }
+        .edit-group label { flex: 1; font-family: 'Montserrat', sans-serif; font-size: 0.9rem;}
         .edit-group input[type="number"], .edit-group input[type="text"], .edit-group select { background: #000; color: #fff; border: 1px solid var(--secondary); padding: 6px; width: 140px; text-align: right; border-radius: 6px; font-family: inherit; box-shadow: 0 0 10px rgba(var(--secondary-rgb),0.2);}
+        [data-theme="light"] .edit-group input[type="number"], [data-theme="light"] .edit-group input[type="text"], [data-theme="light"] .edit-group select { background: #fff; color: #000; }
 
         .lb-container { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 60px; justify-content: center; width: 100%; max-width: 1200px;}
         .leaderboard-wrapper { flex: 1; min-width: 300px; padding: 20px; border-radius: 20px;}
@@ -389,7 +398,7 @@
         .lb-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.3); margin-bottom: 6px; border-radius: 10px; transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); box-shadow: inset 0 1px 1px rgba(255,255,255,0.05);}
         [data-theme="light"] .lb-row { background: rgba(255,255,255,0.5); }
         .lb-row:hover { background: rgba(var(--primary-rgb),0.1); transform: translateX(5px) scale(1.02); box-shadow: 0 0 15px var(--primary);}
-        [data-theme="light"] .lb-row:hover { background: #fff; }
+        [data-theme="light"] .lb-row:hover { background: #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
         .lb-row.top-1 { border-left: 4px solid #FFD700; background: linear-gradient(90deg, rgba(255,215,0,0.15), transparent); box-shadow: 0 0 15px rgba(255,215,0,0.2);}
         .lb-row.top-2 { border-left: 4px solid #C0C0C0; background: linear-gradient(90deg, rgba(192,192,192,0.15), transparent); box-shadow: 0 0 15px rgba(192,192,192,0.2);}
         .lb-row.top-3 { border-left: 4px solid #CD7F32; background: linear-gradient(90deg, rgba(205,127,50,0.15), transparent); box-shadow: 0 0 15px rgba(205,127,50,0.2);}
@@ -397,7 +406,7 @@
         [data-theme="light"] .lb-rank { text-shadow: none; color: #000; }
         .lb-name { flex: 1; font-size: 1rem; font-weight: bold; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px;}
         .lb-score { font-family: 'Orbitron', sans-serif; color: var(--primary); font-size: 0.9rem; text-align: right; font-weight: bold; text-shadow: 0 0 5px rgba(var(--primary-rgb),0.5);}
-        [data-theme="light"] .lb-score { text-shadow: none; }
+        [data-theme="light"] .lb-score { text-shadow: none; color: var(--primary); }
 
         #banScreen { display: none; position: fixed; top:0; left:0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); backdrop-filter: blur(20px); z-index: 9999; color: var(--danger); flex-direction: column; align-items: center; justify-content: center; font-family: 'Courier New', monospace; text-align: center;}
 
@@ -431,7 +440,7 @@
         .coc-chat-input { flex: 1; background: rgba(255,255,255,0.1); border: 1px solid var(--primary); color: var(--text-main); padding: 10px 15px; border-radius: 20px; outline: none; font-family: 'Montserrat', sans-serif; transition: 0.3s; }
         [data-theme="light"] .coc-chat-input { background: #fff; }
         .coc-chat-input:focus { box-shadow: 0 0 15px var(--primary); background: rgba(0,0,0,0.3);}
-        [data-theme="light"] .coc-chat-input:focus { background: #fff; }
+        [data-theme="light"] .coc-chat-input:focus { background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         .coc-chat-send { background: var(--primary); color: #000; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-weight: bold; transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s; display:flex; align-items:center; justify-content:center; font-size: 1.2rem;}
         .coc-chat-send:hover { box-shadow: 0 0 15px var(--primary); transform: scale(1.1); }
         .coc-chat-send:active { transform: scale(0.9); }
@@ -616,7 +625,7 @@
         <div id="editFormContent"></div>
         <div style="margin-top:20px; text-align:right; display:flex; justify-content:flex-end; gap:10px;">
             <button class="cc-btn" onclick="document.getElementById('adminEditModal').style.display='none'">Annuler</button>
-            <button class="cc-btn primary-btn" id="btnSaveAdminEdit">Sauvegarder</button>
+            <button class="cc-btn primary-btn" id="btnSaveAdminEdit">Sauvegarder Modifs</button>
         </div>
     </div>
 
@@ -701,8 +710,8 @@
             <h3 style="color: var(--primary); text-shadow: 0 0 10px var(--primary);">Sauvegardes Serveur & Sanctions</h3>
             <div style="overflow-x: auto;">
                 <table class="admin-table" id="adminSavesTable">
-                    <thead><tr><th>ID (Code)</th><th>Pseudo</th><th>Groupe</th><th>Cookies</th><th>CpS</th><th>Action</th></tr></thead>
-                    <tbody><tr><td colspan="6">Chargement...</td></tr></tbody>
+                    <thead><tr><th>ID (Code)</th><th>Pseudo</th><th>Groupe</th><th>Cookies</th><th>Sucres</th><th>CpS</th><th>Action</th></tr></thead>
+                    <tbody><tr><td colspan="7">Chargement...</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -1915,7 +1924,12 @@
                         if (game.totalCookies >= 1000000000 || game.sugars > 0 || level > 0) {
                             let costToLevel = level + 1;
                             let canAfford = game.sugars >= costToLevel;
-                            lvlBox.innerHTML = `<button class="cc-btn" style="padding: 2px 6px; font-size: 0.7rem; margin-left: 10px; border-color: ${canAfford ? 'var(--primary)' : 'var(--glass-border)'}; color: ${canAfford ? 'var(--primary)' : 'var(--text-muted)'};" onclick="event.stopPropagation(); window.buyBuildingLevel('${id}')" title="+1% CpS (Coût : ${costToLevel} sucres)">Lvl ${level} ⬆</button>`;
+                            
+                            let btnStyle = canAfford 
+                                ? "background: rgba(52,199,89,0.1); border-color: #34C759; color: #34C759; box-shadow: 0 0 10px rgba(52,199,89,0.4);" 
+                                : "border-color: var(--glass-border); color: var(--text-muted); opacity: 0.5;";
+
+                            lvlBox.innerHTML = `<button class="cc-btn" style="padding: 2px 8px; font-size: 0.75rem; margin-left: 10px; font-weight: bold; transition: 0.2s; ${btnStyle}" onclick="event.stopPropagation(); window.buyBuildingLevel('${id}')" title="+1% CpS (Coût : ${costToLevel} sucres)">Lvl ${level} ⬆</button>`;
                         } else {
                             lvlBox.innerHTML = '';
                         }
@@ -2081,7 +2095,7 @@
                 companionAutoClickInterval = setInterval(() => {
                     if(!game.banned) {
                         game.cookies += clickPower; game.totalCookies += clickPower;
-                        spawnCrack(125 + Math.random()*50-25, 125 + Math.random()*50-25);
+                        spawnCrack(130 + Math.random()*40-20, 130 + Math.random()*40-20);
                         displayCookies.innerText = formatNumber(game.cookies);
                     }
                 }, 333); 
@@ -2341,6 +2355,7 @@
                     username: game.username,
                     displayName: game.displayName || game.username,
                     score: Math.floor(game.cookies),
+                    sugars: game.sugars || 0,
                     cps: Math.floor(currentCps),
                     groupId: game.groupId || null,
                     banned: game.banned
@@ -2524,7 +2539,8 @@
                         <td><span style="font-size:0.7rem; color:var(--text-muted);">${d.id}</span></td>
                         <td style="${isBan?'text-decoration:line-through;color:var(--danger);':''}">${dat.displayName || dat.username}</td>
                         <td>${groupSelectHTML}</td>
-                        <td>${formatNumber(dat.score)}</td>
+                        <td>${Math.floor(validateNum(dat.score)).toLocaleString('fullwide', {useGrouping:false})}</td>
+                        <td>${formatNumber(dat.sugars||0)}</td>
                         <td>${formatNumber(dat.cps||0)}</td>
                         <td>
                             <button class="btn-edit" onclick="window.openEditModal('${d.id}')">Éditer</button> 
@@ -2535,7 +2551,7 @@
                         </td>
                     </tr>`;
                 });
-            } catch(e){ sTable.innerHTML = '<tr><td colspan="6">Erreur Firebase</td></tr>'; }
+            } catch(e){ sTable.innerHTML = '<tr><td colspan="7">Erreur Firebase</td></tr>'; }
         }
 
         window.openWheelAdminModal = async function(id) {
@@ -2600,6 +2616,58 @@
             }
         };
 
+        /* REFONTE ACTIONS RAPIDES ADMIN */
+        window.adminQuickAdd = async function(id, type, amount) {
+            const s = await getDoc(doc(db, "stmg_saves", id));
+            if(s.exists()) {
+                let p = JSON.parse(s.data().saveData);
+                if(type === 'cookies') p.cookies = validateNum(p.cookies) + amount;
+                if(type === 'sugars') p.sugars = validateNum(p.sugars) + amount;
+                
+                await updateDoc(doc(db, "stmg_saves", id), { saveData: JSON.stringify(p) });
+                await updateDoc(doc(db, "stmg_leaderboard", id), { 
+                    score: p.cookies, 
+                    sugars: p.sugars,
+                    adminEditTimestamp: Date.now() 
+                });
+                
+                if(type === 'cookies' && document.getElementById('edit_cookies')) {
+                    document.getElementById('edit_cookies').value = Math.floor(p.cookies).toLocaleString('fullwide', {useGrouping:false});
+                }
+                if(type === 'sugars' && document.getElementById('edit_sugars')) {
+                    document.getElementById('edit_sugars').value = p.sugars;
+                }
+                
+                alert("✅ Action appliquée en temps réel au joueur !");
+                loadAdminData();
+            }
+        };
+
+        window.adminWipeSave = async function(id) {
+            if(confirm("⚠️ ATTENTION : Es-tu sûr de vouloir remettre ce compte totalement à ZÉRO ?")) {
+                const s = await getDoc(doc(db, "stmg_saves", id));
+                if(s.exists()) {
+                    let oldData = JSON.parse(s.data().saveData);
+                    let newData = { ...defaultSave };
+                    newData.username = oldData.username;
+                    newData.displayName = oldData.displayName;
+                    newData.saveCode = oldData.saveCode;
+                    newData.password = oldData.password;
+                    newData.banned = oldData.banned;
+                    newData.groupId = oldData.groupId;
+                    
+                    await updateDoc(doc(db, "stmg_saves", id), { saveData: JSON.stringify(newData) });
+                    await updateDoc(doc(db, "stmg_leaderboard", id), { 
+                        score: 0, cps: 0, sugars: 0, adminEditTimestamp: Date.now() 
+                    });
+                    
+                    document.getElementById('adminEditModal').style.display = 'none';
+                    alert("✅ Compte réinitialisé !");
+                    loadAdminData();
+                }
+            }
+        };
+
         window.openEditModal = async function(id) {
             const s = await getDoc(doc(db, "stmg_saves", id));
             if(s.exists()) {
@@ -2607,51 +2675,62 @@
                 document.getElementById('editPlayerName').innerText = adminTempEditData.username || adminTempEditData.displayName;
                 
                 let safeCookieString = Math.floor(validateNum(adminTempEditData.cookies)).toLocaleString('fullwide', {useGrouping:false});
+                let safeSugars = validateNum(adminTempEditData.sugars);
                 
                 let html = `
-                    <div style="background:rgba(0,0,0,0.3); padding:15px; border-radius:12px; margin-bottom:15px; border:1px solid var(--primary); box-shadow: inset 0 0 10px rgba(var(--primary-rgb),0.1);">
-                        <h4 style="margin-bottom:10px; color:var(--primary); font-family:'Orbitron'; text-shadow: 0 0 10px var(--primary);">⚡ Action Rapide (Cookies)</h4>
-                        <div style="display:flex; gap:10px; margin-bottom:10px;">
-                            <select id="quickCookieAction" class="cc-input" style="width:100px; padding:5px;">
-                                <option value="add">Ajouter</option>
-                                <option value="remove">Retirer</option>
-                            </select>
-                            <input type="text" id="quickCookieAmount" class="cc-input" placeholder="Montant brut..." style="flex:1; padding:5px;">
+                    <div class="admin-grid">
+                        <div class="admin-card">
+                            <h4 style="color:var(--primary); margin-bottom:15px; text-shadow:0 0 5px var(--primary);">📊 Statistiques</h4>
+                            <div class="edit-group"><label>Cookies :</label><input type="text" id="edit_cookies" value="${safeCookieString}"></div>
+                            <div class="edit-group"><label>Sucres :</label><input type="number" id="edit_sugars" value="${safeSugars}"></div>
                         </div>
-                        <button class="cc-btn primary-btn" id="btnQuickCookieApply" style="width:100%;">Appliquer maintenant</button>
+
+                        <div class="admin-card" style="border-color:#ffbd2e;">
+                            <h4 style="color:#ffbd2e; margin-bottom:15px; text-shadow:0 0 5px #ffbd2e;">⚡ Actions Instantanées</h4>
+                            <button class="cc-btn" style="width:100%; margin-bottom:8px; background:rgba(52,199,89,0.2); border-color:#34C759; color:#34C759;" onclick="window.adminQuickAdd('${id}', 'cookies', 1000000000)">+ 1 Billion Cookies</button>
+                            <button class="cc-btn" style="width:100%; margin-bottom:8px; background:rgba(0,212,255,0.2); border-color:#00D4FF; color:#00D4FF;" onclick="window.adminQuickAdd('${id}', 'sugars', 10)">+ 10 Sucres</button>
+                            <button class="cc-btn" style="width:100%; background:rgba(255,59,48,0.2); border-color:#ff3b30; color:#ff3b30;" onclick="window.adminWipeSave('${id}')">⚠️ Remettre à Zéro</button>
+                        </div>
                     </div>
                 `;
-
-                html += `<div class="edit-group"><label>Cookies Actuels :</label><input type="text" id="edit_cookies" value="${safeCookieString}"></div>`;
                 
-                let compHtml = `<div class="edit-group" style="flex-direction:column; align-items:flex-start;"><label>Quantité de Compagnons possédés :</label><div style="display:flex; flex-direction:column; gap:8px; margin-top:10px; width:100%;">`;
+                let compHtml = `
+                    <h4 style="margin-top:25px; color:var(--secondary); border-bottom:1px solid var(--glass-border); padding-bottom:5px;">🐾 Compagnons possédés</h4>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-top:15px;">
+                `;
                 ['algaz', 'dan', 'dan_shiny', 'jayden', 'jayden_shiny'].forEach(c => {
                     let qty = (adminTempEditData.companions || []).filter(x => x === c).length;
-                    compHtml += `<div style="display:flex; justify-content:space-between; width:100%;"><label>${companionsDB[c].name} :</label> <input type="number" id="edit_comp_${c}" value="${qty}" min="0"></div>`;
+                    compHtml += `<div class="edit-group"><label>${companionsDB[c].name} :</label> <input type="number" id="edit_comp_${c}" value="${qty}" min="0"></div>`;
                 });
-                compHtml += `</div></div><hr style="border-color:rgba(255,255,255,0.1); margin:10px 0;">`;
+                compHtml += `</div>`;
                 html += compHtml;
 
+                let bHtml = `
+                    <h4 style="margin-top:25px; color:var(--text-main); border-bottom:1px solid var(--glass-border); padding-bottom:5px;">🏢 Bâtiments (Quantité & Niveau)</h4>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:10px; margin-top:15px;">
+                `;
                 for(let key in buildingData) {
                     let count = adminTempEditData.buildings[key] ? validateNum(adminTempEditData.buildings[key].count) : 0;
-                    html += `<div class="edit-group"><label>${buildingData[key].name} :</label><input type="number" id="edit_b_${key}" value="${count}"></div>`;
+                    let lvl = adminTempEditData.buildings[key] ? validateNum(adminTempEditData.buildings[key].level) : 0;
+                    bHtml += `
+                        <div class="edit-group" style="flex-direction: column; align-items: stretch; gap: 5px;">
+                            <label style="font-weight:bold; color:var(--primary);">${buildingData[key].icon} ${buildingData[key].name}</label>
+                            <div style="display:flex; justify-content:space-between; gap:5px;">
+                                <span>Quantité: <input type="number" id="edit_b_${key}" value="${count}" style="width:80px;"></span>
+                                <span>Level: <input type="number" id="edit_b_lvl_${key}" value="${lvl}" style="width:60px;"></span>
+                            </div>
+                        </div>
+                    `;
                 }
+                bHtml += `</div>`;
+                html += bHtml;
+
                 document.getElementById('editFormContent').innerHTML = html;
                 document.getElementById('adminEditModal').style.display = 'block';
-                
-                document.getElementById('btnQuickCookieApply').onclick = () => {
-                    let action = document.getElementById('quickCookieAction').value;
-                    let amt = validateNum(parseFloat(document.getElementById('quickCookieAmount').value));
-                    let current = validateNum(parseFloat(document.getElementById('edit_cookies').value));
-                    if(action === 'add') current += amt;
-                    else current -= amt;
-                    if(current < 0) current = 0;
-                    document.getElementById('edit_cookies').value = Math.floor(current).toLocaleString('fullwide', {useGrouping:false});
-                    document.getElementById('quickCookieAmount').value = '';
-                };
 
                 document.getElementById('btnSaveAdminEdit').onclick = async () => {
                     adminTempEditData.cookies = validateNum(parseFloat(document.getElementById('edit_cookies').value));
+                    adminTempEditData.sugars = validateNum(parseFloat(document.getElementById('edit_sugars').value));
                     
                     adminTempEditData.companions = [];
                     ['algaz', 'dan', 'dan_shiny', 'jayden', 'jayden_shiny'].forEach(c => {
@@ -2663,19 +2742,24 @@
                     }
 
                     for(let key in buildingData) {
-                        let val = validateNum(parseInt(document.getElementById(`edit_b_${key}`).value));
-                        if(!adminTempEditData.buildings[key]) adminTempEditData.buildings[key] = { count: 0 };
-                        adminTempEditData.buildings[key].count = val;
+                        let countVal = validateNum(parseInt(document.getElementById(`edit_b_${key}`).value));
+                        let lvlVal = validateNum(parseInt(document.getElementById(`edit_b_lvl_${key}`).value));
+                        if(!adminTempEditData.buildings[key]) adminTempEditData.buildings[key] = { count: 0, level: 0 };
+                        adminTempEditData.buildings[key].count = countVal;
+                        adminTempEditData.buildings[key].level = lvlVal;
                     }
+                    
                     let newCps = calculateCpsForSave(adminTempEditData);
                     await updateDoc(doc(db, "stmg_saves", id), { saveData: JSON.stringify(adminTempEditData) });
                     await updateDoc(doc(db, "stmg_leaderboard", id), { 
                         score: adminTempEditData.cookies, 
+                        sugars: adminTempEditData.sugars,
                         cps: Math.floor(newCps),
                         adminEditTimestamp: Date.now() 
                     });
+                    
                     document.getElementById('adminEditModal').style.display = 'none';
-                    alert("Compte modifié !");
+                    alert("Sauvegarde manuelle appliquée avec succès !");
                     loadAdminData(); 
                     loadLeaderboards(); 
                 };
@@ -2871,6 +2955,9 @@
                 
                 displayCookies.innerText = formatNumber(game.cookies);
                 document.title = `${formatNumber(game.cookies)} cookies`;
+            }
+            if (game.username && !game.banned) {
+                updateSugars();
             }
         }, 100);
         
