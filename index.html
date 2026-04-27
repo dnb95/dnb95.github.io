@@ -5,6 +5,11 @@
     <title>Dan Bouillet - Accueil</title>
     <meta name="description" content="L'accueil du site de Dan Bouillet.">
     <link rel="icon" type="image/png" href="https://upload.wikimedia.org/wikipedia/commons/2/20/Dan_Bouillet_Logo.png">
+    <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/2/20/Dan_Bouillet_Logo.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#030305">
+    
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;500;800&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -267,14 +272,14 @@
         @keyframes pulseGC { 0% { transform: scale(1); filter: drop-shadow(0 0 20px gold); } 50% { transform: scale(1.1); filter: drop-shadow(0 0 50px #fff) drop-shadow(0 0 30px gold); } 100% { transform: scale(1); filter: drop-shadow(0 0 20px gold); } }
 
         .companion-list { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
-        .companion-card { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 15px; border-radius: 12px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); cursor: pointer; box-shadow: inset 0 1px 1px rgba(255,255,255,0.05);}
+        .companion-card { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 15px; border-radius: 12px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); box-shadow: inset 0 1px 1px rgba(255,255,255,0.05);}
         [data-theme="light"] .companion-card { background: rgba(255,255,255,0.5); }
         .companion-card:not(.locked-companion):hover { border-color: var(--secondary); transform: scale(1.02) translateX(5px); box-shadow: 0 0 15px var(--secondary); background: rgba(0,0,0,0.4);}
         [data-theme="light"] .companion-card:not(.locked-companion):hover { background: rgba(255,255,255,0.9); }
         .companion-card:not(.locked-companion):active { transform: scale(0.98); }
         .companion-card.equipped { border-color: var(--primary); box-shadow: 0 0 15px var(--primary); background: rgba(0,0,0,0.4); }
         [data-theme="light"] .companion-card.equipped { background: rgba(255,255,255,0.9); }
-        .comp-info { display: flex; align-items: center; gap: 15px; }
+        .comp-info { display: flex; align-items: center; gap: 15px; cursor: pointer; flex: 1; }
         .comp-icon { width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--primary); object-fit: cover; box-shadow: 0 0 10px rgba(0,212,255,0.5);}
         .comp-name { font-family: 'Orbitron', sans-serif; font-weight: bold; font-size: 1.1rem; color: var(--text-main); text-shadow: 0 0 5px rgba(255,255,255,0.3);}
         [data-theme="light"] .comp-name { text-shadow: none; }
@@ -402,14 +407,15 @@
         .lb-row.top-1 { border-left: 4px solid #FFD700; background: linear-gradient(90deg, rgba(255,215,0,0.15), transparent); box-shadow: 0 0 15px rgba(255,215,0,0.2);}
         .lb-row.top-2 { border-left: 4px solid #C0C0C0; background: linear-gradient(90deg, rgba(192,192,192,0.15), transparent); box-shadow: 0 0 15px rgba(192,192,192,0.2);}
         .lb-row.top-3 { border-left: 4px solid #CD7F32; background: linear-gradient(90deg, rgba(205,127,50,0.15), transparent); box-shadow: 0 0 15px rgba(205,127,50,0.2);}
-        .lb-rank { font-family: 'Orbitron', sans-serif; font-size: 1.2rem; color: var(--secondary); width: 30px; font-weight: bold; text-shadow: 0 0 5px rgba(var(--secondary-rgb),0.5);}
+        
+        .lb-rank { font-family: 'Orbitron', sans-serif; font-size: 1.2rem; color: var(--secondary); width: 40px; font-weight: bold; text-align: right; text-shadow: 0 0 5px rgba(var(--secondary-rgb),0.5);}
         [data-theme="light"] .lb-rank { text-shadow: none; color: #000; }
         
-        .lb-name-container { flex: 1; display:flex; flex-direction:column; justify-content:center; overflow: hidden; margin-right: 10px;}
+        .lb-name-container { flex: 1; display:flex; flex-direction:column; justify-content:center; overflow: hidden;}
         .lb-name { font-size: 1rem; font-weight: bold; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height:1.1;}
-        .lb-group { font-size: 0.75rem; font-weight:normal; margin-top: 2px;}
+        .lb-group { font-size: 0.75rem; font-weight:normal; margin-top: 4px; display:inline-block;}
 
-        .lb-score { font-family: 'Orbitron', sans-serif; color: var(--primary); font-size: 0.9rem; text-align: right; font-weight: bold; text-shadow: 0 0 5px rgba(var(--primary-rgb),0.5);}
+        .lb-score { font-family: 'Orbitron', sans-serif; color: var(--primary); font-size: 0.9rem; text-align: right; font-weight: bold; text-shadow: 0 0 5px rgba(var(--primary-rgb),0.5); margin-right: 15px; width: 85px;}
         [data-theme="light"] .lb-score { text-shadow: none; color: var(--primary); }
 
         #banScreen { display: none; position: fixed; top:0; left:0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); backdrop-filter: blur(20px); z-index: 9999; color: var(--danger); flex-direction: column; align-items: center; justify-content: center; font-family: 'Courier New', monospace; text-align: center;}
@@ -449,12 +455,22 @@
         .coc-chat-send:hover { box-shadow: 0 0 15px var(--primary); transform: scale(1.1); }
         .coc-chat-send:active { transform: scale(0.9); }
 
+        /* Effets spéciaux pour les groupes */
         .text-rainbow { background-image: linear-gradient(to left, #00D4FF, #00FF88, yellow, orange, red); -webkit-background-clip: text; color: transparent; animation: rainbowAnimation 3s linear infinite; background-size: 200% 200%; font-weight: bold; filter: drop-shadow(0 0 8px rgba(0,255,136,0.6)); }
         @keyframes rainbowAnimation { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+        
         .text-golden-aura { color: #fffacd; text-shadow: 0 0 5px gold, 0 0 10px goldenrod, 0 0 15px darkgoldenrod; animation: goldenShine 1.5s infinite alternate; font-weight: bold; }
         @keyframes goldenShine { 0% { text-shadow: 0 0 5px gold, 0 0 10px goldenrod, 0 0 15px darkgoldenrod; } 100% { text-shadow: 0 0 10px #ffe066, 0 0 20px gold, 0 0 30px #ffcc00; } }
+        
         .text-aura { background-image: linear-gradient(to right, #0ABAB5, #E0B0FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 5px #0ABAB5) drop-shadow(0 0 10px #E0B0FF); animation: auraPulse 1.5s infinite alternate; font-weight: bold; }
         @keyframes auraPulse { 0% { filter: drop-shadow(0 0 2px #0ABAB5); } 100% { filter: drop-shadow(0 0 10px #0ABAB5) drop-shadow(0 0 20px #E0B0FF); } }
+
+        .text-dan-secret { position: relative; color: #000; font-weight: 900; padding: 0 12px; display: inline-block; animation: danSecretPulse 2s infinite alternate; letter-spacing: 1px; }
+        @keyframes danSecretPulse { 0% { text-shadow: 0 0 2px rgba(255,255,255,0.8), 0 0 5px rgba(255,255,255,0.5); color: #111; } 100% { text-shadow: 0 0 8px #fff, 0 0 15px #fff, 0 0 20px #fff; color: #333; } }
+        .text-dan-secret::before, .text-dan-secret::after { content: '✨'; position: absolute; font-size: 1rem; animation: starBlink 1.5s infinite alternate; }
+        .text-dan-secret::before { top: -8px; left: -10px; animation-delay: 0s; }
+        .text-dan-secret::after { bottom: -8px; right: -10px; animation-delay: 0.7s; }
+        @keyframes starBlink { 0% { opacity: 0; transform: scale(0.3) rotate(0deg); } 50% { opacity: 1; transform: scale(1.3) rotate(20deg); filter: drop-shadow(0 0 5px white); } 100% { opacity: 0; transform: scale(0.3) rotate(40deg); } }
         
         .auth-separator { margin: 15px 0; border-top: 1px solid var(--glass-border); position: relative; text-align: center; }
         .auth-separator span { background: var(--glass-bg); padding: 0 10px; position: relative; top: -10px; color: var(--text-muted); font-size: 0.8rem; }
@@ -467,6 +483,7 @@
             #cocChatPanel { width: 280px; } 
             .fs-icon-container img { width: 35px; height: 35px; }
             .fs-slice-text { font-size: 0.95rem; }
+            .lb-score { width: auto; font-size: 0.8rem; }
         }
     </style>
 </head>
@@ -520,7 +537,7 @@
     </div>
 
     <div id="activeTradeModal" class="modal">
-        <div class="modal-content" style="max-width:700px;">
+        <div class="modal-content" style="max-width:750px;">
             <h3 style="color:var(--secondary); font-family:'Orbitron'; margin-bottom:20px; text-shadow: 0 0 10px var(--secondary);">Échange avec <span id="tradeTargetName" style="color:var(--text-main);">...</span></h3>
             
             <div style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:20px;">
@@ -529,8 +546,8 @@
                     <input type="number" id="tradeMyCookiesInput" class="cc-input" style="width:100%; padding:8px; font-size:1rem; margin-bottom:10px;" placeholder="Nb Cookies..." min="0">
                     <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;">Compagnons à donner :</p>
                     <div id="tradeMyCompsList" style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:15px; max-height:100px; overflow-y:auto;"></div>
-                    <button class="cc-btn primary-btn" id="btnUpdateMyOffer" style="width:100%; margin-bottom:10px;">Mettre à jour l'offre</button>
-                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px;">
+                    
+                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; justify-content:center; margin-top:10px;">
                         <input type="checkbox" id="tradeMyReadyCheck" style="transform:scale(1.5);"> 
                         <span style="font-weight:bold;">Je suis prêt !</span>
                     </label>
@@ -549,6 +566,15 @@
                     <div id="tradeTheirReadyStatus" style="padding:10px; text-align:center; border-radius:8px; background:rgba(255,59,48,0.2); color:var(--danger); font-weight:bold; box-shadow: var(--danger-glow);">
                         ❌ Pas prêt
                     </div>
+                </div>
+            </div>
+
+            <div style="border-top: 1px solid var(--glass-border); padding-top: 15px; margin-bottom: 15px; text-align: left;">
+                <h4 style="color:var(--text-main); font-size:0.9rem; margin-bottom:10px;">💬 Chat Privé de l'échange</h4>
+                <div id="tradeChatBox" style="height: 120px; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 10px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);"></div>
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="tradeChatInput" class="cc-input" style="flex:1; padding:8px; font-size:0.9rem;" placeholder="Message...">
+                    <button class="cc-btn primary-btn" id="btnSendTradeChat" style="padding: 0 15px;">Envoyer</button>
                 </div>
             </div>
 
@@ -621,7 +647,7 @@
                         <input type="text" id="setProfilePicUrl" class="cc-input" style="width:100%; margin-bottom:10px; padding: 8px; font-size: 0.8rem;" placeholder="Ou colle un lien d'image...">
                         
                         <input type="file" id="setProfilePicFile" accept="image/*" style="display:none;">
-                        <label for="setProfilePicFile" class="cc-btn" style="display:inline-block; width:100%; text-align:center; cursor:pointer; font-size:0.8rem;">📁 Parcourir les fichiers</label>
+                        <label for="setProfilePicFile" class="cc-btn" style="display:inline-block; width:100%; text-align:center; cursor:pointer; font-size:0.8rem;">📁 Choisir une image</label>
                     </div>
                 </div>
                 <button class="cc-btn" id="btnRemoveProfilePic" style="margin-top:10px; width:100%; font-size:0.8rem; border-color:var(--danger); color:var(--danger); display:none;">🗑️ Retirer la photo</button>
@@ -740,6 +766,7 @@
                         <option value="rainbow">Rainbow (Modé)</option>
                         <option value="golden-aura">Golden Aura (Modé)</option>
                         <option value="aura">Aura (Modé)</option>
+                        <option value="dan">Dan Secret (Modé)</option>
                     </select>
                     <button id="btnCreateGroup" class="cc-btn primary-btn">Créer le groupe</button>
                 </div>
@@ -870,7 +897,7 @@
 
                     <div id="panelComps">
                         <h3 style="color: var(--secondary); font-family: 'Orbitron'; text-align: center; font-size: 1.5rem; margin-bottom: 5px; text-shadow: 0 0 10px var(--secondary);">Tes Compagnons</h3>
-                        <p style="text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-bottom: 15px;">Clique sur un compagnon pour l'équiper (un seul à la fois).</p>
+                        <p style="text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-bottom: 15px;">Clique sur un compagnon pour l'équiper (un seul à la fois). Tu peux aussi les vendre pour obtenir des cookies.</p>
                         <div class="companion-list" id="compListContainer"></div>
                     </div>
 
@@ -882,7 +909,7 @@
                             <ul style="padding-left:20px;">
                                 <li>Tu ne peux échanger que ce que tu <b>possèdes</b>.</li>
                                 <li>Une fois l'échange validé par les deux joueurs, il est <b>définitif</b>.</li>
-                                <li>Les doublons de compagnons sont autorisés !</li>
+                                <li>Les modifications s'affichent en temps réel !</li>
                             </ul>
                         </div>
                         
@@ -937,7 +964,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, query, orderBy, limit, deleteDoc, where, updateDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, query, orderBy, limit, deleteDoc, where, updateDoc, onSnapshot, serverTimestamp, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -1054,11 +1081,11 @@
         ];
 
         const companionsDB = {
-            algaz: { id: 'algaz', name: 'AlgaZ', icon: '💥', cpsMult: 1.25, clickBonus: 1000000, gcMult: 1, desc: "x1.25 CpS | +1M Puissance de Clic", rarity: "Épique", rClass: "r-epic" },
-            dan: { id: 'dan', name: 'Dan', icon: '💣', cpsMult: 1.75, clickBonus: 0, gcMult: 2, desc: "x1.75 CpS | Apparition Cookies Dorés x2", rarity: "Mythique", rClass: "r-mythic" },
-            dan_shiny: { id: 'dan_shiny', name: 'Dan ✨', icon: '💣', cpsMult: 2.5, clickBonus: 0, gcMult: 4, desc: "x2.50 CpS | Cookies Dorés x4 | SHINY ✨", rarity: "Secret", rClass: "r-secret shiny-img" },
-            jayden: { id: 'jayden', name: 'Jayden', icon: 'https://i.ibb.co/qM5P7xxK/m-13.png', cpsMult: 2.0, clickBonus: 3000000, gcMult: 2, desc: "x2.00 CpS | +3M Clic | Cookies Dorés x2", rarity: "Secret", rClass: "r-secret" },
-            jayden_shiny: { id: 'jayden_shiny', name: 'Jayden ✨', icon: 'https://i.ibb.co/qM5P7xxK/m-13.png', cpsMult: 2.5, clickBonus: 5000000, gcMult: 3, desc: "x2.50 CpS | +5M Clic | Cookies Dorés x3 | SHINY ✨", rarity: "Secret+", rClass: "r-secret shiny-img" }
+            algaz: { id: 'algaz', name: 'AlgaZ', icon: '💥', cpsMult: 1.25, clickBonus: 1000000, gcMult: 1, desc: "x1.25 CpS | +1M Puissance de Clic", rarity: "Épique", rClass: "r-epic", sellPrice: 10000000000 },
+            dan: { id: 'dan', name: 'Dan', icon: '💣', cpsMult: 1.75, clickBonus: 0, gcMult: 2, desc: "x1.75 CpS | Apparition Cookies Dorés x2", rarity: "Mythique", rClass: "r-mythic", sellPrice: 50000000000 },
+            dan_shiny: { id: 'dan_shiny', name: 'Dan ✨', icon: '💣', cpsMult: 2.5, clickBonus: 0, gcMult: 4, desc: "x2.50 CpS | Cookies Dorés x4 | SHINY ✨", rarity: "Secret", rClass: "r-secret shiny-img", sellPrice: 1000000000000 },
+            jayden: { id: 'jayden', name: 'Jayden', icon: 'https://i.ibb.co/qM5P7xxK/m-13.png', cpsMult: 2.0, clickBonus: 3000000, gcMult: 2, desc: "x2.00 CpS | +3M Clic | Cookies Dorés x2", rarity: "Secret", rClass: "r-secret", sellPrice: 250000000000 },
+            jayden_shiny: { id: 'jayden_shiny', name: 'Jayden ✨', icon: 'https://i.ibb.co/qM5P7xxK/m-13.png', cpsMult: 2.5, clickBonus: 5000000, gcMult: 3, desc: "x2.50 CpS | +5M Clic | Cookies Dorés x3 | SHINY ✨", rarity: "Secret+", rClass: "r-secret shiny-img", sellPrice: 5000000000000 }
         };
 
         let game = JSON.parse(JSON.stringify(defaultSave));
@@ -1098,6 +1125,7 @@
 
         const imgCookieBase = "https://png.pngtree.com/png-vector/20250425/ourmid/pngtree-chocolate-chip-cookie-icon-white-background-png-image_16100260.png";
         const imgCookieGolden = "https://i.ibb.co/Y4fx1dPt/image-removebg-preview-2.png";
+        const defaultPfp = "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Default_pfp.svg/250px-Default_pfp.svg.png";
 
         const displayCookies = document.getElementById('cookiesDisplay');
         const displayCps = document.getElementById('cpsDisplay');
@@ -1164,6 +1192,7 @@
         btnWheelShortcut.addEventListener('click', () => switchTab('wheel'));
         btnCompsShortcut.addEventListener('click', () => switchTab('comps'));
 
+        // ================= AUTH GOOGLE =================
         async function handleGoogleAuth() {
             try {
                 const result = await signInWithPopup(auth, googleProvider);
@@ -1185,7 +1214,7 @@
                 }
             } catch (error) {
                 console.error(error);
-                alert("Erreur lors de la connexion avec Google.");
+                alert("Erreur de connexion Google : " + error.message + "\n\n(Astuce : Assure-toi d'avoir ajouté ton nom de domaine dans les domaines autorisés sur Firebase > Authentication)");
             }
         }
 
@@ -1215,9 +1244,10 @@
                 }
                 document.getElementById('settingsModal').style.display='none';
             } catch (error) {
-                alert("Erreur lors de la liaison Google.");
+                alert("Erreur lors de la liaison Google : " + error.message);
             }
         });
+        // ===============================================
 
         document.getElementById('btnLoginCodeMain').addEventListener('click', () => { openLoginModal(); });
         document.getElementById('btnImportFooter').addEventListener('click', () => { openLoginModal(); });
@@ -1314,7 +1344,45 @@
             if (g.color === 'rainbow') return `<span class="text-rainbow lb-group">[${safeName}]</span>`;
             if (g.color === 'golden-aura') return `<span class="text-golden-aura lb-group">[${safeName}]</span>`;
             if (g.color === 'aura') return `<span class="text-aura lb-group">[${safeName}]</span>`;
+            if (g.color === 'dan') return `<span class="text-dan-secret lb-group">[${safeName}]</span>`;
+            
             return `<span class="lb-group" style="color:${g.color}; font-weight:bold; text-shadow: 0 0 10px ${g.color};">[${safeName}]</span>`;
+        }
+
+        // ================= TEMPS RÉEL TRADE =================
+        let tradeUpdateTimeout = null;
+        window.debounceUpdateOffer = function() {
+            if(tradeUpdateTimeout) clearTimeout(tradeUpdateTimeout);
+            tradeUpdateTimeout = setTimeout(sendOfferUpdate, 500);
+        }
+        
+        async function sendOfferUpdate() {
+            if(!currentTradeDocId || !currentTradeData) return;
+            
+            let inputField = document.getElementById('tradeMyCookiesInput');
+            let cookiesInput = Math.floor(validateNum(inputField.value));
+            
+            if(cookiesInput > game.cookies) {
+                cookiesInput = Math.floor(game.cookies);
+                inputField.value = cookiesInput;
+            }
+
+            let selectedComps = [];
+            document.querySelectorAll('.trade-comp-check:checked').forEach(cb => selectedComps.push(cb.value));
+
+            let isSender = currentTradeData.senderId === game.saveCode;
+            let updates = {};
+            if(isSender) {
+                updates.senderOffer = { cookies: cookiesInput, comps: selectedComps };
+                updates.receiverReady = false; 
+                updates.senderReady = false; 
+            } else {
+                updates.receiverOffer = { cookies: cookiesInput, comps: selectedComps };
+                updates.senderReady = false;
+                updates.receiverReady = false;
+            }
+
+            await updateDoc(doc(db, "stmg_trades", currentTradeDocId), updates);
         }
 
         function setupTradeListeners() {
@@ -1342,12 +1410,14 @@
                             syncTradeUI(false); 
                         }
                     }
-                    if(t.status === 'completed' || t.status === 'cancelled') {
+                    if(t.status === 'completed' && !t.receiverProcessed) {
+                        processTradeCompletion(d.id, t, false);
+                    }
+                    if(t.status === 'cancelled') {
                         if(isTradeModalOpen && currentTradeDocId === d.id) {
                             document.getElementById('activeTradeModal').style.display = 'none';
                             isTradeModalOpen = false;
-                            if(t.status === 'completed' && !t.receiverProcessed) processTradeCompletion(d.id, t, false);
-                            else if(t.status === 'cancelled' && !appJustLoaded) alert("L'échange a été annulé.");
+                            if(!appJustLoaded) alert("L'échange a été annulé.");
                         }
                     }
                 });
@@ -1367,12 +1437,14 @@
                             syncTradeUI(true); 
                         }
                     }
-                    if(t.status === 'completed' || t.status === 'cancelled') {
+                    if(t.status === 'completed' && !t.senderProcessed) {
+                        processTradeCompletion(d.id, t, true);
+                    }
+                    if(t.status === 'cancelled') {
                         if(isTradeModalOpen && currentTradeDocId === d.id) {
                             document.getElementById('activeTradeModal').style.display = 'none';
                             isTradeModalOpen = false;
-                            if(t.status === 'completed' && !t.senderProcessed) processTradeCompletion(d.id, t, true);
-                            else if(t.status === 'cancelled' && !appJustLoaded) alert("L'échange a été annulé.");
+                            if(!appJustLoaded) alert("L'échange a été annulé.");
                         }
                     }
                 });
@@ -1417,6 +1489,7 @@
                     receiverOffer: { cookies: 0, comps: [] },
                     senderReady: false, receiverReady: false,
                     senderProcessed: false, receiverProcessed: false,
+                    chat: [],
                     timestamp: serverTimestamp()
                 });
                 alert(`🚀 Demande instantanée envoyée à ${targetName} !`);
@@ -1446,6 +1519,9 @@
             
             document.getElementById('tradeTargetName').innerText = targetName;
             
+            // Events Temps Réel
+            document.getElementById('tradeMyCookiesInput').oninput = window.debounceUpdateOffer;
+            
             const myCompsList = document.getElementById('tradeMyCompsList');
             myCompsList.innerHTML = '';
             if(!game.companions) game.companions = [];
@@ -1455,7 +1531,16 @@
                 if(compData) {
                     let label = document.createElement('label');
                     label.style.cssText = "display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.3); padding:5px 10px; border-radius:8px; font-size:0.8rem; cursor:pointer; border: 1px solid rgba(255,255,255,0.05);";
-                    label.innerHTML = `<input type="checkbox" value="${c}" data-index="${index}" class="trade-comp-check"> ${compData.name}`;
+                    
+                    let cb = document.createElement('input');
+                    cb.type = 'checkbox'; cb.value = c; cb.className = 'trade-comp-check';
+                    cb.onchange = window.debounceUpdateOffer;
+                    
+                    label.appendChild(cb);
+                    label.innerHTML += ` ${compData.name}`;
+                    // Re-bind listener after innerHTML
+                    label.querySelector('input').onchange = window.debounceUpdateOffer;
+                    
                     myCompsList.appendChild(label);
                 }
             });
@@ -1494,51 +1579,61 @@
             if(amIReady) {
                 myBox.classList.add('ready');
                 document.getElementById('tradeMyCookiesInput').disabled = true;
-                document.getElementById('btnUpdateMyOffer').disabled = true;
                 document.querySelectorAll('.trade-comp-check').forEach(cb => cb.disabled = true);
             } else {
                 myBox.classList.remove('ready');
                 document.getElementById('tradeMyCookiesInput').disabled = false;
-                document.getElementById('btnUpdateMyOffer').disabled = false;
                 document.querySelectorAll('.trade-comp-check').forEach(cb => cb.disabled = false);
             }
             document.getElementById('tradeMyReadyCheck').checked = amIReady;
+
+            // Sync Chat Privé
+            const tcb = document.getElementById('tradeChatBox');
+            tcb.innerHTML = '';
+            (currentTradeData.chat || []).forEach(msg => {
+                let isMe = msg.senderId === game.saveCode;
+                let align = isMe ? 'right' : 'left';
+                let color = isMe ? 'var(--primary)' : 'var(--secondary)';
+                tcb.innerHTML += `<div style="text-align:${align}; margin-bottom:4px;">
+                    <span style="font-size:0.7rem; color:${color}; font-weight:bold;">${msg.name}</span><br>
+                    <span style="background:rgba(255,255,255,0.1); padding:4px 8px; border-radius:8px; display:inline-block; font-size:0.85rem; word-break:break-word; max-width:80%; text-align:left;">${msg.text}</span>
+                </div>`;
+            });
+            tcb.scrollTop = tcb.scrollHeight;
         }
 
-        document.getElementById('btnUpdateMyOffer').onclick = async () => {
-            if(!currentTradeDocId || !currentTradeData) return;
+        document.getElementById('btnSendTradeChat').onclick = async () => {
+            let txt = document.getElementById('tradeChatInput').value.trim();
+            if(!txt || !currentTradeDocId) return;
             
-            let cookiesInput = Math.floor(validateNum(document.getElementById('tradeMyCookiesInput').value));
-            if(cookiesInput > game.cookies) {
-                alert("Tu n'as pas assez de cookies !");
-                return;
-            }
-
-            let selectedComps = [];
-            document.querySelectorAll('.trade-comp-check:checked').forEach(cb => selectedComps.push(cb.value));
-
-            let isSender = currentTradeData.senderId === game.saveCode;
-            let updates = {};
-            if(isSender) {
-                updates.senderOffer = { cookies: cookiesInput, comps: selectedComps };
-                updates.receiverReady = false; 
-            } else {
-                updates.receiverOffer = { cookies: cookiesInput, comps: selectedComps };
-                updates.senderReady = false;
-            }
-
-            await updateDoc(doc(db, "stmg_trades", currentTradeDocId), updates);
+            await updateDoc(doc(db, "stmg_trades", currentTradeDocId), {
+                chat: arrayUnion({
+                    senderId: game.saveCode,
+                    name: game.displayName || game.username,
+                    text: txt,
+                    time: Date.now()
+                })
+            });
+            document.getElementById('tradeChatInput').value = '';
         };
+
+        document.getElementById('tradeChatInput').addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') document.getElementById('btnSendTradeChat').click();
+        });
 
         document.getElementById('tradeMyReadyCheck').onchange = async (e) => {
             if(!currentTradeDocId || !currentTradeData) return;
             let ready = e.target.checked;
             let isSender = currentTradeData.senderId === game.saveCode;
             
-            let myOfferCookies = isSender ? currentTradeData.senderOffer.cookies : currentTradeData.receiverOffer.cookies;
+            let inputField = document.getElementById('tradeMyCookiesInput');
+            let myOfferCookies = Math.floor(validateNum(inputField.value));
+            
             if(ready && myOfferCookies > game.cookies) {
                 alert("Tu ne peux pas valider, tu n'as plus assez de cookies !");
                 e.target.checked = false;
+                inputField.value = Math.floor(game.cookies);
+                window.debounceUpdateOffer();
                 return;
             }
 
@@ -1567,9 +1662,11 @@
             let cookiesGiven = validateNum(myOffer.cookies);
             let cookiesReceived = validateNum(theirOffer.cookies);
 
+            // Sécurisation forte de la transaction
             game.cookies = validateNum(game.cookies) - cookiesGiven + cookiesReceived;
             if (game.cookies < 0) game.cookies = 0;
             if (cookiesReceived > 0) game.totalCookies = validateNum(game.totalCookies) + cookiesReceived;
+            
             if(!game.companions) game.companions = [];
             
             if (myOffer.comps && Array.isArray(myOffer.comps)) {
@@ -1588,13 +1685,21 @@
                 });
             }
 
-            if(!appJustLoaded) alert(`✅ Échange terminé !\nTu as envoyé : ${formatNumber(cookiesGiven)} cookies & ${myOffer.comps ? myOffer.comps.length : 0} compagnons.\nTu as reçu : ${formatNumber(cookiesReceived)} cookies & ${theirOffer.comps ? theirOffer.comps.length : 0} compagnons.`);
+            if(isTradeModalOpen && currentTradeDocId === docId) {
+                document.getElementById('activeTradeModal').style.display = 'none';
+                isTradeModalOpen = false;
+                if(!appJustLoaded) alert(`✅ Échange terminé !\nTu as envoyé : ${formatNumber(cookiesGiven)} cookies & ${myOffer.comps ? myOffer.comps.length : 0} compagnons.\nTu as reçu : ${formatNumber(cookiesReceived)} cookies & ${theirOffer.comps ? theirOffer.comps.length : 0} compagnons.`);
+            }
 
             let updates = {};
             if(isSender) updates.senderProcessed = true;
             else updates.receiverProcessed = true;
-            await updateDoc(doc(db, "stmg_trades", docId), updates);
+            
+            try {
+                await updateDoc(doc(db, "stmg_trades", docId), updates);
+            } catch(e) {} 
 
+            // Forcer la sauvegarde immédiatement
             unsavedProgress = true;
             await saveGameToServer(); 
             
@@ -1846,6 +1951,7 @@
                 if (gColor === 'rainbow') isCustomCSS = 'rainbow';
                 else if (gColor === 'golden-aura') isCustomCSS = 'golden-aura';
                 else if (gColor === 'aura') isCustomCSS = 'aura';
+                else if (gColor === 'dan') isCustomCSS = 'dan';
                 else color = gColor;
             } else if (game.totalCookies >= 1000000000) {
                 color = 'var(--secondary)'; 
@@ -1856,6 +1962,7 @@
             if (isCustomCSS === 'rainbow') ccWrapper.style.borderColor = 'var(--secondary)';
             else if (isCustomCSS === 'golden-aura') ccWrapper.style.borderColor = 'gold';
             else if (isCustomCSS === 'aura') ccWrapper.style.borderColor = '#0ABAB5';
+            else if (isCustomCSS === 'dan') ccWrapper.style.borderColor = '#fff';
             else ccWrapper.style.borderColor = color;
 
             waves.forEach(w => {
@@ -1863,6 +1970,7 @@
                     if(isCustomCSS === 'rainbow') w.style.background = 'linear-gradient(45deg, var(--primary), var(--secondary), yellow, orange, red)';
                     if(isCustomCSS === 'golden-aura') w.style.background = 'linear-gradient(45deg, #ffd700, #ff8c00, #fffacd)';
                     if(isCustomCSS === 'aura') w.style.background = 'linear-gradient(45deg, #0ABAB5, #E0B0FF)';
+                    if(isCustomCSS === 'dan') w.style.background = '#222';
                 } else {
                     w.style.background = color;
                 }
@@ -1870,6 +1978,8 @@
                 let baseOp = w.classList.contains('wave3') ? 0.35 : (w.classList.contains('wave1') ? 0.25 : (w.classList.contains('wave4') ? 0.20 : 0.15));
                 if (color === '#FFD700' || isCustomCSS === 'golden-aura' || isCustomCSS === 'rainbow' || isCustomCSS === 'aura') {
                     w.style.opacity = baseOp * 1.5; 
+                } else if (isCustomCSS === 'dan') {
+                    w.style.opacity = baseOp * 2.5; 
                 } else {
                     w.style.opacity = baseOp;
                 }
@@ -1938,16 +2048,19 @@
                     let badgeHTML = count > 1 ? `<span style="background:var(--primary); color:#000; padding:2px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold; margin-left:10px; box-shadow: 0 0 10px var(--primary);">x${count}</span>` : '';
 
                     div.innerHTML = `
-                        <div class="comp-info">
+                        <div class="comp-info" style="cursor: pointer; flex: 1;">
                             ${iconHtml}
                             <div>
                                 <div class="comp-name">${c.name} ${badgeHTML} <span class="comp-rarity ${c.rClass}">${c.rarity}</span></div>
                                 <div style="color:var(--text-muted); font-size:0.8rem; margin-top:2px;">${c.desc}</div>
+                                <button class="cc-btn sell-comp-btn" style="background: var(--danger); border: none; padding: 4px 8px; font-size: 0.75rem; color: #fff; margin-top: 8px; font-weight:bold; box-shadow: 0 0 5px rgba(255,59,48,0.5);">Vendre (+${formatNumber(c.sellPrice)})</button>
                             </div>
                         </div>
                         <div style="font-size: 1.5rem; filter: drop-shadow(0 0 5px rgba(255,255,255,0.5));">${isEq ? '✅' : ''}</div>
                     `;
-                    div.onclick = () => {
+                    
+                    div.querySelector('.comp-info').onclick = (e) => {
+                        if(e.target.classList.contains('sell-comp-btn')) return;
                         game.equippedCompanion = isEq ? null : cId;
                         unsavedProgress = true;
                         saveGameToServer(); 
@@ -1955,6 +2068,28 @@
                         renderCompanions();
                         updateUI();
                     };
+
+                    div.querySelector('.sell-comp-btn').onclick = (e) => {
+                        e.stopPropagation();
+                        if(confirm(`Es-tu sûr de vouloir vendre ce compagnon (${c.name}) pour ${formatNumber(c.sellPrice)} cookies ?`)) {
+                            game.cookies += c.sellPrice;
+                            game.totalCookies += c.sellPrice;
+                            
+                            let idx = game.companions.indexOf(cId);
+                            if(idx > -1) game.companions.splice(idx, 1);
+                            
+                            if(game.equippedCompanion === cId && game.companions.indexOf(cId) === -1) {
+                                game.equippedCompanion = null; 
+                            }
+                            
+                            unsavedProgress = true;
+                            saveGameToServer();
+                            recalculateStats();
+                            updateUI();
+                            renderCompanions();
+                        }
+                    };
+
                     compListContainer.appendChild(div);
                 }
             });
@@ -2339,16 +2474,18 @@
         }
 
         document.getElementById('btnSpin1').addEventListener('click', () => {
-            if(game.spinsLeft < 1 || game.cookies < 5000000000 || isSpinning) return;
+            if(game.spinsLeft < 1 || isSpinning) return;
+            if(game.cookies < 5000000000) { alert("Fonds insuffisants ! Il te faut 5 Billions de Cookies."); return; }
             
             game.cookies = validateNum(game.cookies) - 5000000000;
             game.spinsLeft -= 1;
             if(game.lastSpinReset === 0) game.lastSpinReset = Date.now() + (5 * 60 * 1000);
             
+            unsavedProgress = true;
+            saveGameToServer(); 
             recalculateStats();
             updateUI();
             checkSpinTimer();
-            saveGameToServer(); 
             
             wheelPendingPrize = getWheelPrize();
             
@@ -2421,6 +2558,7 @@
                     awardPrize(wheelPendingPrize);
                     
                     wheelPendingPrize = null;
+                    unsavedProgress = true;
                     saveGameToServer();
                     recalculateStats();
                     updateUI();
@@ -2668,6 +2806,7 @@
             document.getElementById('settingsModal').style.display = 'none';
             await saveGameToServer();
             updateUI();
+            loadLeaderboards();
         });
 
         btnOpenAdmin.addEventListener('click', async () => {
@@ -2957,7 +3096,7 @@
                     
                     let isMe = m.userId === game.username;
                     let bubbleClass = isMe ? 'chat-me' : 'chat-other';
-                    let avatarStr = m.profilePic ? `<img src="${m.profilePic}" style="width:20px; height:20px; border-radius:50%; object-fit:cover; margin-right:5px; vertical-align:middle; background:transparent;" onerror="this.style.display='none'">` : "";
+                    let avatarStr = m.profilePic ? `<img src="${m.profilePic}" style="width:20px; height:20px; border-radius:50%; object-fit:cover; margin-right:5px; vertical-align:middle; background:transparent;" onerror="this.src='${defaultPfp}'">` : `<img src="${defaultPfp}" style="width:20px; height:20px; border-radius:50%; object-fit:cover; margin-right:5px; vertical-align:middle; background:transparent;">`;
 
                     box.innerHTML += `
                         <div class="coc-chat-msg ${bubbleClass}">
@@ -3032,15 +3171,15 @@
 
                     let html = `
                     <div class="lb-row ${rank===1?'top-1':rank===2?'top-2':rank===3?'top-3':''}">
-                        <div class="lb-rank">#${rank}</div>
                         <div style="display:flex; align-items:center; flex:1; overflow:hidden; margin-right:10px;">
                             ${avatarStr}
                             <div class="lb-name-container" title="${dat.username}">
                                 <div class="lb-name">${dat.displayName || dat.username}</div>
-                                ${grpStr ? `<div class="lb-group">${grpStr}</div>` : ''}
+                                ${grpStr ? `<div style="margin-top:2px;">${grpStr}</div>` : ''}
                             </div>
                         </div>
                         <div class="lb-score">${formatNumber(dat.score)}</div>
+                        <div class="lb-rank">#${rank}</div>
                     </div>`;
                     document.getElementById('lbCookies').innerHTML += html; rank++;
                 });
@@ -3055,15 +3194,15 @@
 
                     let html = `
                     <div class="lb-row ${rank===1?'top-1':rank===2?'top-2':rank===3?'top-3':''}">
-                        <div class="lb-rank">#${rank}</div>
                         <div style="display:flex; align-items:center; flex:1; overflow:hidden; margin-right:10px;">
                             ${avatarStr}
                             <div class="lb-name-container" title="${dat.username}">
                                 <div class="lb-name">${dat.displayName || dat.username}</div>
-                                ${grpStr ? `<div class="lb-group">${grpStr}</div>` : ''}
+                                ${grpStr ? `<div style="margin-top:2px;">${grpStr}</div>` : ''}
                             </div>
                         </div>
                         <div class="lb-score">${formatNumber(dat.cps||0)}/s</div>
+                        <div class="lb-rank">#${rank}</div>
                     </div>`;
                     document.getElementById('lbCps').innerHTML += html; rank++;
                 });
@@ -3083,7 +3222,14 @@
                 document.getElementById('lbGroups').innerHTML = ''; 
                 let rankG = 1;
                 sortedGroups.forEach(g => {
-                     let html = `<div class="lb-row ${rankG===1?'top-1':rankG===2?'top-2':rankG===3?'top-3':''}"><div class="lb-rank">#${rankG}</div><div class="lb-name">${getGroupHTML(g.id)}</div><div class="lb-score">${formatNumber(g.score)}</div></div>`;
+                     let html = `
+                     <div class="lb-row ${rankG===1?'top-1':rankG===2?'top-2':rankG===3?'top-3':''}">
+                        <div style="flex:1; display:flex; align-items:center;">
+                            ${getGroupHTML(g.id)}
+                        </div>
+                        <div class="lb-score">${formatNumber(g.score)}</div>
+                        <div class="lb-rank">#${rankG}</div>
+                     </div>`;
                      document.getElementById('lbGroups').innerHTML += html; rankG++;
                 });
                 if(sortedGroups.length === 0) document.getElementById('lbGroups').innerHTML = '<p style="text-align:center; color:var(--text-muted);">Aucun groupe actif pour le moment</p>';
