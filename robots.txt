@@ -4,5 +4,4 @@ Allow: /1STMG/
 Allow: /1STMG/more/
 Allow: /1STMG/pages/
 
-# Indique explicitement l'emplacement du sitemap à Google
 Sitemap: https://dnb95.github.io/sitemap.xml
