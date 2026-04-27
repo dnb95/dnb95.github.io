@@ -59,6 +59,13 @@
             transition: background-color 0.5s ease, color 0.5s ease;
         }
 
+        /* OPTIMISATION PERFORMANCES (ANTI-LAG) */
+        .ambient-orb, .wave, .tilt-card, .cursor-orbit-img, .cc-wrapper, .modal-content, #cocChatPanel {
+            will-change: transform, opacity;
+            transform: translateZ(0); 
+            backface-visibility: hidden;
+        }
+
         .ambient-bg {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -2; overflow: hidden; pointer-events: none;
             background: var(--bg-base);
@@ -68,7 +75,6 @@
         .ambient-orb {
             position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.6;
             mix-blend-mode: screen;
-            will-change: transform;
             transition: background 0.5s ease;
         }
         
@@ -543,7 +549,24 @@
             <div style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:20px;">
                 <div class="trade-box" id="myTradeBox">
                     <h4 style="color:var(--primary); margin-bottom:10px; text-shadow: 0 0 10px var(--primary);">Ton Offre</h4>
-                    <input type="number" id="tradeMyCookiesInput" class="cc-input" style="width:100%; padding:8px; font-size:1rem; margin-bottom:10px;" placeholder="Nb Cookies..." min="0">
+                    
+                    <div style="display:flex; gap:10px; margin-bottom:10px;">
+                        <input type="number" id="tradeCookiesAmount" class="cc-input" style="flex:1; padding:8px; font-size:1rem;" placeholder="Montant (ex: 15)" min="0" max="999">
+                        <select id="tradeCookiesUnit" class="cc-input" style="flex:1; padding:8px; font-size:0.9rem;">
+                            <option value="1">Aucun</option>
+                            <option value="1000000">Millions</option>
+                            <option value="1000000000">Milliards</option>
+                            <option value="1000000000000">Billions</option>
+                            <option value="1000000000000000">Billiards</option>
+                            <option value="1000000000000000000">Trillions</option>
+                            <option value="1000000000000000000000">Quatrillion</option>
+                            <option value="1000000000000000000000000">Quintillion</option>
+                            <option value="1000000000000000000000000000">Sextillion</option>
+                            <option value="1000000000000000000000000000000">Septillion</option>
+                        </select>
+                    </div>
+                    <input type="hidden" id="tradeMyCookiesInput" value="0">
+
                     <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;">Compagnons à donner :</p>
                     <div id="tradeMyCompsList" style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:15px; max-height:100px; overflow-y:auto;"></div>
                     
@@ -1081,11 +1104,11 @@
         ];
 
         const companionsDB = {
-            algaz: { id: 'algaz', name: 'AlgaZ', icon: '💥', cpsMult: 1.25, clickBonus: 1000000, gcMult: 1, desc: "x1.25 CpS | +1M Puissance de Clic", rarity: "Épique", rClass: "r-epic", sellPrice: 10000000000 },
-            dan: { id: 'dan', name: 'Dan', icon: '💣', cpsMult: 1.75, clickBonus: 0, gcMult: 2, desc: "x1.75 CpS | Apparition Cookies Dorés x2", rarity: "Mythique", rClass: "r-mythic", sellPrice: 50000000000 },
-            dan_shiny: { id: 'dan_shiny', name: 'Dan ✨', icon: '💣', cpsMult: 2.5, clickBonus: 0, gcMult: 4, desc: "x2.50 CpS | Cookies Dorés x4 | SHINY ✨", rarity: "Secret", rClass: "r-secret shiny-img", sellPrice: 1000000000000 },
-            jayden: { id: 'jayden', name: 'Jayden', icon: 'https://i.ibb.co/qM5P7xxK/m-13.png', cpsMult: 2.0, clickBonus: 3000000, gcMult: 2, desc: "x2.00 CpS | +3M Clic | Cookies Dorés x2", rarity: "Secret", rClass: "r-secret", sellPrice: 250000000000 },
-            jayden_shiny: { id: 'jayden_shiny', name: 'Jayden ✨', icon: 'https://i.ibb.co/qM5P7xxK/m-13.png', cpsMult: 2.5, clickBonus: 5000000, gcMult: 3, desc: "x2.50 CpS | +5M Clic | Cookies Dorés x3 | SHINY ✨", rarity: "Secret+", rClass: "r-secret shiny-img", sellPrice: 5000000000000 }
+            algaz: { id: 'algaz', name: 'AlgaZ', icon: '💥', cpsMult: 1.25, clickBonus: 1000000, gcMult: 1, desc: "x1.25 CpS | +1M Puissance de Clic", rarity: "Épique", rClass: "r-epic", sellPrice: 10000000000000 },
+            dan: { id: 'dan', name: 'Dan', icon: '💣', cpsMult: 1.75, clickBonus: 10000000, gcMult: 2, desc: "x1.75 CpS | Apparition Cookies Dorés x2", rarity: "Mythique", rClass: "r-mythic", sellPrice: 50000000000000 },
+            dan_shiny: { id: 'dan_shiny', name: 'Dan ✨', icon: '💣', cpsMult: 3, clickBonus: 200000000, gcMult: 20, desc: "x2.50 CpS | Cookies Dorés x5 | SHINY ✨", rarity: "Secret", rClass: "r-secret shiny-img", sellPrice: 10000000000000000 },
+            jayden: { id: 'jayden', name: 'Jayden', icon: 'https://i.ibb.co/qM5P7xxK/m-13.png', cpsMult: 2.0, clickBonus: 3000000, gcMult: 2, desc: "x2.00 CpS | +3M Clic | Cookies Dorés x2", rarity: "Secret", rClass: "r-secret", sellPrice: 250000000000000 },
+            jayden_shiny: { id: 'jayden_shiny', name: 'Jayden ✨', icon: 'https://i.ibb.co/qM5P7xxK/m-13.png', cpsMult: 3, clickBonus: 5000000, gcMult: 4, desc: "x3 CpS | +5M Clic | Cookies Dorés x5 | SHINY ✨", rarity: "Secret+", rClass: "r-secret shiny-img", sellPrice: 50000000000000000 }
         };
 
         let game = JSON.parse(JSON.stringify(defaultSave));
@@ -1192,7 +1215,6 @@
         btnWheelShortcut.addEventListener('click', () => switchTab('wheel'));
         btnCompsShortcut.addEventListener('click', () => switchTab('comps'));
 
-        // ================= AUTH GOOGLE =================
         async function handleGoogleAuth() {
             try {
                 const result = await signInWithPopup(auth, googleProvider);
@@ -1247,7 +1269,6 @@
                 alert("Erreur lors de la liaison Google : " + error.message);
             }
         });
-        // ===============================================
 
         document.getElementById('btnLoginCodeMain').addEventListener('click', () => { openLoginModal(); });
         document.getElementById('btnImportFooter').addEventListener('click', () => { openLoginModal(); });
@@ -1349,22 +1370,32 @@
             return `<span class="lb-group" style="color:${g.color}; font-weight:bold; text-shadow: 0 0 10px ${g.color};">[${safeName}]</span>`;
         }
 
-        // ================= TEMPS RÉEL TRADE =================
         let tradeUpdateTimeout = null;
         window.debounceUpdateOffer = function() {
             if(tradeUpdateTimeout) clearTimeout(tradeUpdateTimeout);
             tradeUpdateTimeout = setTimeout(sendOfferUpdate, 500);
         }
+
+        function updateHiddenTradeInput() {
+            let amount = parseFloat(document.getElementById('tradeCookiesAmount').value) || 0;
+            let unit = parseFloat(document.getElementById('tradeCookiesUnit').value) || 1;
+            let total = Math.floor(amount * unit);
+            if (total > game.cookies) total = Math.floor(game.cookies);
+            document.getElementById('tradeMyCookiesInput').value = total;
+            window.debounceUpdateOffer();
+        }
+
+        document.getElementById('tradeCookiesAmount').addEventListener('input', updateHiddenTradeInput);
+        document.getElementById('tradeCookiesUnit').addEventListener('change', updateHiddenTradeInput);
         
         async function sendOfferUpdate() {
             if(!currentTradeDocId || !currentTradeData) return;
             
-            let inputField = document.getElementById('tradeMyCookiesInput');
-            let cookiesInput = Math.floor(validateNum(inputField.value));
+            let cookiesInput = Math.floor(validateNum(document.getElementById('tradeMyCookiesInput').value));
             
             if(cookiesInput > game.cookies) {
                 cookiesInput = Math.floor(game.cookies);
-                inputField.value = cookiesInput;
+                document.getElementById('tradeMyCookiesInput').value = cookiesInput;
             }
 
             let selectedComps = [];
@@ -1519,8 +1550,9 @@
             
             document.getElementById('tradeTargetName').innerText = targetName;
             
-            // Events Temps Réel
-            document.getElementById('tradeMyCookiesInput').oninput = window.debounceUpdateOffer;
+            document.getElementById('tradeCookiesAmount').value = '';
+            document.getElementById('tradeCookiesUnit').value = '1';
+            document.getElementById('tradeMyCookiesInput').value = '0';
             
             const myCompsList = document.getElementById('tradeMyCompsList');
             myCompsList.innerHTML = '';
@@ -1538,7 +1570,6 @@
                     
                     label.appendChild(cb);
                     label.innerHTML += ` ${compData.name}`;
-                    // Re-bind listener after innerHTML
                     label.querySelector('input').onchange = window.debounceUpdateOffer;
                     
                     myCompsList.appendChild(label);
@@ -1578,16 +1609,17 @@
             let myBox = document.getElementById('myTradeBox');
             if(amIReady) {
                 myBox.classList.add('ready');
-                document.getElementById('tradeMyCookiesInput').disabled = true;
+                document.getElementById('tradeCookiesAmount').disabled = true;
+                document.getElementById('tradeCookiesUnit').disabled = true;
                 document.querySelectorAll('.trade-comp-check').forEach(cb => cb.disabled = true);
             } else {
                 myBox.classList.remove('ready');
-                document.getElementById('tradeMyCookiesInput').disabled = false;
+                document.getElementById('tradeCookiesAmount').disabled = false;
+                document.getElementById('tradeCookiesUnit').disabled = false;
                 document.querySelectorAll('.trade-comp-check').forEach(cb => cb.disabled = false);
             }
             document.getElementById('tradeMyReadyCheck').checked = amIReady;
 
-            // Sync Chat Privé
             const tcb = document.getElementById('tradeChatBox');
             tcb.innerHTML = '';
             (currentTradeData.chat || []).forEach(msg => {
@@ -1626,14 +1658,14 @@
             let ready = e.target.checked;
             let isSender = currentTradeData.senderId === game.saveCode;
             
-            let inputField = document.getElementById('tradeMyCookiesInput');
-            let myOfferCookies = Math.floor(validateNum(inputField.value));
+            let myOfferCookies = Math.floor(validateNum(document.getElementById('tradeMyCookiesInput').value));
             
             if(ready && myOfferCookies > game.cookies) {
                 alert("Tu ne peux pas valider, tu n'as plus assez de cookies !");
                 e.target.checked = false;
-                inputField.value = Math.floor(game.cookies);
-                window.debounceUpdateOffer();
+                document.getElementById('tradeCookiesAmount').value = Math.floor(game.cookies);
+                document.getElementById('tradeCookiesUnit').value = '1';
+                updateHiddenTradeInput(); 
                 return;
             }
 
@@ -1662,7 +1694,6 @@
             let cookiesGiven = validateNum(myOffer.cookies);
             let cookiesReceived = validateNum(theirOffer.cookies);
 
-            // Sécurisation forte de la transaction
             game.cookies = validateNum(game.cookies) - cookiesGiven + cookiesReceived;
             if (game.cookies < 0) game.cookies = 0;
             if (cookiesReceived > 0) game.totalCookies = validateNum(game.totalCookies) + cookiesReceived;
@@ -1699,7 +1730,6 @@
                 await updateDoc(doc(db, "stmg_trades", docId), updates);
             } catch(e) {} 
 
-            // Forcer la sauvegarde immédiatement
             unsavedProgress = true;
             await saveGameToServer(); 
             
@@ -2146,7 +2176,6 @@
             game.cookies = validateNum(game.cookies); 
             if(game.banned) { document.getElementById('banScreen').style.display = 'flex'; return; }
 
-            displayCookies.innerText = formatNumber(game.cookies);
             playerNameDisplay.innerHTML = (game.displayName || game.username) + getGroupHTML(game.groupId);
             
             updateSugars();
@@ -2214,7 +2243,6 @@
                 });
             }
 
-            document.title = `${formatNumber(game.cookies)} cookies`;
             updateLiquidColor(); 
             updateOrbitingCursors(); 
         }
@@ -2302,7 +2330,8 @@
             spawnCrack(x, y);
             for(let i=0; i<2; i++) spawnCrumb(x, y);
             
-            if (panelStore.style.display !== 'block') { displayCookies.innerText = formatNumber(game.cookies); updateUI(); } else { updateUI(); }
+            displayCookies.innerText = formatNumber(game.cookies);
+            if (panelStore.style.display === 'block') { updateUI(); }
         });
 
         function showGoldenCookie() {
@@ -3167,7 +3196,15 @@
                     allLeaderboardPlayers.push({id: d.id, ...dat});
 
                     let grpStr = dat.groupId ? getGroupHTML(dat.groupId) : '';
-                    let avatarStr = dat.profilePic ? `<img src="${dat.profilePic}" style="width:30px; height:30px; min-width:30px; border-radius:50%; object-fit:cover; margin-right:10px; background:transparent;" onerror="this.style.display='none'">` : `<div style="width:30px; height:30px; min-width:30px; border-radius:50%; background:rgba(0,212,255,0.2); margin-right:10px; display:flex; align-items:center; justify-content:center; color:var(--primary); font-size:14px; font-weight:bold;">${(dat.displayName || dat.username).charAt(0).toUpperCase()}</div>`;
+                    let baseAvatar = dat.profilePic ? `<img src="${dat.profilePic}" style="width:30px; height:30px; min-width:30px; border-radius:50%; object-fit:cover; background:transparent;" onerror="this.style.display='none'">` : `<div style="width:30px; height:30px; min-width:30px; border-radius:50%; background:rgba(0,212,255,0.2); display:flex; align-items:center; justify-content:center; color:var(--primary); font-size:14px; font-weight:bold;">${(dat.displayName || dat.username).charAt(0).toUpperCase()}</div>`;
+                    
+                    let crown = rank === 1 ? `<div style="position:absolute; top:-10px; left:50%; transform:translateX(-50%) rotate(-15deg); font-size:1.2rem; filter:drop-shadow(0 2px 2px rgba(0,0,0,0.5)); z-index:5;"> </div>` : '';
+                    
+                    let avatarStr = `
+                    <div style="position:relative; display:inline-block; margin-right:10px;">
+                        ${crown}
+                        ${baseAvatar}
+                    </div>`;
 
                     let html = `
                     <div class="lb-row ${rank===1?'top-1':rank===2?'top-2':rank===3?'top-3':''}">
@@ -3190,7 +3227,16 @@
                 snapCps.forEach(d => {
                     let dat = d.data();
                     let grpStr = dat.groupId ? getGroupHTML(dat.groupId) : '';
-                    let avatarStr = dat.profilePic ? `<img src="${dat.profilePic}" style="width:30px; height:30px; min-width:30px; border-radius:50%; object-fit:cover; margin-right:10px; background:transparent;" onerror="this.style.display='none'">` : `<div style="width:30px; height:30px; min-width:30px; border-radius:50%; background:rgba(0,212,255,0.2); margin-right:10px; display:flex; align-items:center; justify-content:center; color:var(--primary); font-size:14px; font-weight:bold;">${(dat.displayName || dat.username).charAt(0).toUpperCase()}</div>`;
+                    
+                    let baseAvatar = dat.profilePic ? `<img src="${dat.profilePic}" style="width:30px; height:30px; min-width:30px; border-radius:50%; object-fit:cover; background:transparent;" onerror="this.style.display='none'">` : `<div style="width:30px; height:30px; min-width:30px; border-radius:50%; background:rgba(0,212,255,0.2); display:flex; align-items:center; justify-content:center; color:var(--primary); font-size:14px; font-weight:bold;">${(dat.displayName || dat.username).charAt(0).toUpperCase()}</div>`;
+                    
+                    let crown = rank === 1 ? `<div style="position:absolute; top:-10px; left:50%; transform:translateX(-50%) rotate(-15deg); font-size:1.2rem; filter:drop-shadow(0 2px 2px rgba(0,0,0,0.5)); z-index:5;"> </div>` : '';
+                    
+                    let avatarStr = `
+                    <div style="position:relative; display:inline-block; margin-right:10px;">
+                        ${crown}
+                        ${baseAvatar}
+                    </div>`;
 
                     let html = `
                     <div class="lb-row ${rank===1?'top-1':rank===2?'top-2':rank===3?'top-3':''}">
@@ -3297,6 +3343,7 @@
             if(panelWheel.style.display === 'flex') { checkSpinTimer(); }
         }, 1000);
 
+        let lastDomUpdate = 0;
         setInterval(() => {
             if (currentCps > 0 && game.username && !game.banned) {
                 let toAdd = currentCps / 10; 
