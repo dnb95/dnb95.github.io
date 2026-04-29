@@ -924,12 +924,12 @@
                         <div style="background:rgba(0,0,0,0.3); padding:15px; border-radius:12px; margin-bottom:15px; border:1px solid var(--glass-border); font-size:0.85rem; color:var(--text-main); line-height:1.4; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); width: 100%;">
                             <h4 style="color:var(--secondary); margin-bottom:5px; text-shadow: 0 0 10px var(--secondary);">📜 Règles & Probabilités :</h4>
                             <ul style="padding-left:20px; margin-bottom: 10px;">
-                                <li>Chaque tour coûte <b style="color: #ffbd2e;">45% de tes cookies actuels</b> (Ta fortune x 1.5 x 30%).</li>
+                                <li>Chaque tour coûte <b style="color: #ffbd2e;">37.5% de tes cookies actuels</b> (Ta fortune x 1.5 x 25%).</li>
                                 <li>Tu disposes de <b>2 tours maximum</b>, qui se rechargent avec le temps.</li>
                             </ul>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 0.8rem; background: rgba(0,0,0,0.4); padding: 10px; border-radius: 8px;">
-                                <div>🍪 2.5B Cookies : <b>~47.9%</b></div>
-                                <div>🍪 7.5B Cookies : <b style="color: #ffbd2e;">35%</b></div>
+                                <div>🍪 50% du Prix : <b>~47.9%</b></div>
+                                <div>🍪 125% du Prix : <b style="color: #ffbd2e;">35%</b></div>
                                 <div>💥 AlgaZ (Épique) : <b style="color: var(--primary);">15%</b></div>
                                 <div>💣 Dan (Mythique) : <b style="color: var(--secondary);">2%</b></div>
                                 <div>✨ Dan Shiny (Secret) : <b style="color: #ff3b30;">0.0015%</b></div>
@@ -1159,6 +1159,7 @@
         let wheelPendingPrize = null;
         let wheelStartPos = 0;
         let wheelStartPosX = 0;
+        let lastSpinCostPaid = 0; // Nouvelle variable pour mémoriser le coût payé
         let currentWheelEditId = null;
         let currentWheelEditData = null;
         let currentWheelLayout = [];
@@ -1223,8 +1224,9 @@
         const historyList = document.getElementById('historyList');
 
         function getSpinCost() {
-            // Calcule exactement 45% (30% de la fortune x 1.5)
-            return Math.floor(validateNum(game.cookies) * 1.5 * 0.30);
+            // Calcule exactement 37.5% de la fortune (Fortune x 1.5 x 25%)
+            // Minimum de 100 cookies pour éviter que la roue soit gratuite si on est à 0
+            return Math.max(100, Math.floor(validateNum(game.cookies) * 1.5 * 0.15));
         }
 
         function switchTab(tabId) {
@@ -2467,8 +2469,8 @@
         }
 
         const itemsDef = [
-            { id: '2_5b', label: '2.5B<br>Cookies', img: imgCookieBase, odds: '~47.9%' },
-            { id: '7_5b', label: '7.5B<br>Cookies', img: imgCookieGolden, odds: '35%' },
+            { id: 'win_50', label: '50% du<br>Prix', img: imgCookieBase, odds: '~47.9%' },
+            { id: 'win_125', label: '125% du<br>Prix', img: imgCookieGolden, odds: '35%' },
             { id: 'algaz', label: 'AlgaZ<br>(Épique)', icon: '💥', odds: '15%' },
             { id: 'dan', label: 'Dan<br>(Mythique)', icon: '💣', odds: '2%' },
             { id: 'dan_shiny', label: 'Dan ✨<br>(Secret)', icon: '💣', extraClass: 'shiny-img', odds: '0.0015%' },
@@ -2569,9 +2571,9 @@
             if (r <= 0.0018) return { id: 'dan_shiny', name: 'Compagnon DAN (SHINY ✨)' };
             if (r <= 2.0018) return { id: 'dan', name: 'Compagnon DAN (Mythique)' };
             if (r <= 17.0018) return { id: 'algaz', name: 'Compagnon ALGAZ (Épique)' };
-            if (r <= 52.0018) return { id: '7_5b', name: '7.5 Billions Cookies' };
+            if (r <= 52.0018) return { id: 'win_125', name: 'Jackpot 125% du Prix' };
             
-            return { id: '2_5b', name: '2.5 Billions Cookies' };
+            return { id: 'win_50', name: 'Remboursement 50% du Prix' };
         }
 
         document.getElementById('btnSpin1').addEventListener('click', () => {
@@ -2580,6 +2582,7 @@
             let cost = getSpinCost();
             if(game.cookies < cost) { alert("Fonds insuffisants !"); return; }
             
+            lastSpinCostPaid = cost; // On mémorise la mise exacte
             game.cookies = validateNum(game.cookies) - cost;
             game.spinsLeft -= 1;
             
@@ -2660,8 +2663,10 @@
                     wheelScaleWrapper.classList.remove('wheel-zoom-effect');
                     wheelScaleWrapper.style.transform = `rotate(0deg)`;
                     
-                    alert("🎉 Tu as gagné : \n- " + wheelPendingPrize.name + "\n\n(Ton solde a été mis à jour)");
-                    awardPrize(wheelPendingPrize);
+                    let cookiesWon = awardPrize(wheelPendingPrize);
+                    let gainText = cookiesWon > 0 ? `\n(+ ${formatNumber(cookiesWon)} Cookies)` : "";
+                    
+                    alert("🎉 Tu as gagné : \n- " + wheelPendingPrize.name + gainText + "\n\n(Ton solde a été mis à jour)");
                     
                     wheelPendingPrize = null;
                     unsavedProgress = true;
@@ -2680,17 +2685,22 @@
         wheelModal.addEventListener('touchend', handleSwipeEnd);
 
         function awardPrize(prize) {
-            if(prize.id === '2_5b') { 
-                game.cookies = validateNum(game.cookies) + 2500000000; 
-                game.totalCookies = validateNum(game.totalCookies) + 2500000000; 
+            if(prize.id === 'win_50') { 
+                let gain = Math.floor(lastSpinCostPaid * 0.50);
+                game.cookies = validateNum(game.cookies) + gain; 
+                game.totalCookies = validateNum(game.totalCookies) + gain; 
+                return gain;
             }
-            else if(prize.id === '7_5b') { 
-                game.cookies = validateNum(game.cookies) + 7500000000; 
-                game.totalCookies = validateNum(game.totalCookies) + 7500000000; 
+            else if(prize.id === 'win_125') { 
+                let gain = Math.floor(lastSpinCostPaid * 1.25);
+                game.cookies = validateNum(game.cookies) + gain; 
+                game.totalCookies = validateNum(game.totalCookies) + gain; 
+                return gain;
             }
             else {
                 if(!game.companions) game.companions = [];
                 game.companions.push(prize.id);
+                return 0;
             }
         }
 
