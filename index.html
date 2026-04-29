@@ -3364,9 +3364,16 @@
 
         async function loadLocalGame() {
             let saved = localStorage.getItem('danCookieSave_v6');
+            let localCode = null;
+            let isGuest = true;
+
+            // 1. On charge d'abord le local au cas où (si c'est un invité ou si on n'a pas internet)
             if (saved) {
                 try {
                     let parsed = JSON.parse(saved);
+                    localCode = parsed.saveCode;
+                    isGuest = parsed.username ? parsed.username.startsWith("Invité") : true;
+
                     game = { ...defaultSave, ...parsed, buildings: { ...defaultSave.buildings, ...parsed.buildings } };
                     if(!game.upgradesBought) game.upgradesBought = [];
                     if(!game.companions) game.companions = [];
@@ -3374,22 +3381,32 @@
                     if(game.profilePic === undefined) game.profilePic = "";
                 } catch(e) {}
             }
-            
-            if(game.saveCode && game.username && !game.username.startsWith("Invité")) {
+
+            // 2. Si on a un compte, ON FORCE LA LECTURE SUR LE SERVEUR
+            if(localCode && !isGuest) {
                 try {
-                    const docSnap = await getDoc(doc(db, "stmg_saves", game.saveCode));
+                    const docSnap = await getDoc(doc(db, "stmg_saves", localCode));
                     if(docSnap.exists()) {
                         let parsed = JSON.parse(docSnap.data().saveData);
                         game = { ...defaultSave, ...parsed, buildings: { ...defaultSave.buildings, ...parsed.buildings } };
-                        saveLocal(); 
+                        
+                        // C'est ici que ça cassait : il manquait les fallbacks de sécurité sur les données du serveur !
+                        if(!game.upgradesBought) game.upgradesBought = [];
+                        if(!game.companions) game.companions = [];
+                        if(game.sugars === undefined) game.sugars = 0;
+                        if(game.profilePic === undefined) game.profilePic = "";
+                        
+                        saveLocal(); // On nettoie le cache avec les données toutes neuves du cloud
                     }
-                } catch(e) { console.warn("Sync initiale échouée, on continue en local"); }
-                
+                } catch(e) { 
+                    console.warn("Sync initiale échouée, on continue en local", e); 
+                }
+
                 setupRealtimeListener();
                 setupTradeListeners();
-                
+
                 if(game.banned) { document.getElementById('banScreen').style.display = 'flex'; return; }
-                usernameOverlay.style.display = 'none'; 
+                usernameOverlay.style.display = 'none';
                 await fetchGroups();
                 finishLogin();
             } else { 
