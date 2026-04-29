@@ -751,13 +751,13 @@
 
         <div class="cards-grid">
             <a href="https://dnb95.github.io/1STMG/" class="tilt-card" target="_blank">
-                <div class="card-icon">🚀</div><h3 class="card-title">DAN REVIZ</h3><p class="card-desc">Plateforme d'aide.<br>Révision des livres pour le bac</p>
+                <div class="card-icon">🚀</div><h3 class="card-title">DAN REVIZ</h3><p class="card-desc">Le Clicker se trouve si dessous :<br>.</p>
             </a>
             <a href="https://instagram.com/dnb.95" class="tilt-card" target="_blank">
-                <div class="card-icon">📸</div><h3 class="card-title">INSTAGRAM</h3><p class="card-desc">@dnb.95<br>(Y a pas grand choses)</p>
+                <div class="card-icon">📸</div><h3 class="card-title">INSTAGRAM</h3><p class="card-desc">@dnb.95<br>.</p>
             </a>
             <a href="https://www.linkedin.com/in/xbox/" class="tilt-card" target="_blank">
-                <div class="card-icon">💼</div><h3 class="card-title">LINKEDIN</h3><p class="card-desc">Connexion Pro.<br>Mon parcours</p>
+                <div class="card-icon">💼</div><h3 class="card-title">LINKEDIN</h3><p class="card-desc">Connexion Pro.<br>.</p>
             </a>
         </div>
 
@@ -826,7 +826,7 @@
             </div>
 
             <h3 style="color: var(--primary); text-shadow: 0 0 10px var(--primary);">Sauvegardes Serveur & Sanctions</h3>
-            <div style="overflow-x: auto;">
+            <div style="overflow-x: auto; padding-bottom: 10px;">
                 <table class="admin-table" id="adminSavesTable">
                     <thead><tr><th>ID (Code)</th><th>Pseudo</th><th>Groupe</th><th>Cookies</th><th>Sucres</th><th>CpS</th><th>Action</th></tr></thead>
                     <tbody><tr><td colspan="7">Chargement...</td></tr></tbody>
@@ -924,7 +924,7 @@
                         <div style="background:rgba(0,0,0,0.3); padding:15px; border-radius:12px; margin-bottom:15px; border:1px solid var(--glass-border); font-size:0.85rem; color:var(--text-main); line-height:1.4; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); width: 100%;">
                             <h4 style="color:var(--secondary); margin-bottom:5px; text-shadow: 0 0 10px var(--secondary);">📜 Règles & Probabilités :</h4>
                             <ul style="padding-left:20px; margin-bottom: 10px;">
-                                <li>Chaque tour coûte <b style="color: #ffbd2e;">37.5% de tes cookies actuels</b> (Ta fortune x 1.5 x 25%).</li>
+                                <li>Chaque tour coûte <b style="color: #ffbd2e;">25% de tes cookies actuels</b> (min. 100).</li>
                                 <li>Tu disposes de <b>2 tours maximum</b>, qui se rechargent avec le temps.</li>
                             </ul>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 0.8rem; background: rgba(0,0,0,0.4); padding: 10px; border-radius: 8px;">
@@ -1131,7 +1131,7 @@
             { id: 'up7', icon: '🖱️', cost: 100000, desc: "Clic x2 (Encore)", type: 'click_mult', val: 2 },
             { id: 'up8', icon: '🖱️', cost: 10002212100, desc: "Clic x3 (Encore)", type: 'click_mult', val: 3 },
             { id: 'up9', icon: '👀', cost: 1000, desc: "C'est Dan qui donne c'est carré ! Production globale +71%", type: 'global_mult', val: 1.71 },
-          { id: 'up10', icon: '👑J', cost: 1000000000000000000000000, desc: "C'est Jayden qui donne c'est carré ! Production globale x8", type: 'global_mult', val: 8 }
+          { id: 'up10', icon: '👑', cost: 1000000000000000000000000, desc: "C'est Jayden qui donne c'est carré ! Production globale x8", type: 'global_mult', val: 8 }
         ];
 
         const companionsDB = {
@@ -1159,7 +1159,7 @@
         let wheelPendingPrize = null;
         let wheelStartPos = 0;
         let wheelStartPosX = 0;
-        let lastSpinCostPaid = 0; // Nouvelle variable pour mémoriser le coût payé
+        let lastSpinCostPaid = 0;
         let currentWheelEditId = null;
         let currentWheelEditData = null;
         let currentWheelLayout = [];
@@ -1224,9 +1224,8 @@
         const historyList = document.getElementById('historyList');
 
         function getSpinCost() {
-            // Calcule exactement 37.5% de la fortune (Fortune x 1.5 x 25%)
-            // Minimum de 100 cookies pour éviter que la roue soit gratuite si on est à 0
-            return Math.max(100, Math.floor(validateNum(game.cookies) * 1.5 * 0.15));
+            // Le coût est à 25% de la fortune totale du joueur (sans multiplier par 1.5)
+            return Math.max(100, Math.floor(validateNum(game.cookies) * 0.25));
         }
 
         function switchTab(tabId) {
@@ -2469,11 +2468,11 @@
         }
 
         const itemsDef = [
-            { id: 'win_50', label: '50% du<br>Prix', img: imgCookieBase, odds: '~47.9%' },
-            { id: 'win_125', label: '125% du<br>Prix', img: imgCookieGolden, odds: '35%' },
+            { id: 'win_50', label: '50%', img: imgCookieBase, odds: '~47.9%' },
+            { id: 'win_125', label: '125%', img: imgCookieGolden, odds: '35%' },
             { id: 'algaz', label: 'AlgaZ<br>(Épique)', icon: '💥', odds: '15%' },
             { id: 'dan', label: 'Dan<br>(Mythique)', icon: '💣', odds: '2%' },
-            { id: 'dan_shiny', label: 'Dan ✨<br>(Secret)', icon: '💣', extraClass: 'shiny-img', odds: '0.0015%' },
+            { id: 'dan_shiny', label: 'Dan ✨<br>(Secret)', icon: '👑', extraClass: 'shiny-img', odds: '0.0015%' },
             { id: 'jayden', label: 'Jayden<br>(Secret)', img: 'https://i.ibb.co/qM5P7xxK/m-13.png', odds: '0.0003%' }
         ];
 
@@ -2513,12 +2512,19 @@
             });
             wheel.style.background = `conic-gradient(${gradientString.join(', ')})`;
             
+            let cost = getSpinCost();
+            
             let html = '';
             currentWheelLayout.forEach((item, i) => {
                 let rot = item.startDeg + 30;
                 let media = item.img ? `<img src="${item.img}">` : `<div style="font-size: 40px; margin-bottom: 8px;" class="${item.extraClass || ''}">${item.icon}</div>`;
+                
+                let labelText = item.label;
+                if(item.id === 'win_50') labelText = formatNumber(cost * 0.5) + '<br>Cookies';
+                if(item.id === 'win_125') labelText = formatNumber(cost * 1.25) + '<br>Cookies';
+
                 html += `<div class="fs-icon-container" style="transform: rotate(${rot}deg);">
-                    <div class="fs-slice-text">${item.label}</div>
+                    <div class="fs-slice-text">${labelText}</div>
                     <div class="fs-slice-odds">${item.odds}</div>
                     ${media}
                 </div>`;
@@ -2571,9 +2577,9 @@
             if (r <= 0.0018) return { id: 'dan_shiny', name: 'Compagnon DAN (SHINY ✨)' };
             if (r <= 2.0018) return { id: 'dan', name: 'Compagnon DAN (Mythique)' };
             if (r <= 17.0018) return { id: 'algaz', name: 'Compagnon ALGAZ (Épique)' };
-            if (r <= 52.0018) return { id: 'win_125', name: 'Jackpot 125% du Prix' };
+            if (r <= 52.0018) return { id: 'win_125', name: 'Jackpot Cookies' };
             
-            return { id: 'win_50', name: 'Remboursement 50% du Prix' };
+            return { id: 'win_50', name: 'Remboursement Partiel Cookies' };
         }
 
         document.getElementById('btnSpin1').addEventListener('click', () => {
@@ -2582,7 +2588,7 @@
             let cost = getSpinCost();
             if(game.cookies < cost) { alert("Fonds insuffisants !"); return; }
             
-            lastSpinCostPaid = cost; // On mémorise la mise exacte
+            lastSpinCostPaid = cost; 
             game.cookies = validateNum(game.cookies) - cost;
             game.spinsLeft -= 1;
             
@@ -2714,9 +2720,9 @@
                 await setDoc(doc(db, "stmg_leaderboard", game.saveCode), {
                     username: game.username,
                     displayName: game.displayName || game.username,
-                    score: Math.floor(game.cookies),
+                    score: game.cookies, 
                     sugars: game.sugars || 0,
-                    cps: Math.floor(currentCps),
+                    cps: currentCps, 
                     groupId: game.groupId || null,
                     banned: game.banned,
                     profilePic: game.profilePic || ""
@@ -2958,16 +2964,16 @@
                         let sel = (dat.groupId === gId) ? "selected" : "";
                         groupOptions += `<option value="${gId}" ${sel}>${groupsMap[gId].name}</option>`;
                     }
-                    let groupSelectHTML = `<select id="grp_sel_${d.id}" style="background:rgba(0,0,0,0.5); color:inherit; border:1px solid var(--primary); border-radius:6px; padding:4px; font-size:0.8rem;">${groupOptions}</select> <button class="cc-btn" style="padding: 2px 6px;" onclick="window.updatePlayerGroup('${d.id}')">💾</button>`;
+                    let groupSelectHTML = `<select id="grp_sel_${d.id}" style="background:rgba(0,0,0,0.5); color:inherit; border:1px solid var(--primary); border-radius:6px; padding:4px; font-size:0.8rem; max-width:120px;">${groupOptions}</select> <button class="cc-btn" style="padding: 2px 6px;" onclick="window.updatePlayerGroup('${d.id}')">💾</button>`;
 
                     sTable.innerHTML += `<tr>
                         <td><span style="font-size:0.7rem; color:var(--text-muted);">${d.id}</span></td>
                         <td style="${isBan?'text-decoration:line-through;color:var(--danger);':''}">${dat.displayName || dat.username}</td>
                         <td>${groupSelectHTML}</td>
-                        <td>${Math.floor(validateNum(dat.score)).toLocaleString('fullwide', {useGrouping:false})}</td>
+                        <td>${formatNumber(dat.score)}</td>
                         <td>${formatNumber(dat.sugars||0)}</td>
                         <td>${formatNumber(dat.cps||0)}</td>
-                        <td>
+                        <td style="white-space:nowrap;">
                             <button class="btn-edit" onclick="window.openEditModal('${d.id}')">Éditer</button> 
                             <button class="btn-delete" onclick="window.delDoc('${d.id}')">Suppr.</button> 
                             ${banBtn}
@@ -3183,7 +3189,7 @@
                     await updateDoc(doc(db, "stmg_leaderboard", id), { 
                         score: adminTempEditData.cookies, 
                         sugars: adminTempEditData.sugars,
-                        cps: Math.floor(newCps),
+                        cps: newCps,
                         profilePic: adminTempEditData.profilePic,
                         adminEditTimestamp: Date.now() 
                     });
@@ -3387,22 +3393,21 @@
             let saved = localStorage.getItem('danCookieSave_v6');
             let localCode = null;
             let isGuest = true;
+            let localGameData = null;
 
             if (saved) {
                 try {
                     let parsed = JSON.parse(saved);
                     localCode = parsed.saveCode;
                     isGuest = parsed.username ? parsed.username.startsWith("Invité") : true;
-
-                    game = { ...defaultSave, ...parsed, buildings: { ...defaultSave.buildings, ...parsed.buildings } };
-                    if(!game.upgradesBought) game.upgradesBought = [];
-                    if(!game.companions) game.companions = [];
-                    if(game.sugars === undefined) game.sugars = 0;
-                    if(game.profilePic === undefined) game.profilePic = "";
+                    localGameData = parsed;
                 } catch(e) {}
             }
 
             if(localCode && !isGuest) {
+                document.getElementById('usernameOverlay').style.display = 'flex';
+                document.getElementById('usernameOverlay').innerHTML = '<h3 style="color:var(--primary); font-family:\'Orbitron\'; text-shadow: 0 0 10px var(--primary);">Synchronisation Serveur... ⏳</h3>';
+
                 try {
                     const docSnap = await getDoc(doc(db, "stmg_saves", localCode));
                     if(docSnap.exists()) {
@@ -3415,19 +3420,31 @@
                         if(game.profilePic === undefined) game.profilePic = "";
                         
                         saveLocal(); 
+                    } else if (localGameData) {
+                        game = { ...defaultSave, ...localGameData, buildings: { ...defaultSave.buildings, ...localGameData.buildings } };
+                        if(!game.upgradesBought) game.upgradesBought = [];
+                        if(!game.companions) game.companions = [];
+                        if(game.sugars === undefined) game.sugars = 0;
+                        if(game.profilePic === undefined) game.profilePic = "";
                     }
                 } catch(e) { 
                     console.warn("Sync initiale échouée, on continue en local", e); 
+                    if (localGameData) {
+                        game = { ...defaultSave, ...localGameData, buildings: { ...defaultSave.buildings, ...localGameData.buildings } };
+                    }
                 }
 
                 setupRealtimeListener();
                 setupTradeListeners();
 
                 if(game.banned) { document.getElementById('banScreen').style.display = 'flex'; return; }
-                usernameOverlay.style.display = 'none';
+                document.getElementById('usernameOverlay').style.display = 'none';
                 await fetchGroups();
                 finishLogin();
-            } else { 
+            } else {
+                if (localGameData) {
+                    game = { ...defaultSave, ...localGameData, buildings: { ...defaultSave.buildings, ...localGameData.buildings } };
+                }
                 usernameOverlay.style.display = 'flex'; 
             }
         }
