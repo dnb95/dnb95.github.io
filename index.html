@@ -924,7 +924,7 @@
                         <div style="background:rgba(0,0,0,0.3); padding:15px; border-radius:12px; margin-bottom:15px; border:1px solid var(--glass-border); font-size:0.85rem; color:var(--text-main); line-height:1.4; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); width: 100%;">
                             <h4 style="color:var(--secondary); margin-bottom:5px; text-shadow: 0 0 10px var(--secondary);">📜 Règles & Probabilités :</h4>
                             <ul style="padding-left:20px; margin-bottom: 10px;">
-                                <li>Chaque tour coûte <b style="color: #ffbd2e;">5 Billions</b> de cookies.</li>
+                                <li>Chaque tour coûte <b style="color: #ffbd2e;">45% de tes cookies actuels</b> (Ta fortune x 1.5 x 30%).</li>
                                 <li>Tu disposes de <b>2 tours maximum</b>, qui se rechargent avec le temps.</li>
                             </ul>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 0.8rem; background: rgba(0,0,0,0.4); padding: 10px; border-radius: 8px;">
@@ -943,7 +943,7 @@
                         
                         <button class="cc-btn primary-btn" id="btnSpin1" style="font-size: 1.3rem; padding: 15px 30px; border-radius: 50px; display: flex; flex-direction: column; align-items: center; gap: 5px; box-shadow: 0 0 15px var(--primary);">
                             <span>TOURNER LA ROUE</span>
-                            <span style="font-size: 0.8rem; font-weight: normal; opacity: 0.9;">Prix : 5 Billions</span>
+                            <span id="wheelCostDisplay" style="font-size: 0.8rem; font-weight: normal; opacity: 0.9;">Prix : Calcul...</span>
                         </button>
                     </div>
 
@@ -1221,6 +1221,11 @@
         const btnHistory = document.getElementById('btnHistory');
         const historyModal = document.getElementById('historyModal');
         const historyList = document.getElementById('historyList');
+
+        function getSpinCost() {
+            // Calcule exactement 45% (30% de la fortune x 1.5)
+            return Math.floor(validateNum(game.cookies) * 1.5 * 0.30);
+        }
 
         function switchTab(tabId) {
             tabBuy.classList.remove('active', 'sell-active', 'trade-active');
@@ -2535,6 +2540,9 @@
             if (panelWheel.style.display === 'flex') {
                 let textEl = document.getElementById('spinTimerText');
                 let btn1 = document.getElementById('btnSpin1');
+                let costDisplay = document.getElementById('wheelCostDisplay');
+                
+                let currentCost = getSpinCost();
 
                 if (game.spinsLeft >= 2) {
                     textEl.innerText = "Tours dispo : 2/2";
@@ -2545,7 +2553,8 @@
                     textEl.innerText = `Tours dispo : ${game.spinsLeft}/2 (Recharge dans ${m}:${s.toString().padStart(2, '0')})`;
                 }
 
-                btn1.disabled = game.spinsLeft < 1 || game.cookies < 5000000000 || isSpinning;
+                costDisplay.innerText = "Prix : " + formatNumber(currentCost);
+                btn1.disabled = game.spinsLeft < 1 || isSpinning || game.cookies < currentCost;
             }
         }
 
@@ -2567,9 +2576,11 @@
 
         document.getElementById('btnSpin1').addEventListener('click', () => {
             if(game.spinsLeft < 1 || isSpinning) return;
-            if(game.cookies < 5000000000) { alert("Fonds insuffisants ! Il te faut 5 Billions de Cookies."); return; }
             
-            game.cookies = validateNum(game.cookies) - 5000000000;
+            let cost = getSpinCost();
+            if(game.cookies < cost) { alert("Fonds insuffisants !"); return; }
+            
+            game.cookies = validateNum(game.cookies) - cost;
             game.spinsLeft -= 1;
             
             if(game.spinsLeft === 1) {
@@ -3367,7 +3378,6 @@
             let localCode = null;
             let isGuest = true;
 
-            // 1. On charge d'abord le local au cas où (si c'est un invité ou si on n'a pas internet)
             if (saved) {
                 try {
                     let parsed = JSON.parse(saved);
@@ -3382,7 +3392,6 @@
                 } catch(e) {}
             }
 
-            // 2. Si on a un compte, ON FORCE LA LECTURE SUR LE SERVEUR
             if(localCode && !isGuest) {
                 try {
                     const docSnap = await getDoc(doc(db, "stmg_saves", localCode));
@@ -3390,13 +3399,12 @@
                         let parsed = JSON.parse(docSnap.data().saveData);
                         game = { ...defaultSave, ...parsed, buildings: { ...defaultSave.buildings, ...parsed.buildings } };
                         
-                        // C'est ici que ça cassait : il manquait les fallbacks de sécurité sur les données du serveur !
                         if(!game.upgradesBought) game.upgradesBought = [];
                         if(!game.companions) game.companions = [];
                         if(game.sugars === undefined) game.sugars = 0;
                         if(game.profilePic === undefined) game.profilePic = "";
                         
-                        saveLocal(); // On nettoie le cache avec les données toutes neuves du cloud
+                        saveLocal(); 
                     }
                 } catch(e) { 
                     console.warn("Sync initiale échouée, on continue en local", e); 
