@@ -3,12 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <title>Dan Bouillet - Accueil - Jayden Hounnouvi</title>
-    <meta name="description" content="L'accueil du site de Dan Bouillet / Jayden Hounnouvi">
-    <link rel="icon" type="image/png" href="https://upload.wikimedia.org/wikipedia/commons/2/20/Dan_Bouillet_Logo.png">
-    <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/2/20/Dan_Bouillet_Logo.png">
+    <meta name="description" content="L'accueil du site Cookie Clicker de Dan Bouillet aKa Dnb95 / Jayden Hounnouvi aKa JaydenSSE">
+    <link rel="icon" type="image/png" sizes="32x32" href="https://upload.wikimedia.org/wikipedia/commons/4/48/DnB_website.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="https://upload.wikimedia.org/wikipedia/commons/4/48/DnB_website.png">
+    <link rel="shortcut icon" href="https://upload.wikimedia.org/wikipedia/commons/4/48/DnB_website.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="https://upload.wikimedia.org/wikipedia/commons/4/48/DnB_website.png">
+    <link rel="apple-touch-icon-precomposed" href="https://upload.wikimedia.org/wikipedia/commons/4/48/DnB_website.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="DnB Website">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="DnB Website">
     <meta name="theme-color" content="#030305">
+    <link rel="manifest" href="data:application/json,%7B%22name%22%3A%22DnB%20Website%22%2C%22short_name%22%3A%22DnB%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fupload.wikimedia.org%2Fwikipedia%2Fcommons%2F4%2F48%2FDnB_website.png%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fpng%22%7D%5D%2C%22start_url%22%3A%22%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23030305%22%2C%22theme_color%22%3A%22%23030305%22%7D">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Dan Bouillet — Cookie Clicker - Jayden Hounnouvi">
+    <meta property="og:description" content="Dan Bouillet & Jayden Hounnouvi — Lycéen STMG, projets web, boutique et cookie clicker.">
+    <meta property="og:image" content="https://upload.wikimedia.org/wikipedia/commons/4/48/DnB_website.png">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/4/48/DnB_website.png">
     
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;500;800&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,8 +29,8 @@
     <style>
         :root {
             --bg-base: #030305;
-            --primary: #00D4FF;
-            --secondary: #00FF88; 
+            --primary: #aab9f3;
+            --secondary: #f3e5ab; 
             --text-main: #FFFFFF;
             --text-muted: #8b949e;
             
@@ -55,7 +68,7 @@
             background-color: var(--bg-base);
             color: var(--text-main); 
             font-family: 'Montserrat', sans-serif;
-            overflow-x: hidden; min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+            overflow-x: hidden; min-height: 100vh; display: flex; flex-direction: column; align-items: stretch;
             transition: background-color 0.5s ease, color 0.5s ease;
         }
 
@@ -153,14 +166,14 @@
         [data-theme="light"] .cc-input { background: rgba(255,255,255,0.5); color: #000; border-color: rgba(0,0,0,0.2); }
         .cc-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 15px var(--primary); }
         
-        .cc-left { flex: 1; min-width: 380px; min-height: 550px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid var(--glass-border); padding: 20px; position: relative; }
+        .cc-left { flex: 1; min-width: 380px; min-height: 550px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid var(--glass-border); padding: 20px; position: relative; background: #03030a; border-radius: 20px 0 0 20px; }
         .liquid-bg-container { position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; overflow: hidden; z-index: 0; border-radius: 20px 0 0 20px; pointer-events: none; }
-        .wave { position: absolute; left: 50%; width: 250%; height: 250%; background: var(--primary); box-shadow: inset 0 0 50px rgba(0,0,0,0.3); animation: spin 10s linear infinite; transition: background 1s ease, bottom 0.5s ease, opacity 0.5s ease; mix-blend-mode: color-dodge; }
+        .wave { position: absolute; left: 50%; width: 250%; height: 250%; background: var(--game-primary, #aab9f3); box-shadow: inset 0 0 50px rgba(0,0,0,0.3); animation: spin 10s linear infinite; transition: background 1s ease, bottom 0.5s ease, opacity 0.5s ease; mix-blend-mode: color-dodge; }
         [data-theme="light"] .wave { mix-blend-mode: overlay; opacity: 0.1 !important; }
         .wave.wave1 { animation-duration: 12s; bottom: -185%; opacity: 0.25; border-radius: 43%; transform-origin: 49% 51%; }
-        .wave.wave2 { animation-duration: 15s; bottom: -195%; opacity: 0.15; border-radius: 46%; transform-origin: 51% 49%; }
+        .wave.wave2 { animation-duration: 15s; bottom: -195%; opacity: 0.15; border-radius: 46%; background: var(--game-secondary, #f3e5ab); transform-origin: 51% 49%; }
         .wave.wave3 { animation-duration: 18s; bottom: -180%; opacity: 0.35; border-radius: 41%; transform-origin: 50% 50%; }
-        .wave.wave4 { animation-duration: 22s; bottom: -190%; opacity: 0.20; border-radius: 44%; transform-origin: 52% 48%; }
+        .wave.wave4 { animation-duration: 22s; bottom: -190%; opacity: 0.20; border-radius: 44%; background: var(--game-secondary, #f3e5ab); transform-origin: 52% 48%; }
         @keyframes spin { 100% { transform: translate(-50%, 0) rotate(360deg); } 0% { transform: translate(-50%, 0) rotate(0deg); } }
         .cc-left > :not(.liquid-bg-container) { position: relative; z-index: 2; }
 
@@ -510,7 +523,136 @@
         .auth-separator { margin: 15px 0; border-top: 1px solid var(--glass-border); position: relative; text-align: center; }
         .auth-separator span { background: var(--glass-bg); padding: 0 10px; position: relative; top: -10px; color: var(--text-muted); font-size: 0.8rem; }
 
-        @media (max-width: 768px) { 
+        .site-footer {
+            width: 100vw;
+            position: relative;
+            left: 50%;
+            right: 50%;
+            margin-left: -50vw;
+            margin-right: -50vw;
+            box-sizing: border-box;
+            background: var(--glass-bg); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            border-top: 1px solid var(--glass-border); padding: 60px 0 0; margin-top: 60px; z-index: 1;
+        }
+        .footer-inner { width: 90%; max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 40px; }
+        @media (max-width: 768px) { .footer-inner { grid-template-columns: 1fr; gap: 30px; } }
+        .footer-brand { display: flex; flex-direction: column; gap: 15px; }
+        .footer-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+        .footer-logo img { width: 48px; height: 48px; object-fit: contain; }
+        .footer-logo-text { font-family: 'Orbitron', sans-serif; font-size: 1.1rem; color: var(--text-main); letter-spacing: 2px; }
+        .footer-tagline { color: var(--text-muted); font-size: 0.85rem; line-height: 1.6; max-width: 280px; }
+        .footer-socials { display: flex; gap: 12px; margin-top: 5px; flex-wrap: wrap; }
+        .footer-social-link { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); padding: 9px 18px; border-radius: 20px; text-decoration: none; color: var(--text-main); font-size: 0.85rem; font-weight: bold; transition: all 0.3s; }
+        .footer-social-link:hover { transform: translateY(-3px); }
+        .footer-social-link.insta:hover { border-color: #E1306C; box-shadow: 0 0 15px rgba(225,48,108,0.5); color: #E1306C; }
+        .footer-social-link.linkedin:hover { border-color: #0A66C2; box-shadow: 0 0 15px rgba(10,102,194,0.5); color: #0A66C2; }
+        .footer-social-link svg { width: 18px; height: 18px; flex-shrink: 0; }
+        .footer-section-title { font-family: 'Orbitron', sans-serif; font-size: 0.75rem; letter-spacing: 3px; color: var(--primary); text-transform: uppercase; margin-bottom: 15px; text-shadow: 0 0 8px var(--primary); }
+        [data-theme="light"] .footer-section-title { text-shadow: none; }
+        .footer-links { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+        .footer-links li a { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; transition: color 0.3s; display: flex; align-items: center; gap: 8px; }
+        .footer-links li a:hover { color: var(--primary); }
+        .footer-contact-list { display: flex; flex-direction: column; gap: 10px; }
+        .footer-contact-item { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: var(--text-muted); }
+        .footer-contact-item a { color: var(--text-muted); text-decoration: none; transition: color 0.3s; }
+        .footer-contact-item a:hover { color: var(--primary); }
+        .footer-bottom { width: 90%; max-width: 1200px; margin: 40px auto 0; padding: 20px 0 30px; border-top: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .footer-bottom p { color: var(--text-muted); font-size: 0.8rem; }
+
+        .game-section-wrapper {
+            position: relative;
+            overflow: hidden;
+            border-radius: 24px;
+            padding: 20px;
+            margin-bottom: 40px;
+        }
+        .game-ambient-bg {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            border-radius: 24px;
+            overflow: hidden;
+            background: #030305;
+            transition: background 0.8s ease;
+        }
+        .game-ambient-bg .game-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(90px);
+            opacity: 0.55;
+            mix-blend-mode: screen;
+            transition: background 0.8s ease;
+        }
+        .game-orb.gorb1 { background: #aab9f3; width: 50%; height: 50%; top: -15%; left: -10%; animation: floatOrb1 12s infinite ease-in-out alternate; }
+        .game-orb.gorb2 { background: #f3e5ab; width: 45%; height: 45%; bottom: -15%; right: -10%; animation: floatOrb2 15s infinite ease-in-out alternate; }
+        .game-orb.gorb3 { background: #aab9f3; width: 35%; height: 35%; top: 30%; left: 25%; animation: floatOrb3 18s infinite ease-in-out alternate; opacity: 0.35; }
+        .game-orb.gorb4 { background: #f3e5ab; width: 30%; height: 30%; top: 5%; right: 15%; animation: floatOrb4 14s infinite ease-in-out alternate; opacity: 0.25; }
+        .game-section-wrapper > :not(.game-ambient-bg) { position: relative; z-index: 1; }
+
+        #gameOverlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: var(--bg-base); z-index: 9000; overflow-y: auto;
+            flex-direction: column;
+        }
+        #gameOverlay.visible { display: flex; }
+        .game-overlay-header {
+            position: sticky; top: 0; z-index: 9100;
+            background: var(--glass-bg); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 30px;
+        }
+        .game-overlay-title { font-family: 'Orbitron', sans-serif; font-size: 1rem; color: var(--primary); letter-spacing: 2px; text-shadow: 0 0 8px var(--primary); }
+        [data-theme="light"] .game-overlay-title { text-shadow: none; }
+        .game-close-btn {
+            background: rgba(255,59,48,0.15); border: 1px solid var(--danger); color: var(--danger);
+            padding: 8px 20px; border-radius: 20px; cursor: pointer; font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem; letter-spacing: 1px; transition: all 0.3s; display: flex; align-items: center; gap: 8px;
+        }
+        .game-close-btn:hover { background: var(--danger); color: #fff; box-shadow: var(--danger-glow); }
+        .game-overlay-body { flex: 1; padding: 0; }
+
+        .game-launch-section {
+            text-align: center; margin: 50px 0 20px;
+        }
+        .game-launch-btn {
+            display: inline-flex; align-items: center; gap: 14px;
+            background: var(--glass-bg); backdrop-filter: blur(25px);
+            border: 1px solid var(--primary); color: var(--text-main);
+            padding: 18px 40px; border-radius: 50px; cursor: pointer;
+            font-family: 'Orbitron', sans-serif; font-size: 1.1rem; letter-spacing: 2px;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 0 20px rgba(var(--primary-rgb),0.3), var(--glass-highlight);
+            text-transform: uppercase; text-decoration: none;
+        }
+        .game-launch-btn:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 0 40px var(--primary), 0 20px 40px rgba(0,0,0,0.3); border-color: var(--secondary); }
+        .game-launch-btn:active { transform: scale(0.97); }
+        .game-launch-icon { font-size: 1.8rem; filter: drop-shadow(0 0 10px var(--primary)); }
+
+        #siteAdminPanel {
+            display: none; width: 100%; max-width: 1200px; margin: 40px auto;
+            background: var(--glass-bg); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+            border: 1px solid rgba(255,189,46,0.5); border-radius: 20px; padding: 30px;
+            box-shadow: var(--shadow-soft), 0 0 30px rgba(255,189,46,0.2);
+        }
+        .site-admin-title { font-family: 'Orbitron', sans-serif; color: #ffbd2e; text-align: center; margin-bottom: 25px; font-size: 1.3rem; text-shadow: 0 0 15px rgba(255,189,46,0.6); letter-spacing: 3px; }
+        [data-theme="light"] .site-admin-title { text-shadow: none; }
+        .site-admin-tabs { display: flex; gap: 10px; margin-bottom: 25px; flex-wrap: wrap; }
+        .site-admin-tab { background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: var(--text-muted); padding: 8px 20px; border-radius: 20px; cursor: pointer; font-family: 'Montserrat', sans-serif; font-weight: bold; transition: all 0.3s; }
+        .site-admin-tab.active { border-color: #ffbd2e; color: #ffbd2e; background: rgba(255,189,46,0.1); box-shadow: 0 0 10px rgba(255,189,46,0.3); }
+        .site-admin-section { display: none; }
+        .site-admin-section.active { display: block; }
+        .sa-card-editor { background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px; margin-bottom: 15px; }
+        [data-theme="light"] .sa-card-editor { background: rgba(255,255,255,0.5); }
+        .sa-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px; display: block; font-weight: bold; }
+        .sa-input { background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: var(--text-main); padding: 10px; border-radius: 8px; width: 100%; font-family: 'Montserrat', sans-serif; font-size: 0.95rem; margin-bottom: 10px; transition: border-color 0.3s; }
+        [data-theme="light"] .sa-input { background: rgba(255,255,255,0.8); color: #111; border-color: rgba(0,0,0,0.2); }
+        .sa-input:focus { outline: none; border-color: #ffbd2e; box-shadow: 0 0 10px rgba(255,189,46,0.3); }
+        .sa-save-btn { background: rgba(255,189,46,0.15); border: 1px solid #ffbd2e; color: #ffbd2e; padding: 10px 25px; border-radius: 20px; cursor: pointer; font-family: 'Orbitron', sans-serif; font-size: 0.85rem; transition: all 0.3s; }
+        .sa-save-btn:hover { background: #ffbd2e; color: #000; box-shadow: 0 0 15px rgba(255,189,46,0.5); }
+
+        @media (max-width: 768px) {
             .cards-grid { grid-template-columns: 1fr; } 
             .cc-left { border-right: none; border-bottom: 1px solid var(--glass-border); padding-right: 0; padding-bottom: 20px; } 
             .liquid-bg-container { border-radius: 20px 20px 0 0; }
@@ -647,12 +789,33 @@
             </div>
 
             <div style="text-align:left; margin-bottom:20px;">
-                <label style="font-size:0.9rem; color:var(--text-muted);">Couleurs du thème et des animations :</label>
+                <label style="font-size:0.9rem; color:var(--text-muted);">Couleurs des vagues IN-GAME :</label>
+                <p style="font-size:0.75rem; color:var(--text-muted); margin-top:3px; margin-bottom:8px; opacity:0.7;">Modifient uniquement les vagues de la zone de jeu. La couleur du groupe (si débloquée) a la priorité.</p>
                 <div style="display:flex; gap:10px; margin-top:5px;">
-                    <input type="color" id="customColor1" value="#00D4FF" title="Couleur Principale" style="flex:1; height:45px; border:none; border-radius:8px; cursor:pointer; padding:0;">
-                    <input type="color" id="customColor2" value="#00FF88" title="Couleur Secondaire" style="flex:1; height:45px; border:none; border-radius:8px; cursor:pointer; padding:0;">
+                    <input type="color" id="customColor1" value="#00D4FF" title="Couleur Principale des vagues" style="flex:1; height:45px; border:none; border-radius:8px; cursor:pointer; padding:0;">
+                    <input type="color" id="customColor2" value="#00FF88" title="Couleur Secondaire des vagues" style="flex:1; height:45px; border:none; border-radius:8px; cursor:pointer; padding:0;">
                 </div>
                 <button class="cc-btn" id="btnResetColors" style="width:100%; margin-top:10px;">Réinitialiser les couleurs</button>
+            </div>
+
+            <div style="text-align:left; margin-bottom:20px;">
+                <label style="font-size:0.9rem; color:var(--text-muted);">🎨 Fond animé de la zone de jeu :</label>
+                <p style="font-size:0.75rem; color:var(--text-muted); margin-top:3px; margin-bottom:8px; opacity:0.7;">Choisissez les deux couleurs des orbes animés derrière le cookie clicker et les classements.</p>
+                <div style="display:flex; gap:10px; margin-top:5px;">
+                    <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;">
+                        <input type="color" id="gameBgColor1" value="#aab9f3" title="Orbe 1 du fond de jeu" style="width:100%; height:45px; border:none; border-radius:8px; cursor:pointer; padding:0;">
+                        <span style="font-size:0.7rem; color:var(--text-muted);">Orbe A</span>
+                    </div>
+                    <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;">
+                        <input type="color" id="gameBgColor2" value="#f3e5ab" title="Orbe 2 du fond de jeu" style="width:100%; height:45px; border:none; border-radius:8px; cursor:pointer; padding:0;">
+                        <span style="font-size:0.7rem; color:var(--text-muted);">Orbe B</span>
+                    </div>
+                    <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;">
+                        <input type="color" id="gameBgBase" value="#030305" title="Couleur de base du fond" style="width:100%; height:45px; border:none; border-radius:8px; cursor:pointer; padding:0;">
+                        <span style="font-size:0.7rem; color:var(--text-muted);">Fond</span>
+                    </div>
+                </div>
+                <button class="cc-btn" id="btnResetGameBg" style="width:100%; margin-top:10px;">Réinitialiser le fond</button>
             </div>
 
             <button class="cc-btn primary-btn" onclick="document.getElementById('appearanceModal').style.display='none'" style="width:100%;">Fermer</button>
@@ -750,14 +913,14 @@
         <h1 class="mega-title">MES PROJETS</h1>
 
         <div class="cards-grid">
-            <a href="https://dnb95.github.io/1STMG/" class="tilt-card" target="_blank">
-                <div class="card-icon">🚀</div><h3 class="card-title">DAN REVIZ</h3><p class="card-desc">Le Clicker se trouve si dessous :<br>.</p>
+            <a href="https://dnb95.github.io/1STMG/" class="tilt-card" target="_blank" id="card-0">
+                <div class="card-icon" id="card-0-icon">🚀</div><h3 class="card-title" id="card-0-title">DAN REVIZ</h3><p class="card-desc" id="card-0-desc">Révisions interactives pour le DNB. Fiches, quiz et ressources.</p>
             </a>
-            <a href="https://instagram.com/dnb.95" class="tilt-card" target="_blank">
-                <div class="card-icon">📸</div><h3 class="card-title">INSTAGRAM</h3><p class="card-desc">@dnb.95<br>.</p>
+            <a href="/shop" class="tilt-card" id="card-1">
+                <div class="card-icon" id="card-1-icon">🛒</div><h3 class="card-title" id="card-1-title">BOUTIQUE</h3><p class="card-desc" id="card-1-desc">Découvrez notre boutique. Produits exclusifs et éditions limitées.</p>
             </a>
-            <a href="https://www.linkedin.com/in/xbox/" class="tilt-card" target="_blank">
-                <div class="card-icon">💼</div><h3 class="card-title">LINKEDIN</h3><p class="card-desc">Connexion Pro.<br>.</p>
+            <a href="#" class="tilt-card" id="card-2" onclick="openGameOverlay(); return false;" style="cursor:pointer;">
+                <div class="card-icon" id="card-2-icon">🍪</div><h3 class="card-title" id="card-2-title">DÉMONSTRATION</h3><p class="card-desc" id="card-2-desc">Joue au DNB Cookie Clicker — Classements en temps réel.</p>
             </a>
         </div>
 
@@ -794,6 +957,54 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div id="siteAdminPanel">
+            <div class="site-admin-title">⚙️ ADMIN SITE — ÉDITEUR DE CONTENU</div>
+            <div class="site-admin-tabs">
+                <button class="site-admin-tab active" onclick="switchSATab('projects')">🃏 Cartes Projets</button>
+                <button class="site-admin-tab" onclick="switchSATab('identity')">👤 Identités</button>
+            </div>
+
+            <div class="site-admin-section active" id="saTabProjects">
+                <div id="saProjectsEditor"></div>
+                <button class="sa-save-btn" onclick="saSaveProjects()">💾 Sauvegarder les cartes</button>
+            </div>
+
+            <div class="site-admin-section" id="saTabIdentity">
+                <div class="sa-card-editor">
+                    <b style="color:var(--primary); font-family:'Orbitron'; font-size:0.85rem;">PROFIL DAN</b>
+                    <br><br>
+                    <label class="sa-label">Avatar URL</label>
+                    <input class="sa-input" id="saIdDanAvatar" value="https://avatars.githubusercontent.com/u/255840404">
+                    <label class="sa-label">Nom affiché</label>
+                    <input class="sa-input" id="saIdDanName" value="Dan">
+                    <label class="sa-label">Statut</label>
+                    <input class="sa-input" id="saIdDanStatus" value="Lycéen en STMG">
+                    <label class="sa-label">Email contact</label>
+                    <input class="sa-input" id="saIdDanEmail" value="dan.bouillet.14@gmail.com">
+                </div>
+                <div class="sa-card-editor">
+                    <b style="color:var(--secondary); font-family:'Orbitron'; font-size:0.85rem;">PROFIL JAYDEN</b>
+                    <br><br>
+                    <label class="sa-label">Avatar URL</label>
+                    <input class="sa-input" id="saIdJayAvatar" value="https://i.ibb.co/60xqvnKB/Capture-d-cran-2026-03-23-201502.png">
+                    <label class="sa-label">Nom affiché</label>
+                    <input class="sa-input" id="saIdJayName" value="Jayden Hounnouvi">
+                    <label class="sa-label">Statut</label>
+                    <input class="sa-input" id="saIdJayStatus" value="Lycéen en STMG">
+                    <label class="sa-label">Email contact</label>
+                    <input class="sa-input" id="saIdJayEmail" value="Jaydenhounnouvi@gmail.com">
+                </div>
+                <button class="sa-save-btn" onclick="saSaveIdentity()">💾 Sauvegarder les identités</button>
+            </div>
+        </div>
+
+        <div class="game-launch-section">
+            <button class="game-launch-btn" onclick="openGameOverlay()">
+                <span class="game-launch-icon">🍪</span>
+                Jouer au Cookie Clicker
+            </button>
         </div>
 
         <div id="adminPanel">
@@ -834,8 +1045,23 @@
             </div>
         </div>
 
-        <div id="gameSection">
-            <h2 class="section-label">ZONE DNB CLICKER</h2>
+        <div id="gameOverlay">
+            <div class="game-overlay-header">
+                <div class="game-overlay-title">🍪 DNB COOKIE CLICKER</div>
+                <button class="game-close-btn" onclick="closeGameOverlay()">✕ Retour au site</button>
+            </div>
+            <div class="game-overlay-body">
+                <div class="container" style="padding-top: 20px;">
+                    <div id="gameSection">
+            <div class="game-section-wrapper" id="gameSectionWrapper">
+                <div class="game-ambient-bg" id="gameAmbientBg">
+                    <div class="game-orb gorb1" id="gameOrb1"></div>
+                    <div class="game-orb gorb2" id="gameOrb2"></div>
+                    <div class="game-orb gorb3" id="gameOrb3"></div>
+                    <div class="game-orb gorb4" id="gameOrb4"></div>
+                </div>
+
+            <h2 class="section-label" style="position:relative;z-index:1;">ZONE DNB CLICKER</h2>
             
             <div class="cc-wrapper" id="ccWrapper">
 
@@ -999,8 +1225,62 @@
                     <div id="lbGroups"><p style="text-align:center; color:var(--text-muted);">Chargement...</p></div>
                 </div>
             </div>
+            </div>
+            </div>
         </div>
-    </div>
+        </div>
+        </div>
+
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <a class="footer-logo" href="#">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/4/48/DnB_website.png" alt="Logo DnB">
+                    <span class="footer-logo-text">DAN BOUILLET</span>
+                </a>
+                <p class="footer-tagline">Projet entièrement réalisé par Dan Bouillet (Dnb95) et Jayden Hounnouvi (JaydenSSE).</p>
+                <div class="footer-socials">
+                    <a href="https://instagram.com/dnb.95" target="_blank" class="footer-social-link insta">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="ig-grad" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#f09433"/><stop offset="25%" style="stop-color:#e6683c"/><stop offset="50%" style="stop-color:#dc2743"/><stop offset="75%" style="stop-color:#cc2366"/><stop offset="100%" style="stop-color:#bc1888"/></linearGradient></defs><rect x="2" y="2" width="20" height="20" rx="5.5" ry="5.5" fill="url(#ig-grad)"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="white" stroke-width="1.8"/><circle cx="17.5" cy="6.5" r="1.2" fill="white"/></svg>
+                        Instagram
+                    </a>
+                    <a href="https://www.linkedin.com/in/xbox/" target="_blank" class="footer-social-link linkedin">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="4" fill="#0A66C2"/><path d="M7 10v7M7 7v.5" stroke="white" stroke-width="2" stroke-linecap="round"/><path d="M11 17v-4a2 2 0 0 1 4 0v4M11 10v7" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        LinkedIn
+                    </a>
+                </div>
+            </div>
+            <div>
+                <div class="footer-section-title">Navigation</div>
+                <ul class="footer-links">
+                    <li><a href="#">⬆ Mes Projets</a></li>
+                    <li><a href="/shop">🛒 Boutique</a></li>
+                    <li><a href="https://dnb95.github.io/1STMG/" target="_blank">🚀 Dan Reviz</a></li>
+                    <li><a href="#" onclick="openGameOverlay(); return false;">🍪 Cookie Clicker</a></li>
+                </ul>
+            </div>
+            <div>
+                <div class="footer-section-title">Contact</div>
+                <div class="footer-contact-list">
+                    <div class="footer-contact-item">
+                        <span>📧</span>
+                        <a href="mailto:dan.bouillet.14@gmail.com">dan.bouillet.14@gmail.com</a>
+                    </div>
+                    <div class="footer-contact-item">
+                        <span>📧</span>
+                        <a href="mailto:Jaydenhounnouvi@gmail.com">Jaydenhounnouvi@gmail.com</a>
+                    </div>
+                    <div class="footer-contact-item" style="margin-top:10px; flex-direction:column; align-items:flex-start; gap:5px;">
+                        <span style="color:var(--text-muted); font-size:0.8rem; line-height:1.5;">Disponibles pour tout projet, collaboration ou demande d'information. Réponse sous 48h.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2026 Dnb95. Tous droits réservés.</p>
+            <p style="font-size:0.75rem;">Fait avec beaucoup de cookies 🍪</p>
+        </div>
+    </footer>
 
     <div id="cocChatPanel">
         <div class="chat-toggle-tab" id="chatToggleBtn">
@@ -1053,40 +1333,87 @@
         let savedC1 = localStorage.getItem('dnb_color_1');
         let savedC2 = localStorage.getItem('dnb_color_2');
 
-        if(savedC1) {
-            document.documentElement.style.setProperty('--primary', savedC1);
-            document.documentElement.style.setProperty('--primary-rgb', hexToRgb(savedC1));
-            customColor1.value = savedC1;
+        function applyGameColors(c1, c2) {
+            const ccWrapper = document.getElementById('ccWrapper');
+            if (!ccWrapper) return;
+            if (c1) ccWrapper.style.setProperty('--game-primary', c1);
+            if (c2) ccWrapper.style.setProperty('--game-secondary', c2);
         }
-        if(savedC2) {
-            document.documentElement.style.setProperty('--secondary', savedC2);
-            document.documentElement.style.setProperty('--secondary-rgb', hexToRgb(savedC2));
-            customColor2.value = savedC2;
-        }
+
+        if(savedC1) { customColor1.value = savedC1; }
+        if(savedC2) { customColor2.value = savedC2; }
+        setTimeout(() => applyGameColors(savedC1, savedC2), 100);
 
         customColor1.addEventListener('input', (e) => {
             let col = e.target.value;
-            document.documentElement.style.setProperty('--primary', col);
-            document.documentElement.style.setProperty('--primary-rgb', hexToRgb(col));
             localStorage.setItem('dnb_color_1', col);
+            applyGameColors(col, null);
         });
 
         customColor2.addEventListener('input', (e) => {
             let col = e.target.value;
-            document.documentElement.style.setProperty('--secondary', col);
-            document.documentElement.style.setProperty('--secondary-rgb', hexToRgb(col));
             localStorage.setItem('dnb_color_2', col);
+            applyGameColors(null, col);
         });
 
         btnResetColors.addEventListener('click', () => {
             localStorage.removeItem('dnb_color_1');
             localStorage.removeItem('dnb_color_2');
-            document.documentElement.style.removeProperty('--primary');
-            document.documentElement.style.removeProperty('--secondary');
-            document.documentElement.style.removeProperty('--primary-rgb');
-            document.documentElement.style.removeProperty('--secondary-rgb');
-            customColor1.value = '#00D4FF';
-            customColor2.value = '#00FF88';
+            customColor1.value = '#aab9f3';
+            customColor2.value = '#f3e5ab';
+            const ccWrapper = document.getElementById('ccWrapper');
+            if (ccWrapper) {
+                ccWrapper.style.removeProperty('--game-primary');
+                ccWrapper.style.removeProperty('--game-secondary');
+            }
+        });
+
+        // === Game Background Ambient Colors ===
+        const gameBgColor1El = document.getElementById('gameBgColor1');
+        const gameBgColor2El = document.getElementById('gameBgColor2');
+        const gameBgBaseEl = document.getElementById('gameBgBase');
+        const btnResetGameBg = document.getElementById('btnResetGameBg');
+
+        function applyGameBgColors(c1, c2, base) {
+            const orb1 = document.getElementById('gameOrb1');
+            const orb2 = document.getElementById('gameOrb2');
+            const orb3 = document.getElementById('gameOrb3');
+            const orb4 = document.getElementById('gameOrb4');
+            const bgEl = document.getElementById('gameAmbientBg');
+            if (c1 && orb1) { orb1.style.background = c1; orb3.style.background = c1; }
+            if (c2 && orb2) { orb2.style.background = c2; orb4.style.background = c2; }
+            if (base && bgEl) { bgEl.style.background = base; }
+        }
+
+        let savedGBg1 = localStorage.getItem('dnb_game_bg1');
+        let savedGBg2 = localStorage.getItem('dnb_game_bg2');
+        let savedGBgBase = localStorage.getItem('dnb_game_bg_base');
+
+        if (savedGBg1) gameBgColor1El.value = savedGBg1;
+        if (savedGBg2) gameBgColor2El.value = savedGBg2;
+        if (savedGBgBase) gameBgBaseEl.value = savedGBgBase;
+        setTimeout(() => applyGameBgColors(savedGBg1, savedGBg2, savedGBgBase), 150);
+
+        gameBgColor1El.addEventListener('input', (e) => {
+            localStorage.setItem('dnb_game_bg1', e.target.value);
+            applyGameBgColors(e.target.value, null, null);
+        });
+        gameBgColor2El.addEventListener('input', (e) => {
+            localStorage.setItem('dnb_game_bg2', e.target.value);
+            applyGameBgColors(null, e.target.value, null);
+        });
+        gameBgBaseEl.addEventListener('input', (e) => {
+            localStorage.setItem('dnb_game_bg_base', e.target.value);
+            applyGameBgColors(null, null, e.target.value);
+        });
+        btnResetGameBg.addEventListener('click', () => {
+            localStorage.removeItem('dnb_game_bg1');
+            localStorage.removeItem('dnb_game_bg2');
+            localStorage.removeItem('dnb_game_bg_base');
+            gameBgColor1El.value = '#aab9f3';
+            gameBgColor2El.value = '#f3e5ab';
+            gameBgBaseEl.value = '#030305';
+            applyGameBgColors('#aab9f3', '#f3e5ab', '#030305');
         });
 
         document.getElementById('btnThemeDark').addEventListener('click', () => { applyTheme('dark'); });
@@ -1224,7 +1551,6 @@
         const historyList = document.getElementById('historyList');
 
         function getSpinCost() {
-            // Le coût est à 25% de la fortune totale du joueur (sans multiplier par 1.5)
             return Math.max(100, Math.floor(validateNum(game.cookies) * 0.25));
         }
 
@@ -3495,6 +3821,189 @@
         initStore();
         loadLocalGame();
         spawnGoldenCookieLoop(); 
+
+
+        const origFinishLogin = window.finishLogin;
+        const adminObserver = new MutationObserver(() => {
+            const btn = document.getElementById('btnOpenAdmin');
+            if(btn && btn.style.display !== 'none') {
+                window._isAdmin = true;
+                document.getElementById('siteAdminPanel').style.display = 'block';
+                saInitProjects();
+                saInitIdentity();
+            }
+        });
+        const btn = document.getElementById('btnOpenAdmin');
+        if(btn) adminObserver.observe(btn, { attributes: true, attributeFilter: ['style'] });
+    </script>
+
+    <script>
+        let gameLoaded = false;
+
+        function openGameOverlay() {
+            document.getElementById('gameOverlay').classList.add('visible');
+            document.body.style.overflow = 'hidden';
+            if (!gameLoaded) {
+                gameLoaded = true;
+                const chat = document.getElementById('cocChatPanel');
+                if (chat) document.getElementById('gameOverlay').appendChild(chat);
+            }
+        }
+
+        function closeGameOverlay() {
+            document.getElementById('gameOverlay').classList.remove('visible');
+            document.body.style.overflow = '';
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeGameOverlay();
+        });
+
+        const SA_DEFAULTS = {
+            projects: [
+                { icon: '🚀', title: 'DAN REVIZ', desc: 'Révisions interactives pour le DNB. Fiches, quiz et ressources.', link: 'https://dnb95.github.io/1STMG/' },
+                { icon: '🛒', title: 'BOUTIQUE', desc: 'Découvrez notre boutique. Produits exclusifs et éditions limitées.', link: '/shop' },
+                { icon: '🍪', title: 'DÉMONSTRATION', desc: 'Joue au DNB Cookie Clicker — Classements en temps réel.', link: '' }
+            ],
+            identity: {
+                danAvatar: 'https://avatars.githubusercontent.com/u/255840404',
+                danName: 'Dan', danStatus: 'Lycéen en STMG', danEmail: 'dan.bouillet.14@gmail.com',
+                jayAvatar: 'https://i.ibb.co/60xqvnKB/Capture-d-cran-2026-03-23-201502.png',
+                jayName: 'Jayden Hounnouvi', jayStatus: 'Lycéen en STMG', jayEmail: 'Jaydenhounnouvi@gmail.com'
+            }
+        };
+
+        function saLoad(key, def) {
+            try { return JSON.parse(localStorage.getItem('sa_' + key)) || def; } catch(e) { return def; }
+        }
+        function saSave(key, val) { localStorage.setItem('sa_' + key, JSON.stringify(val)); }
+
+        function switchSATab(tab) {
+            document.querySelectorAll('.site-admin-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.site-admin-section').forEach(s => s.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('saTab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+        }
+
+        function saInitProjects() {
+            const projects = saLoad('projects', SA_DEFAULTS.projects);
+            const el = document.getElementById('saProjectsEditor');
+            el.innerHTML = '';
+            projects.forEach((p, i) => {
+                const isGame = i === 2;
+                el.innerHTML += `
+                <div class="sa-card-editor">
+                    <b style="color:var(--primary); font-family:'Orbitron'; font-size:0.85rem;">CARTE #${i+1}</b><br><br>
+                    <label class="sa-label">Icône (emoji)</label>
+                    <input class="sa-input" id="saP${i}icon" value="${p.icon}">
+                    <label class="sa-label">Titre</label>
+                    <input class="sa-input" id="saP${i}title" value="${p.title}">
+                    <label class="sa-label">Description</label>
+                    <input class="sa-input" id="saP${i}desc" value="${p.desc}">
+                    <label class="sa-label">Lien (URL)${isGame ? ' — laisser vide = ouvre le jeu en overlay' : ''}</label>
+                    <input class="sa-input" id="saP${i}link" value="${p.link || ''}" placeholder="${isGame ? 'Laisser vide pour garder le jeu intégré' : 'https://...'}">
+                </div>`;
+            });
+            applyProjectsToDOM(projects);
+        }
+
+        function saSaveProjects() {
+            const projects = saLoad('projects', SA_DEFAULTS.projects).map((p, i) => ({
+                icon: document.getElementById('saP'+i+'icon').value,
+                title: document.getElementById('saP'+i+'title').value,
+                desc: document.getElementById('saP'+i+'desc').value,
+                link: document.getElementById('saP'+i+'link') ? document.getElementById('saP'+i+'link').value : (p.link || '')
+            }));
+            saSave('projects', projects);
+            applyProjectsToDOM(projects);
+            showToast('✅ Cartes sauvegardées !');
+        }
+
+        function applyProjectsToDOM(projects) {
+            projects.forEach((p, i) => {
+                const icon = document.getElementById('card-'+i+'-icon');
+                const title = document.getElementById('card-'+i+'-title');
+                const desc = document.getElementById('card-'+i+'-desc');
+                const card = document.getElementById('card-'+i);
+                if (icon) icon.textContent = p.icon;
+                if (title) title.textContent = p.title;
+                if (desc) desc.textContent = p.desc;
+                if (card && p.link !== undefined) {
+                    if (i === 2) {
+                        if (p.link && p.link.trim() !== '') {
+                            card.onclick = null;
+                            card.style.cursor = 'pointer';
+                            card.setAttribute('href', p.link);
+                            if (!card.getAttribute('target')) card.setAttribute('target', '_blank');
+                        } else {
+                            card.setAttribute('href', '#');
+                            card.onclick = (e) => { e.preventDefault(); openGameOverlay(); };
+                        }
+                    } else if (p.link && p.link.trim() !== '') {
+                        card.setAttribute('href', p.link);
+                    }
+                }
+            });
+        }
+
+        function saInitIdentity() {
+            const id = saLoad('identity', SA_DEFAULTS.identity);
+            document.getElementById('saIdDanAvatar').value = id.danAvatar || SA_DEFAULTS.identity.danAvatar;
+            document.getElementById('saIdDanName').value = id.danName || SA_DEFAULTS.identity.danName;
+            document.getElementById('saIdDanStatus').value = id.danStatus || SA_DEFAULTS.identity.danStatus;
+            document.getElementById('saIdDanEmail').value = id.danEmail || SA_DEFAULTS.identity.danEmail;
+            document.getElementById('saIdJayAvatar').value = id.jayAvatar || SA_DEFAULTS.identity.jayAvatar;
+            document.getElementById('saIdJayName').value = id.jayName || SA_DEFAULTS.identity.jayName;
+            document.getElementById('saIdJayStatus').value = id.jayStatus || SA_DEFAULTS.identity.jayStatus;
+            document.getElementById('saIdJayEmail').value = id.jayEmail || SA_DEFAULTS.identity.jayEmail;
+            applyIdentityToDOM(id);
+        }
+
+        function saSaveIdentity() {
+            const id = {
+                danAvatar: document.getElementById('saIdDanAvatar').value,
+                danName: document.getElementById('saIdDanName').value,
+                danStatus: document.getElementById('saIdDanStatus').value,
+                danEmail: document.getElementById('saIdDanEmail').value,
+                jayAvatar: document.getElementById('saIdJayAvatar').value,
+                jayName: document.getElementById('saIdJayName').value,
+                jayStatus: document.getElementById('saIdJayStatus').value,
+                jayEmail: document.getElementById('saIdJayEmail').value
+            };
+            saSave('identity', id);
+            applyIdentityToDOM(id);
+            showToast('✅ Identités sauvegardées !');
+        }
+
+        function applyIdentityToDOM(id) {
+            const danAvatar = document.querySelector('.bio-section.front .bio-avatar');
+            const danTexts = document.querySelectorAll('.bio-section.front .bio-text p');
+            if (danAvatar) danAvatar.src = id.danAvatar;
+            if (danTexts[1]) danTexts[1].innerHTML = `> Name: <span style="color:var(--text-main);">${id.danName}</span>`;
+            if (danTexts[2]) danTexts[2].innerHTML = `> Status: <span style="color:var(--text-main);">${id.danStatus}</span>`;
+            if (danTexts[3]) danTexts[3].innerHTML = `> Contact: <span style="color:var(--text-main);" class="typewriter">${id.danEmail}</span>`;
+            const jayAvatar = document.querySelector('.bio-section.back .bio-avatar');
+            const jayTexts = document.querySelectorAll('.bio-section.back .bio-text p');
+            if (jayAvatar) jayAvatar.src = id.jayAvatar;
+            if (jayTexts[1]) jayTexts[1].innerHTML = `> Name: <span style="color:var(--text-main);">${id.jayName}</span>`;
+            if (jayTexts[2]) jayTexts[2].innerHTML = `> Status: <span style="color:var(--text-main);">${id.jayStatus}</span>`;
+            if (jayTexts[3]) jayTexts[3].innerHTML = `> Contact: <span style="color:var(--text-main);" class="typewriter">${id.jayEmail}</span>`;
+        }
+
+        (function() {
+            const projects = saLoad('projects', SA_DEFAULTS.projects);
+            applyProjectsToDOM(projects);
+            const id = saLoad('identity', SA_DEFAULTS.identity);
+            applyIdentityToDOM(id);
+        })();
+
+        function showToast(msg) {
+            let t = document.createElement('div');
+            t.style.cssText = 'position:fixed;bottom:30px;right:30px;background:rgba(0,0,0,0.85);border:1px solid var(--primary);color:#fff;padding:12px 25px;border-radius:20px;font-family:Montserrat,sans-serif;z-index:99999;animation:slideFadeIn 0.4s ease;backdrop-filter:blur(10px);';
+            t.textContent = msg;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 2800);
+        }
     </script>
 </body>
 </html>
