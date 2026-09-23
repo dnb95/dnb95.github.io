@@ -53,6 +53,11 @@ window._uploadedFiles = [];
 window._coursUnsub   = null;
 window._frUnsub      = null;
 window._pinnedUnsub  = null;
+window._coursDocsCache = [];
+window._frDocsCache = [];
+window._scheduledRefreshTimer = null;
+window._scheduledAdminUnsub = null;
+window._editingScheduledCourseId = null;
 
 window._quizUnsub    = null;
 window._aiQuizUnsub  = null;
@@ -128,7 +133,7 @@ window._activityFlushTimer = null;
 window._statisticsCharts = {};
 window._statisticsCache = { users: [], sessions: [], events: [], daily: [], hourly: [], concurrent: [], activity: [], activityLifetime: [] };
 
-const GA_MEASUREMENT_ID = window.DNB_GA_MEASUREMENT_ID || "";
+const GA_MEASUREMENT_ID = window.DNB_GA_MEASUREMENT_ID || "G-YMJTRWHEK8";
 let _gaReady = false;
 
 function isAdminUser(user = currentUser) {
@@ -237,6 +242,10 @@ async function endAnalyticsSession() {
 }
 function initGoogleAnalytics() {
   if (!GA_MEASUREMENT_ID || _gaReady) return;
+  if (typeof window.gtag === "function" && Array.isArray(window.dataLayer)) {
+    _gaReady = true;
+    return;
+  }
   _gaReady = true;
   const script = document.createElement("script");
   script.async = true;
@@ -248,10 +257,28 @@ function initGoogleAnalytics() {
   gtag("js", new Date());
   gtag("config", GA_MEASUREMENT_ID, { anonymize_ip: true, send_page_view: true });
 }
+function readAnalyticsDataBlock() {
+  const block = document.getElementById("analytics-data-block");
+  if (!block) return {};
+  const out = {};
+  for (const attr of Array.from(block.attributes || [])) {
+    if (!attr.name.startsWith("data-")) continue;
+    const key = attr.name.slice(5).replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+    out[key] = analyticsSafeText(attr.value);
+  }
+  return out;
+}
+function sendGoogleAnalyticsContext(extra = {}) {
+  if (!GA_MEASUREMENT_ID || typeof window.gtag !== "function") return;
+  if (localStorage.getItem("dnb_cookie_consent") === "false") return;
+  const base = readAnalyticsDataBlock();
+  window.gtag("event", "app_context", { ...base, ...extra });
+}
 function sendGoogleAnalyticsPageView(page) {
   if (!GA_MEASUREMENT_ID || typeof window.gtag !== "function") return;
   const safePage = analyticsSafeText(page || "accueil").replace(/[^a-z0-9_-]/gi, "_").slice(0, 80);
   window.gtag("event", "page_view_app", { page_name: safePage });
+  sendGoogleAnalyticsContext({ page_name: safePage, device_class: analyticsDevice() });
 }
 
 
@@ -430,7 +457,7 @@ return {
 window.canContactUser = (targetUser) => {
   if (!currentUser || !targetUser) return false;
   if (targetUser.username === currentUser.username) return false;
-  if (targetUser.role === 'HS') return false;
+  if (targetUser.role === 'HS') return isAdminUser(currentUser);
 
   const myIsAdminOrHS = currentUser.role === 'admin' || currentUser.role === 'HS' ||
                        (currentUser.subRoles && currentUser.subRoles.includes('admin'));
@@ -618,6 +645,7 @@ window.addEventListener("hashchange", handleHashChange);
 
 window.addEventListener("DOMContentLoaded", () => {
   setTimeout(handleHashChange, 50);
+  setTimeout(() => sendGoogleAnalyticsContext({ page_name: "initialisation" }), 250);
   if (!localStorage.getItem('dnb_cookie_consent')) {
     document.getElementById('cookie-banner').style.display = 'flex';
   }
@@ -627,6 +655,7 @@ window.handleCookies = (accept) => {
   localStorage.setItem('dnb_cookie_consent', accept ? 'true' : 'false');
   document.getElementById('cookie-banner').style.display = 'none';
   if (accept) {
+     sendGoogleAnalyticsContext({ consent: "accepted" });
      console.log("Google Analytics activé");
   }
 };
@@ -741,9 +770,215 @@ window.loadStatisticsDashboard=async()=>{
     if(status)status.textContent=`Données internes : ${rangeDays} jour${rangeDays>1?"s":""}. Dernière actualisation ${formatStatsDate(Date.now())}.`;
   }catch(error){console.error("Erreur statistiques :",error);if(status)status.textContent="Impossible de charger les statistiques. Vérifie les règles Firestore pour analytics_events et analytics_sessions.";showToast("Statistiques indisponibles.");}
 };
-function statisticsExportPayload(){return{generatedAt:new Date().toISOString(),rangeDays:Number(document.getElementById("stats-range")?.value||7),summary:{users:document.getElementById("stats-kpi-users")?.textContent||"0",sessions:document.getElementById("stats-kpi-sessions")?.textContent||"0",logins:document.getElementById("stats-kpi-logins")?.textContent||"0",peakConcurrent:document.getElementById("stats-kpi-peak")?.textContent||"0",liveNow:document.getElementById("stats-kpi-live")?.textContent||"0",pageViews:document.getElementById("stats-kpi-views")?.textContent||"0"},hourlyConnections:window._statisticsCache.hourly||[],concurrentByHour:window._statisticsCache.concurrent||[],daily:window._statisticsCache.daily||{},users:window._statisticsCache.users||[],sessions:window._statisticsCache.sessions||[],events:window._statisticsCache.events||[],activity:window._statisticsCache.activity||[],activityLifetime:window._statisticsCache.activityLifetime||[]};}
-window.exportStatisticsJSON=()=>{if(!isAdminUser(currentUser))return showToast("Accès non autorisé.");const blob=new Blob([JSON.stringify(statisticsExportPayload(),null,2)],{type:"application/json;charset=utf-8"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`dnb-statistiques-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(a.href);};
-window.exportStatisticsPDF=()=>{if(!isAdminUser(currentUser))return showToast("Accès non autorisé.");if(!window.jspdf?.jsPDF)return showToast("Le module PDF n'est pas disponible.");const{jsPDF}=window.jspdf,p=statisticsExportPayload(),doc=new jsPDF({unit:"mm",format:"a4"});doc.setFontSize(20);doc.text("DnB Reviz — Rapport statistiques",14,18);doc.setFontSize(10);doc.text(`Généré le ${new Date().toLocaleString("fr-FR")} · Période: ${p.rangeDays} jour(s)`,14,25);let y=35;doc.setFontSize(12);[`Utilisateurs connus : ${p.summary.users}`,`Sessions : ${p.summary.sessions}`,`Connexions : ${p.summary.logins}`,`Pic de connectés estimé : ${p.summary.peakConcurrent}`,`Connectés maintenant : ${p.summary.liveNow}`,`Pages vues : ${p.summary.pageViews}`].forEach(t=>{doc.text(t,14,y);y+=7;});y+=4;doc.setFontSize(14);doc.text("Connexions par heure",14,y);y+=7;doc.setFontSize(10);for(let i=0;i<24;i+=4){const row=[0,1,2,3].map(j=>{const h=i+j;return`${String(h).padStart(2,"0")}h: ${p.hourlyConnections[h]||0}`;}).join("    ");doc.text(row,14,y);y+=6;}y+=4;doc.setFontSize(14);doc.text("Utilisateurs",14,y);y+=7;doc.setFontSize(9);(p.users||[]).slice(0,30).forEach(u=>{const line=`@${u.username||u.id} · ${u.role||"—"} · ${formatStatsDate(u.lastLogin)} · ${u.sessions||0} session(s) · ${[u.timezone,u.countryHint].filter(Boolean).join(" · ")||"—"}`;const wrapped=doc.splitTextToSize(line,180);if(y>275){doc.addPage();y=18;}doc.text(wrapped,14,y);y+=5*wrapped.length;});doc.save(`dnb-statistiques-${new Date().toISOString().slice(0,10)}.pdf`);};
+function buildStatisticsBreakdowns(cache) {
+  const roleCounts = new Map();
+  const deviceCounts = new Map();
+  const timezoneCounts = new Map();
+  const pageCounts = new Map();
+  (cache.users || []).forEach(u => {
+    const role = u.role || "Inconnu";
+    roleCounts.set(role, (roleCounts.get(role) || 0) + 1);
+    const tz = u.timezone || "Inconnu";
+    timezoneCounts.set(tz, (timezoneCounts.get(tz) || 0) + 1);
+  });
+  (cache.sessions || []).forEach(s => {
+    const device = s.device || "Inconnu";
+    deviceCounts.set(device, (deviceCounts.get(device) || 0) + 1);
+  });
+  (cache.events || []).filter(e => e.type === "page_view").forEach(e => {
+    const page = e.page || "inconnu";
+    pageCounts.set(page, (pageCounts.get(page) || 0) + 1);
+  });
+  const asRows = map => Array.from(map.entries()).sort((a,b) => b[1] - a[1]).map(([label, count]) => ({ label, count }));
+  return {
+    roles: asRows(roleCounts),
+    devices: asRows(deviceCounts),
+    timezones: asRows(timezoneCounts).slice(0, 50),
+    pages: asRows(pageCounts).slice(0, 50)
+  };
+}
+function statisticsExportPayload() {
+  const cache = window._statisticsCache || {};
+  const rangeDays = Number(document.getElementById("stats-range")?.value || 7);
+  const generatedAt = new Date().toISOString();
+  const breakdowns = buildStatisticsBreakdowns(cache);
+  return {
+    meta: {
+      site: "DnB Reviz",
+      siteUrl: "https://dnb95.github.io/home/",
+      generatedAt,
+      generatedAtLocal: new Date().toLocaleString("fr-FR"),
+      timezone: analyticsTimezone(),
+      locale: analyticsLocale(),
+      device: analyticsDevice(),
+      rangeDays,
+      rangeStart: new Date(Date.now() - rangeDays * 86400000).toISOString(),
+      rangeEnd: generatedAt
+    },
+    summary: {
+      users: Number(document.getElementById("stats-kpi-users")?.textContent || 0),
+      sessions: Number(document.getElementById("stats-kpi-sessions")?.textContent || 0),
+      logins: Number(document.getElementById("stats-kpi-logins")?.textContent || 0),
+      peakConcurrent: Number(document.getElementById("stats-kpi-peak")?.textContent || 0),
+      liveNow: Number(document.getElementById("stats-kpi-live")?.textContent || 0),
+      pageViews: Number(document.getElementById("stats-kpi-views")?.textContent || 0)
+    },
+    hourlyConnections: cache.hourly || [],
+    hourlyConnectionLabels: Array.from({length:24}, (_,i) => `${String(i).padStart(2,"0")}h`),
+    concurrentByHour: cache.concurrent || [],
+    concurrentHourLabels: Array.from({length:24}, (_,i) => `${String(i).padStart(2,"0")}h30`),
+    daily: cache.daily || {},
+    ...breakdowns,
+    users: cache.users || [],
+    sessions: cache.sessions || [],
+    events: cache.events || [],
+    activity: cache.activity || [],
+    activityLifetime: cache.activityLifetime || []
+  };
+}
+window.exportStatisticsJSON = () => {
+  if (!isAdminUser(currentUser)) return showToast("Accès non autorisé.");
+  const payload = statisticsExportPayload();
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `dnb-statistiques-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+async function loadImageDataUrl(url) {
+  const res = await fetch(url, {mode:"cors"});
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const blob = await res.blob();
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+window.exportStatisticsPDF = async () => {
+  if (!isAdminUser(currentUser)) return showToast("Accès non autorisé.");
+  if (!window.jspdf?.jsPDF) return showToast("Le module PDF n'est pas disponible.");
+  const {jsPDF} = window.jspdf;
+  const p = statisticsExportPayload();
+  const doc = new jsPDF({unit:"mm", format:"a4"});
+  const margin = 14;
+  const contentWidth = 182;
+  let y = 18;
+
+  try {
+    const faviconData = await loadImageDataUrl("https://upload.wikimedia.org/wikipedia/commons/4/48/DnB_website.png");
+    doc.addImage(faviconData, "PNG", margin, y - 7, 12, 12);
+  } catch (_) {
+    doc.setDrawColor(88,86,214);
+    doc.roundedRect(margin, y - 7, 12, 12, 2, 2, "S");
+    doc.setFontSize(7);
+    doc.text("DnB", margin + 2, y + 1);
+  }
+
+  doc.setFontSize(19);
+  doc.text("DnB Reviz — Rapport statistiques", margin + 16, y);
+  y += 7;
+  doc.setFontSize(9);
+  doc.text(`Généré le ${p.meta.generatedAtLocal} · Période : ${p.meta.rangeDays} jour(s)`, margin + 16, y);
+  y += 10;
+
+  const writeLine = (text, size = 10, gap = 5) => {
+    doc.setFontSize(size);
+    const lines = doc.splitTextToSize(String(text), contentWidth);
+    if (y + lines.length * gap > 282) { doc.addPage(); y = 18; }
+    doc.text(lines, margin, y);
+    y += lines.length * gap;
+  };
+  const writeTitle = title => {
+    if (y > 268) { doc.addPage(); y = 18; }
+    doc.setFontSize(14);
+    doc.text(title, margin, y);
+    y += 7;
+  };
+  const writeRows = (headers, rows, widths, maxRows = rows.length) => {
+    doc.setFontSize(7.5);
+    const colX = [margin];
+    for (let i=0;i<widths.length-1;i++) colX.push(colX[i] + widths[i]);
+    const drawRow = (cells, header=false) => {
+      const lineHeight = 4;
+      const wrapped = cells.map((cell,i) => doc.splitTextToSize(String(cell ?? ""), widths[i] - 2));
+      const rowH = Math.max(7, Math.max(...wrapped.map(a => a.length)) * lineHeight + 2);
+      if (y + rowH > 282) { doc.addPage(); y = 18; }
+      if (header) {
+        doc.setFillColor(244,244,248);
+        doc.rect(margin, y-5, widths.reduce((a,b)=>a+b,0), rowH, "F");
+      }
+      wrapped.forEach((lines,i)=>doc.text(lines, colX[i] + 1, y));
+      y += rowH;
+    };
+    drawRow(headers, true);
+    rows.slice(0, maxRows).forEach(r => drawRow(r, false));
+    y += 3;
+  };
+
+  writeTitle("Synthèse");
+  Object.entries(p.summary).forEach(([key, value]) => writeLine(`${key} : ${value}`, 10, 5));
+
+  writeTitle("Connexions par heure");
+  const hourlyRows = [];
+  for (let i=0;i<24;i++) hourlyRows.push([p.hourlyConnectionLabels[i], p.hourlyConnections[i] || 0, p.concurrentByHour[i] || 0]);
+  writeRows(["Heure","Connexions","Connectés estimés"], hourlyRows, [45,55,70]);
+
+  writeTitle("Évolution quotidienne");
+  const dailyRows = (p.daily.labels || []).map((label,i)=>[label, p.daily.sessions?.[i] || 0, p.daily.views?.[i] || 0]);
+  writeRows(["Jour","Sessions","Pages vues"], dailyRows, [55,55,60]);
+
+  writeTitle("Répartition des utilisateurs et sessions");
+  writeRows(["Rôle","Nombre"], p.roles.map(r=>[r.label,r.count]), [110,60]);
+  writeRows(["Appareil","Sessions"], p.devices.map(r=>[r.label,r.count]), [110,60]);
+
+  writeTitle("Fuseaux et navigation");
+  writeRows(["Fuseau","Utilisateurs"], p.timezones.map(r=>[r.label,r.count]), [130,40], 50);
+  writeRows(["Page","Vues"], p.pages.map(r=>[r.label,r.count]), [130,40], 50);
+
+  writeTitle("Activité récente");
+  const activityRows = (p.activity || []).slice().sort((a,b)=>Number(b.durationMs||0)-Number(a.durationMs||0));
+  writeRows(["Utilisateur","Durée ms","Sessions","Pages","Quiz","Quiz terminés","Recherches"],
+    activityRows.map(r=>[r.username||r.id, r.durationMs||0, r.sessions||0, r.pageViews||0, r.quizStarts||0, r.quizCompletes||0, r.searches||0]),
+    [40,28,22,20,18,28,26], activityRows.length);
+
+  writeTitle("Activité cumulée");
+  const lifetimeRows = (p.activityLifetime || []).slice().sort((a,b)=>Number(b.durationMs||0)-Number(a.durationMs||0));
+  writeRows(["Utilisateur","Durée ms","Sessions","Pages","Quiz","Quiz terminés","Recherches","Likes","Commentaires"],
+    lifetimeRows.map(r=>[
+      r.username||r.id, r.durationMs||0, r.sessions||0, r.pageViews||0,
+      r.quizStarts||0, r.quizCompletes||0, r.searches||0, r.likes||0, r.comments||0
+    ]),
+    [32,24,18,18,16,24,20,16,24], lifetimeRows.length);
+
+  writeTitle("Utilisateurs");
+  writeRows(["Utilisateur","Rôle","Dernière connexion","Sessions","Dernière page","Lieu"],
+    (p.users || []).map(u=>[
+      `@${u.username||u.id}`, u.role||"—", formatStatsDate(u.lastLogin), u.sessions||0,
+      u.lastPage||"—", [u.timezone,u.countryHint].filter(Boolean).join(" · ")||"—"
+    ]),
+    [35,25,36,18,34,34], (p.users || []).length);
+
+  writeTitle("Sessions");
+  writeRows(["ID","Utilisateur","Début","Dernière activité","Appareil","Fuseau"],
+    (p.sessions || []).map(s=>[
+      s.id||"—", `@${s.username||s.userId||"—"}`, formatStatsDate(s.startedAt), formatStatsDate(s.lastSeenAt),
+      s.device||"—", s.timezone||"—"
+    ]),
+    [34,28,34,34,24,28], (p.sessions || []).length);
+
+  writeTitle("Événements analytiques");
+  writeRows(["Type","Utilisateur","Date","Page","Appareil"],
+    (p.events || []).map(e=>[
+      e.type||"—", `@${e.username||e.userId||"—"}`, formatStatsDate(e.timestamp), e.page||"—", e.device||"—"
+    ]),
+    [32,31,34,50,35], (p.events || []).length);
+
+  doc.save(`dnb-statistiques-${new Date().toISOString().slice(0,10)}.pdf`);
+};
 
 function handleHashChange() {
   let hash = window.location.hash.trim();
@@ -1491,12 +1726,20 @@ function hydrateSession(u, options = {}) {
     syncAdminDashboardStats();
     syncAdminUsers();
     syncAdminMats();
+    syncAdminScheduledCourses();
   }
   
   loadAnnonces();
   loadPinnedAnnonces();
   loadCoursFeed();
   loadFRFeed();
+  startScheduledCourseRefreshTimer();
+  if (document.getElementById("group-post-schedule")) {
+    const canSchedule = isProfessorUser(u) || isAdminUser(u);
+    document.getElementById("group-post-schedule").style.display = canSchedule ? "flex" : "none";
+    toggleScheduledCourseFields();
+    if (canSchedule) setDefaultScheduleDate();
+  }
   loadDMChats(); 
 if (document.getElementById("page-quiz").classList.contains("active")) {
   loadQuizFeed();
@@ -2099,10 +2342,35 @@ window.submitReport = async () => {
   }
 };
 
+function isPendingScheduledCourse(post) {
+  return post?.type === "cours" && Number(post?.publishAt || 0) > Date.now() && post?.publicationStatus === "scheduled";
+}
+function canManageScheduledCourse(post) {
+  return !!post && isPendingScheduledCourse(post) &&
+    (isAdminUser(currentUser) || post.authorId === currentUser?.username);
+}
+function formatDateTimeLocal(ts) {
+  const d = new Date(Number(ts || 0));
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function scheduleDateLabel(ts) {
+  return new Date(Number(ts || 0)).toLocaleString("fr-FR", {
+    weekday: "short", day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit"
+  });
+}
+function canViewScheduledCourse(post) {
+  if (!isPendingScheduledCourse(post)) return true;
+  return isAdminUser(currentUser) || post.authorId === currentUser?.username;
+}
 window.getPostHTML = (p, context) => {
   const pId = p.id;
   const isAdmin = currentUser?.role === "admin" || (currentUser?.subRoles && currentUser.subRoles.includes("admin"));
   const canDel = isAdmin || p.authorId === currentUser?.username;
+  const pendingSchedule = isPendingScheduledCourse(p);
+  const canEditSchedule = canManageScheduledCourse(p);
   const hasLiked = (p.likes || []).includes(currentUser?.username);
   const likeCount = (p.likes || []).length;
 
@@ -2159,13 +2427,17 @@ window.getPostHTML = (p, context) => {
     const lowerU = u.toLowerCase();
     const t = (f.type || "").toLowerCase();
     const yt = getYouTubeEmbed(u);
-    const isPDF = t === "application/pdf" || lowerU.endsWith(".pdf");
-    const isVideo = !isPDF && (t === "video/mp4" || lowerU.endsWith(".mp4"));
-    const isImg = !isPDF && !isVideo && (t.startsWith("image/") || lowerU.match(/\.(jpeg|jpg|gif|png|webp)$/i) || lowerU.includes("res.cloudinary.com"));
+    const isPDF = t === "application/pdf" || /\.pdf(?:[?#]|$)/i.test(lowerU);
+    const isVideo = !isPDF && (t === "video/mp4" || /\.mp4(?:[?#]|$)/i.test(lowerU));
+    const isSpreadsheet = /\.((xlsx|xls|xlsm|csv))(?:[?#]|$)/i.test(lowerU) ||
+      /spreadsheetml|ms-excel|text\/csv|application\/csv/i.test(t);
+    const isCloudinaryImage = /res\.cloudinary\.com\/[^/]+\/image\/upload\//i.test(lowerU);
+    const isImg = !isPDF && !isVideo && !isSpreadsheet &&
+      (t.startsWith("image/") || /\.(jpeg|jpg|gif|png|webp|avif)(?:[?#]|$)/i.test(lowerU) || isCloudinaryImage);
     if (yt) youtube = { url: u, embedUrl: yt, name: f.name || "YouTube", type: "video/youtube" };
     else if (isImg) images.push({ ...f, kind: "image", _order: index });
     else if (isVideo) videos.push({ ...f, kind: "video", _order: index });
-    else if (f.url) docs.push(f);
+    else if (f.url) docs.push({ ...f, isSpreadsheet });
   });
 
   const mediaItems = [];
@@ -2206,15 +2478,20 @@ window.getPostHTML = (p, context) => {
   if (docs.length > 0) {
     fileChips = docs.map(d => {
       const cleanName = d.name || p.title || "Document";
-      const isPDF = d.type === "application/pdf" || (d.url || "").toLowerCase().endsWith(".pdf");
+      const lowerName = cleanName.toLowerCase();
+      const lowerUrl = (d.url || "").toLowerCase();
+      const isPDF = d.type === "application/pdf" || /\.pdf(?:[?#]|$)/i.test(lowerUrl) || /\.pdf$/i.test(lowerName);
+      const isSpreadsheet = !!d.isSpreadsheet || /\.(xlsx|xls|xlsm|csv)(?:[?#]|$)/i.test(lowerUrl) ||
+        /spreadsheetml|ms-excel|text\/csv|application\/csv/i.test((d.type || "").toLowerCase());
       return `
       <div class="file-chip mt-1">
         <div class="file-chip-info" title="${esc(cleanName)}">
-          <span style="font-size:22px">${isPDF ? "📄" : "🔗"}</span>
+          <span style="font-size:22px">${isSpreadsheet ? "📊" : isPDF ? "📄" : "🔗"}</span>
           <span>${cleanName}</span>
         </div>
         <a href="${d.url}" target="_blank" rel="noopener" class="btn-download">📥 Consulter</a>
-      </div>`;
+      </div>
+      `;
     }).join("");
   }
 
@@ -2290,6 +2567,7 @@ window.getPostHTML = (p, context) => {
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
+            ${canEditSchedule ? `<button class="btn-ghost btn-sm" onclick="editScheduledCourse('${pId}')">Modifier</button>` : ""}
             ${canDel ? `<button class="btn-danger btn-sm" onclick="deletePost('${pId}')">Supprimer</button>` : ""}
             <button onclick="openReportModal('${pId}', '${esc(p.title || "Document")}', '${p.authorId}')" style="background:transparent; color:var(--ink-m); font-size:20px; font-weight:bold; cursor:pointer; padding:0 6px; border:none; line-height:1;" title="Signaler la publication">…</button>
           </div>
@@ -2298,12 +2576,13 @@ window.getPostHTML = (p, context) => {
           <div>
   <div class="post-title">${p.title.length > 50 ? p.title.substring(0, 47) + '...' : p.title}</div>
   ${p.description ? `<div class="post-desc">${sanitizeRichText(p.description)}</div>` : ""}
+  ${pendingSchedule ? `<div class="schedule-badge">📅 Sortie prévue le ${escapeHTML(scheduleDateLabel(p.publishAt))}</div>` : ""}
 </div>
         ${fileChips}
         ${mediaBox}
       </div>
       <div>
-        <div class="post-date">Publié le ${dateStr}</div>
+        <div class="post-date">${pendingSchedule ? `Programmé le ${dateStr}` : `Publié le ${dateStr}`}</div>
         <div class="post-actions">
           <button class="like-btn ${hasLiked ? "liked" : ""}" onclick="toggleLike('${pId}')">
             ${hasLiked ? "❤️" : "🤍"} ${likeCount}
@@ -2409,6 +2688,22 @@ function loadPinnedAnnonces() {
   });
 }
 
+function refreshScheduledCourseVisibility() {
+  if (!currentUser || !document.getElementById("page-cours")?.classList.contains("active")) return;
+  const container = document.getElementById("cours-feed");
+  if (!container || !Array.isArray(window._coursDocsCache)) return;
+  let docs = window._coursDocsCache.filter(canViewScheduledCourse);
+  if (window._coursFilter.tags.length) docs = docs.filter(p => (Array.isArray(p.tags) ? p.tags : []).some(tag => window._coursFilter.tags.includes(tag)));
+  if (window._coursFilter.order === "likes") docs.sort((a,b) => (b.likes || []).length - (a.likes || []).length);
+  else if (window._coursFilter.order === "oldest") docs.sort((a,b) => (a.timestamp || 0) - (b.timestamp || 0));
+  else docs.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+  renderFeedFromDocs(docs, container, "Aucun cours disponible pour le moment", "recent", "cours");
+}
+function startScheduledCourseRefreshTimer() {
+  if (window._scheduledRefreshTimer) clearInterval(window._scheduledRefreshTimer);
+  window._scheduledRefreshTimer = setInterval(refreshScheduledCourseVisibility, 30000);
+}
+
 function loadCoursFeed() {
 if (window._coursUnsub) { window._coursUnsub(); window._coursUnsub = null; }
 
@@ -2425,7 +2720,8 @@ if (window._coursFilter.subject !== "all") {
 
 window._coursUnsub = onSnapshot(q, snap => {
   let docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  docs = window.filterVisibleContent(docs, 'post');
+  docs = window.filterVisibleContent(docs, 'post').filter(canViewScheduledCourse);
+  window._coursDocsCache = docs;
   if (window._coursFilter.tags.length) docs = docs.filter(p => (Array.isArray(p.tags) ? p.tags : []).some(tag => window._coursFilter.tags.includes(tag)));
   if (window._coursFilter.order === 'likes') {
     docs.sort((a,b) => (b.likes || []).length - (a.likes || []).length);
@@ -2458,6 +2754,7 @@ if (window._frFilter.subject === "all") {
 window._frUnsub = onSnapshot(q, snap => {
 let docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 docs = window.filterVisibleContent(docs, 'post');
+window._frDocsCache = docs;
 if (window._frFilter.order === 'likes') {
   docs.sort((a,b) => (b.likes || []).length - (a.likes || []).length);
 } else if (window._frFilter.order === 'oldest') {
@@ -2603,14 +2900,24 @@ window.handlePostTypeChange = () => {
   const matiereGroup = document.getElementById("group-post-matiere");
   const tagsGroup = document.getElementById("group-post-tags");
   const visibilityGroup = document.getElementById("group-post-announcement-visibility");
+  const scheduleGroup = document.getElementById("group-post-schedule");
+  const canSchedule = isAdminUser(currentUser) || isProfessorUser(currentUser);
   if (type === "annonce") {
     matiereGroup.style.display = "none";
     if (tagsGroup) tagsGroup.style.display = "none";
     if (visibilityGroup) visibilityGroup.style.display = "flex";
+    if (scheduleGroup) scheduleGroup.style.display = "none";
   } else {
     matiereGroup.style.display = "flex";
     if (tagsGroup) tagsGroup.style.display = type === "cours" ? "flex" : "none";
     if (visibilityGroup) visibilityGroup.style.display = "none";
+    if (scheduleGroup) {
+      scheduleGroup.style.display = type === "cours" && canSchedule ? "flex" : "none";
+      if (type === "cours" && canSchedule) {
+        setDefaultScheduleDate();
+        toggleScheduledCourseFields();
+      }
+    }
   }
 };
 
@@ -2767,13 +3074,92 @@ function initCustomMp4Players(root = document) {
   });
 }
 
+function resetCoursePublishForm() {
+  window._editingScheduledCourseId = null;
+  const mode = document.getElementById("post-publish-mode");
+  const at = document.getElementById("post-publish-at");
+  const group = document.getElementById("group-post-schedule");
+  const wrap = document.getElementById("post-publish-at-wrap");
+  const btn = document.getElementById("post-submit-btn");
+  if (mode) mode.value = "now";
+  if (at) at.value = "";
+  if (group) group.dataset.editing = "false";
+  if (wrap) wrap.style.display = "none";
+  if (btn) btn.innerText = "Partager avec la classe";
+}
+window.toggleScheduledCourseFields = () => {
+  const mode = document.getElementById("post-publish-mode")?.value || "now";
+  const wrap = document.getElementById("post-publish-at-wrap");
+  if (wrap) wrap.style.display = mode === "scheduled" ? "flex" : "none";
+};
+function setDefaultScheduleDate() {
+  const input = document.getElementById("post-publish-at");
+  if (!input) return;
+  const minTs = Date.now() + 60 * 1000;
+  input.min = formatDateTimeLocal(minTs);
+  if (!input.value) {
+    input.value = formatDateTimeLocal(Date.now() + 60 * 60 * 1000);
+  }
+}
+async function editScheduledCourse(postId) {
+  if (!currentUser) return;
+  const snap = await getDoc(doc(db, "posts", postId));
+  if (!snap.exists()) return showToast("Cours introuvable.");
+  const post = { id: snap.id, ...snap.data() };
+  if (!canManageScheduledCourse(post)) {
+    showToast("Modification non autorisée.");
+    return;
+  }
+  window._editingScheduledCourseId = postId;
+  document.getElementById("post-title").value = post.title || "";
+  document.getElementById("post-type").value = "cours";
+  const mat = document.getElementById("post-matiere");
+  if (mat && !Array.from(mat.options).some(opt => opt.value === post.matiere)) {
+    const subjectsSnap = await getDocs(collection(db, "subjects"));
+    mat.innerHTML = "";
+    subjectsSnap.forEach(d => {
+      const subject = d.data();
+      const opt = document.createElement("option");
+      opt.value = subject.name;
+      opt.textContent = `${subject.icon || "📚"} ${subject.name}`;
+      mat.appendChild(opt);
+    });
+  }
+  if (mat) mat.value = post.matiere || "";
+  document.getElementById("post-desc").value = post.description || "";
+  const editor = document.getElementById("post-desc-editor");
+  if (editor) editor.innerHTML = post.description || "";
+  document.getElementById("post-url").value = "";
+  clearFile();
+  const scheduleGroup = document.getElementById("group-post-schedule");
+  if (scheduleGroup) scheduleGroup.style.display = isProfessorUser(currentUser) || isAdminUser(currentUser) ? "flex" : "none";
+  const mode = document.getElementById("post-publish-mode");
+  if (mode) mode.value = "scheduled";
+  const at = document.getElementById("post-publish-at");
+  if (at) at.value = formatDateTimeLocal(post.publishAt);
+  toggleScheduledCourseFields();
+  const btn = document.getElementById("post-submit-btn");
+  if (btn) btn.innerText = "Enregistrer la programmation";
+  switchTab("depot");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  showToast("Programmation chargée pour modification.");
+}
+window.editScheduledCourse = editScheduledCourse;
+
 window.handleCreatePost = async () => {
   const title = document.getElementById("post-title").value.trim();
   const type = document.getElementById("post-type").value;
+  const isScheduleCapable = isAdminUser(currentUser) || isProfessorUser(currentUser);
+  const publishMode = type === "cours" && isScheduleCapable
+    ? (document.getElementById("post-publish-mode")?.value || "now")
+    : "now";
+  const publishAtValue = publishMode === "scheduled"
+    ? Number(new Date(document.getElementById("post-publish-at")?.value || "").getTime())
+    : 0;
   const announcementVisibility = type === "annonce"
     ? (document.getElementById("post-announcement-visibility")?.value || "tous")
     : "tous";
-  
+
   let matiere = "Annonces";
   if (type !== "annonce") {
     matiere = document.getElementById("post-matiere").value;
@@ -2782,101 +3168,144 @@ window.handleCreatePost = async () => {
       return;
     }
   }
-  
-  syncRichTextDescription();
-  const desc = sanitizeRichText(document.getElementById("post-desc").value || "");
-  const tags = type === "cours" ? getSelectedTags('input[name="post-tag"]') : [];
-  const urlInput = document.getElementById("post-url").value.trim();
-  
+
   if (!title) {
     showToast("Titre requis.");
     return;
   }
-
-  let filesArray = [];
-  if ((window._uploadedFiles && window._uploadedFiles.length > 0) || urlInput) {
-    const btn = document.querySelector('[onclick="handleCreatePost()"]'); 
-    if (btn) { btn.disabled = true; btn.innerText = "Upload des fichiers en cours…"; }
-    
-    try {
-      const ytUrl = urlInput ? (getYouTubeEmbedUrl(urlInput) ? urlInput : null) : null;
-      if (ytUrl) {
-        filesArray.push({ url: ytUrl, name: "YouTube", type: "video/youtube" });
-      }
-      for (const file of (window._uploadedFiles || [])) {
-        const fileUrl = await uploadToCloudinary(file);
-        filesArray.push({
-          url: fileUrl,
-          name: file.name,
-          type: file.type
-        });
-      }
-      if (urlInput && !ytUrl) {
-        filesArray.push({ url: urlInput, name: "Lien externe", type: "link" });
-      }
-    } catch (err) {
-      showToast("Erreur lors de l'upload Cloudinary."); 
-      if (btn) { btn.disabled = false; btn.innerText = "Partager avec la classe"; } 
+  if (publishMode === "scheduled") {
+    if (!publishAtValue || publishAtValue <= Date.now()) {
+      showToast("Choisis une date et une heure futures pour la sortie.");
       return;
     }
-    
-    if (btn) { btn.disabled = false; btn.innerText = "Partager avec la classe"; }
-  } else if (urlInput) {
-    filesArray.push({
-      url: urlInput,
-      name: "Lien externe",
-      type: "link"
-    });
+  }
+
+  const editingId = window._editingScheduledCourseId;
+  let existingPost = null;
+  if (editingId) {
+    const existingSnap = await getDoc(doc(db, "posts", editingId));
+    if (!existingSnap.exists()) {
+      resetCoursePublishForm();
+      showToast("La programmation n'existe plus.");
+      return;
+    }
+    existingPost = { id: existingSnap.id, ...existingSnap.data() };
+    if (!canManageScheduledCourse(existingPost)) {
+      resetCoursePublishForm();
+      showToast("Modification non autorisée.");
+      return;
+    }
+    if (publishMode !== "scheduled") {
+      showToast("Une programmation doit conserver une date de sortie future.");
+      return;
+    }
+  }
+
+  syncRichTextDescription();
+  const desc = sanitizeRichText(document.getElementById("post-desc").value || "");
+  const tags = type === "cours" ? getSelectedTags('input[name="post-tag"]') : [];
+  const urlInput = document.getElementById("post-url").value.trim();
+
+  let filesArray = Array.isArray(existingPost?.files) ? existingPost.files : [];
+  const hasNewFiles = (window._uploadedFiles && window._uploadedFiles.length > 0) || urlInput;
+  if (hasNewFiles) {
+    const btn = document.getElementById("post-submit-btn");
+    if (btn) { btn.disabled = true; btn.innerText = "Upload des fichiers en cours…"; }
+
+    try {
+      const nextFiles = [];
+      const ytUrl = urlInput ? (getYouTubeEmbedUrl(urlInput) ? urlInput : null) : null;
+      if (ytUrl) nextFiles.push({ url: ytUrl, name: "YouTube", type: "video/youtube" });
+      for (const file of (window._uploadedFiles || [])) {
+        const fileUrl = await uploadToCloudinary(file);
+        nextFiles.push({ url: fileUrl, name: file.name, type: file.type });
+      }
+      if (urlInput && !ytUrl) nextFiles.push({ url: urlInput, name: "Lien externe", type: "link" });
+
+      filesArray = editingId ? [...filesArray, ...nextFiles].slice(0, 5) : nextFiles;
+      if (filesArray.length > 5) {
+        showToast("Maximum 5 fichiers par cours.");
+        if (btn) { btn.disabled = false; btn.innerText = editingId ? "Enregistrer la programmation" : "Partager avec la classe"; }
+        return;
+      }
+    } catch (err) {
+      showToast("Erreur lors de l'upload Cloudinary.");
+      if (btn) { btn.disabled = false; btn.innerText = editingId ? "Enregistrer la programmation" : "Partager avec la classe"; }
+      return;
+    }
+    if (btn) { btn.disabled = false; btn.innerText = editingId ? "Enregistrer la programmation" : "Partager avec la classe"; }
   }
 
   const firstFile = filesArray[0] || {};
-  const post = {
+  const basePost = {
     title, matiere, type, description: desc, tags,
     files: filesArray,
     fileData: firstFile.url || "",
     fileName: firstFile.name || "",
     fileType: firstFile.type || "",
-    url: firstFile.url || urlInput || "",
-    authorId: currentUser.username,
-    authorDisplayName: currentUser.displayName || currentUser.username,
-    authorAvatar: currentUser.avatar || "",
-    authorRole: currentUser.role || "élève",
+    url: firstFile.url || urlInput || existingPost?.url || "",
+    authorId: editingId ? existingPost.authorId : currentUser.username,
+    authorDisplayName: editingId ? (existingPost.authorDisplayName || currentUser.displayName || currentUser.username) : (currentUser.displayName || currentUser.username),
+    authorAvatar: editingId ? (existingPost.authorAvatar || currentUser.avatar || "") : (currentUser.avatar || ""),
+    authorRole: editingId ? (existingPost.authorRole || currentUser.role || "élève") : (currentUser.role || "élève"),
     announcementVisibility,
-    etablissementId: currentUser.etablissementId || "",
-    classeId: currentUser.classeId || "",
-    likes: [], comments: [], timestamp: Date.now(),
+    etablissementId: editingId ? (existingPost.etablissementId || currentUser.etablissementId || "") : (currentUser.etablissementId || ""),
+    classeId: editingId ? (existingPost.classeId || currentUser.classeId || "") : (currentUser.classeId || "")
   };
 
   try {
-    await addDoc(collection(db, "posts"), post);
-    trackActivityEvent("post_create");
-    
-    document.getElementById("post-title").value = ""; 
+    if (editingId) {
+      await updateDoc(doc(db, "posts", editingId), {
+        ...basePost,
+        publishAt: publishAtValue,
+        publicationStatus: "scheduled",
+        updatedAt: Date.now()
+      });
+      void recordAnalyticsEvent("scheduled_course_update", {
+        postId: analyticsSafeText(editingId),
+        publishAt: publishAtValue
+      });
+      showToast("Programmation mise à jour ✓");
+    } else {
+      const post = {
+        ...basePost,
+        likes: [], comments: [], timestamp: Date.now()
+      };
+      if (publishMode === "scheduled") {
+        post.publishAt = publishAtValue;
+        post.publicationStatus = "scheduled";
+      }
+      await addDoc(collection(db, "posts"), post);
+      trackActivityEvent("post_create");
+      showToast(publishMode === "scheduled" ? "Cours programmé ✓" : "Partagé avec la classe ✓");
+
+      if (publishMode !== "scheduled" && currentUser.followers && currentUser.followers.length > 0) {
+        currentUser.followers.forEach(uname => {
+          const fUser = window.usersMap.get(uname);
+          if (fUser) sendEmailNotif('post', fUser);
+        });
+      }
+    }
+
+    document.getElementById("post-title").value = "";
     document.getElementById("post-desc").value = "";
     const postDescEditor = document.getElementById("post-desc-editor");
     if (postDescEditor) postDescEditor.innerHTML = "";
-    syncRichTextDescription(); 
+    syncRichTextDescription();
     document.getElementById("post-url").value = "";
     const announcementVisibilityEl = document.getElementById("post-announcement-visibility");
     if (announcementVisibilityEl) announcementVisibilityEl.value = "tous";
     document.querySelectorAll('input[name="post-tag"]').forEach(el => el.checked = false);
-    clearFile(); 
-    syncContrib(); 
-    showToast("Partagé avec la classe ✓");
-    
-    if (currentUser.followers && currentUser.followers.length > 0) {
-       currentUser.followers.forEach(uname => {
-         const fUser = window.usersMap.get(uname);
-         if (fUser) sendEmailNotif('post', fUser);
-       });
-    }
+    clearFile();
+    resetCoursePublishForm();
+    syncContrib();
 
-    if (type === "cours") switchTab('cours'); 
+    if (type === "cours") switchTab('cours');
     else if (type === "annonce") switchTab('accueil');
     else switchTab('fichesrev');
-    
-  } catch(e) { 
-    showToast("Erreur d'envoi."); 
+  } catch(e) {
+    console.error(e);
+    showToast("Erreur d'envoi.");
   }
 };
 
@@ -3449,7 +3878,7 @@ window._dmChatsUnsub = onSnapshot(q, snap => {
     const otherUname = chat.participants.find(u => u !== currentUser.username);
     const otherUser = window.usersMap.get(otherUname);
     if (!otherUser) return false;
-    if (otherUser.role === 'HS') return false;
+    if (otherUser.role === 'HS' && !isAdminUser(currentUser)) return false;
     if (filters.isAdminOrHS) return true;
     const otherIsAdmin = otherUser.role === 'admin' || (otherUser.subRoles && otherUser.subRoles.includes('admin'));
     if (otherIsAdmin) return true;
@@ -3510,8 +3939,10 @@ window.renderContactSearch = () => {
   
   for (const [uname, u] of window.usersMap.entries()) {
     if (uname === currentUser.username) continue;
-    if (u.allowMessages === false) continue;
-    if (!window.canContactUser(u)) continue;
+    if (u.role === 'HS') {
+      if (!isAdminUser(currentUser)) continue;
+    } else if (u.allowMessages === false) continue;
+    if (!window.canContactUser(u) && !(isAdminUser(currentUser) && u.role === 'HS')) continue;
     
     const dName = u.displayName || uname;
     if (!v || dName.toLowerCase().includes(v) || uname.includes(v)) {
@@ -3537,8 +3968,13 @@ if (!currentUser) return;
 const targetUser = window.usersMap.get(targetUname);
 if (!targetUser) { showToast("Utilisateur introuvable."); return; }
 
-if (!window.canContactUser(targetUser) || targetUser.role === 'HS') {
-  showToast("Vous ne pouvez pas ouvrir de conversation avec un compte HS.");
+if (targetUser.role === 'HS') {
+  if (!isAdminUser(currentUser)) {
+    showToast("Seuls les administrateurs peuvent contacter un compte HS.");
+    return;
+  }
+} else if (!window.canContactUser(targetUser)) {
+  showToast("Vous ne pouvez pas ouvrir cette conversation.");
   return;
 }
   closeModal('m-new-chat');
@@ -3561,6 +3997,11 @@ if (!window.canContactUser(targetUser) || targetUser.role === 'HS') {
 };
 
 window.openChat = async (chatId, partnerUname) => {
+  const partner = window.usersMap.get(partnerUname);
+  if (partner?.role === "HS" && !isAdminUser(currentUser)) {
+    showToast("Seuls les administrateurs peuvent accéder aux conversations HS.");
+    return;
+  }
   window._activeChatId = chatId;
   window._activeChatPartnerId = partnerUname;
 
@@ -3675,6 +4116,12 @@ window.handleDMFile = (e) => {
 window.handleSendDM = async (e) => {
   e.preventDefault();
   if (!window._activeChatId) return;
+
+  const recipientUser = window.usersMap.get(window._activeChatPartnerId);
+  if (recipientUser?.role === "HS" && !isAdminUser(currentUser)) {
+    showToast("Seuls les administrateurs peuvent envoyer des messages aux comptes HS.");
+    return;
+  }
   
   const input = document.getElementById("dm-text-input");
   const txt = input.value.trim();
@@ -4516,6 +4963,39 @@ window.renderAdminUsersTable = () => {
   `).join("");
 };
 
+function syncAdminScheduledCourses() {
+  if (!isAdminUser(currentUser)) return;
+  if (window._scheduledAdminUnsub) window._scheduledAdminUnsub();
+  const q = query(collection(db, "posts"), where("type", "==", "cours"));
+  window._scheduledAdminUnsub = onSnapshot(q, snap => {
+    const tb = document.getElementById("admin-scheduled-courses-tb");
+    if (!tb) return;
+    const rows = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(p => isPendingScheduledCourse(p))
+      .sort((a,b) => Number(a.publishAt || 0) - Number(b.publishAt || 0));
+    if (!rows.length) {
+      tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--ink-m);">Aucun cours programmé.</td></tr>';
+      return;
+    }
+    tb.innerHTML = rows.map(p => {
+      const author = window.usersMap.get(p.authorId) || {};
+      const authorName = author.displayName || p.authorDisplayName || p.authorId || "—";
+      return `<tr>
+        <td><strong>${escapeHTML(p.title || "Cours sans titre")}</strong></td>
+        <td>${escapeHTML(p.matiere || "—")}</td>
+        <td>@${escapeHTML(p.authorId || "—")}<div class="caption">${escapeHTML(authorName)}</div></td>
+        <td>${escapeHTML(scheduleDateLabel(p.publishAt))}</td>
+        <td><div class="td-acts">
+          <button class="btn-ghost btn-sm" onclick="editScheduledCourse('${p.id}')">Modifier</button>
+          <button class="btn-danger btn-sm" onclick="deletePost('${p.id}')">Suppr.</button>
+        </div></td>
+      </tr>`;
+    }).join("");
+  });
+}
+window.syncAdminScheduledCourses = syncAdminScheduledCourses;
+
 window.switchAdminTab = (tabName) => {
   document.querySelectorAll('[data-adm-tab]').forEach(b => b.classList.remove('active'));
   const activeBtn = document.querySelector(`[data-adm-tab="${tabName}"]`);
@@ -4897,6 +5377,7 @@ document.addEventListener("click", e => {
 window.openModal = id => {
   document.getElementById(id).classList.add("active");
   if (id === 'm-new-chat') renderContactSearch();
+  if (id === 'm-legals') sendGoogleAnalyticsContext({ legal_view: "mentions_legales" });
 };
 
 window.closeModal = id => document.getElementById(id).classList.remove("active");
