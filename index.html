@@ -481,18 +481,11 @@
           </div>
         </div>
         <div class="or-div">ou</div>
-        <div class="input-group schedule-course-group" id="group-post-schedule" style="display:none;">
-          <label>Publication du cours</label>
-          <select id="post-publish-mode" onchange="toggleScheduledCourseFields()">
-            <option value="now">Publier immédiatement</option>
-            <option value="scheduled">Programmer la sortie</option>
-          </select>
-          <div id="post-publish-at-wrap" class="schedule-datetime-wrap" style="display:none;">
-            <input type="datetime-local" id="post-publish-at" aria-label="Date et heure de publication">
-            <div class="caption">Le cours reste modifiable et supprimable jusqu’à sa sortie. Les administrateurs voient toutes les programmations.</div>
-          </div>
+        <div class="input-group">
+          <label>Lien externe (Drive, PDF en ligne…)</label>
+          <input type="url" id="post-url" placeholder="YouTube, Drive, PDF en ligne…">
         </div>
-        <button class="btn-pill mt-2" id="post-submit-btn" onclick="handleCreatePost()" style="width:100%;justify-content:center;padding:13px">
+        <button class="btn-pill mt-2" onclick="handleCreatePost()" style="width:100%;justify-content:center;padding:13px">
           Partager avec la classe
         </button>
       </div>
@@ -746,7 +739,6 @@
         <button class="tk-tab active" data-adm-tab="membres" onclick="switchAdminTab('membres')" style="padding:12px 20px; font-size:16px;">Membres</button>
         <button class="tk-tab" data-adm-tab="matieres" onclick="switchAdminTab('matieres')" style="padding:12px 20px; font-size:16px;">Matières</button>
 <button class="tk-tab" data-adm-tab="classes" onclick="switchAdminTab('classes')" style="padding:12px 20px; font-size:16px;">Classes & Établissements</button>
-        <button class="tk-tab" data-adm-tab="programmation" onclick="switchAdminTab('programmation')" style="padding:12px 20px; font-size:16px;">📅 Programmation</button>
         <button class="tk-tab" data-adm-tab="moderation" onclick="switchAdminTab('moderation')" style="padding:12px 20px; font-size:16px; position:relative;">
           Modération
           <span id="admin-mod-dot" style="display:none; width:10px; height:10px; background:var(--danger); border-radius:50%; position:absolute; top:8px; right:6px;"></span>
@@ -789,21 +781,6 @@
           <thead><tr><th>Icône</th><th>Matière</th><th>Actions</th></tr></thead>
           <tbody id="admin-mat-tb"></tbody>
         </table>
-      </div>
-
-      <div id="adm-view-programmation" class="adm-tab-content" style="display:none;">
-        <div class="adm-head" style="margin-top:0; margin-bottom:16px;">
-          <div>
-            <h3>📅 Cours programmés</h3>
-            <div class="caption">Toutes les programmations sont visibles ici. Elles restent modifiables et supprimables avant leur sortie.</div>
-          </div>
-        </div>
-        <div class="scheduled-admin-list-wrap">
-          <table class="admin-table">
-            <thead><tr><th>Cours</th><th>Matière</th><th>Auteur</th><th>Sortie prévue</th><th>Actions</th></tr></thead>
-            <tbody id="admin-scheduled-courses-tb"></tbody>
-          </table>
-        </div>
       </div>
 
       <div id="adm-view-moderation" class="adm-tab-content" style="display:none;">
@@ -1024,14 +1001,7 @@
       <p><strong>Hébergement :</strong> GitHub Pages (GitHub Inc.) | 88 Colin P. Kelly Jr. Street San Francisco, CA 94107, États-Unis</p>
       <p><strong>Base de données :</strong> Firebase (Google LLC) | 1600 Amphitheatre Parkway, Mountain View, CA 94043, États-Unis</p>
       <p><strong>Données Personnelles :</strong> Seuls les noms et prénoms des élèves sont stockés dans la base de données. Les mots de passe et adresses e-mail ne sont <strong>pas</strong> conservés par soucis de confidentialité, même à titre de tests.</p>
-      <p><strong>Mesure d’audience :</strong> Un bloc de contexte technique invisible est présent dans cette page afin d’alimenter les mesures Google Analytics avec des informations non directement identifiantes comme la section consultée, le type d’appareil et la version du site.</p>
-      <div id="analytics-data-block" hidden aria-hidden="true"
-           data-site="dnb-reviz"
-           data-site-url="https://dnb95.github.io/home/"
-           data-version="2026.09.23"
-           data-environment="production"
-           data-app="revision-platform"></div>
-      <p><strong>Contact concernant les données personnelles :</strong>Pour toute demande relative à tes données personnelles, tu peux contacter l’éditeur à l'adresse : dan.bouillet14@gmail.com.</p>
+      <p><strong>Contact concernant les données personnelles :</strong>Pour toute demande relative à tes données personnelles, tu peux contacter l'éditeur à l'adresse : dan.bouillet14@gmail.com.</p>
       <p><strong>Propriété intellectuelle :</strong> © 2026 DnB Reviz. Tous droits réservés.</p>
     </div>
     <div class="mact mt-3">
