@@ -168,12 +168,93 @@ function analyticsSessionIdForUser(user) {
   return window._analyticsSessionId;
 }
 function activityStorageKey(userId) { return `dnb_activity_${String(userId || "")}`; }
+function studyStatsStorageKey(userId) { return `dnb_study_stats_${String(userId || "")}`; }
+function getLocalStudyStats(userId) {
+  const today = typeof getTodayStr === "function" ? getTodayStr() : new Date().toISOString().slice(0, 10);
+  try {
+    const raw = localStorage.getItem(studyStatsStorageKey(userId));
+    if (!raw) return { totalStudyMs: 0, dailyDate: today, dailyStudyMs: 0 };
+    const parsed = JSON.parse(raw);
+    return {
+      totalStudyMs: Math.max(0, Number(parsed.totalStudyMs) || 0),
+      dailyDate: today,
+      dailyStudyMs: parsed.dailyDate === today ? Math.max(0, Number(parsed.dailyStudyMs) || 0) : 0
+    };
+  } catch (_) {
+    return { totalStudyMs: 0, dailyDate: today, dailyStudyMs: 0 };
+  }
+}
+function saveLocalStudyStats(userId, stats) {
+  if (!userId || !stats) return;
+  try {
+    localStorage.setItem(studyStatsStorageKey(userId), JSON.stringify(stats));
+  } catch (_) {}
+}
+window.getTotalStudyMs = () => {
+  if (!currentUser?.id) return 0;
+  const localStats = getLocalStudyStats(currentUser.id);
+  return Math.max(Number(currentUser.totalStudyMs) || 0, localStats.totalStudyMs);
+};
+window.getDailyStudyMs = () => {
+  if (!currentUser?.id) return 0;
+  const today = typeof getTodayStr === "function" ? getTodayStr() : new Date().toISOString().slice(0, 10);
+  const localStats = getLocalStudyStats(currentUser.id);
+  const remoteDaily = currentUser.dailyStudyDate === today ? (Number(currentUser.dailyStudyMs) || 0) : 0;
+  return Math.max(remoteDaily, localStats.dailyStudyMs);
+};
 function createActivityState(user) { const now=Date.now(); return { userId:String(user?.id||""), username:String(user?.username||user?.id||""), role:String(user?.role||""), sessionId:`${String(user?.id||"")}_${now}`, durationMs:0, pageViews:0, quizStarts:0, quizCompletes:0, aiQuizGenerations:0, searches:0, likes:0, comments:0, shares:0, postsViewed:0, postsCreated:0, lastPage:"", lastActivity:now, lastTick:now }; }
 function loadActivityState(user) { const fresh=createActivityState(user); try { const raw=localStorage.getItem(activityStorageKey(user?.id)); if(!raw)return fresh; const old=JSON.parse(raw); return { ...fresh, ...old, sessionId:fresh.sessionId, lastTick:Date.now() }; } catch(_) { return fresh; } }
 function saveActivityState() { const st=window._activityState; if(!st?.userId)return; try{localStorage.setItem(activityStorageKey(st.userId),JSON.stringify(st));}catch(_){} }
-function tickActivity() { const st=window._activityState; if(!st||!currentUser?.id||currentUser.id!==st.userId)return; const now=Date.now(); const delta=Math.max(0,now-Number(st.lastTick||now)); if(document.visibilityState==="visible") st.durationMs+=Math.min(delta,120000); st.lastTick=now; st.lastActivity=now; saveActivityState(); }
-async function flushActivity(reason="periodic") { const st=window._activityState; if(!st?.userId)return; tickActivity(); const payload={...st,flushReason:String(reason),timestamp:Date.now()}; delete payload.lastTick; try { await setDoc(doc(db,"analytics_activity",`${st.userId}_${st.sessionId}`),payload,{merge:true}); localStorage.removeItem(activityStorageKey(st.userId)); } catch(error) { saveActivityState(); console.debug("Activité non synchronisée :",error?.code||error?.message||error); } }
-function initLocalActivityTracking(user) { if(!user?.id)return; if(window._activityState?.userId===String(user.id) && window._activityState.sessionId) return; if(window._activityTimer)clearInterval(window._activityTimer); if(window._activityFlushTimer)clearInterval(window._activityFlushTimer); window._activityState=loadActivityState(user); window._activityTimer=setInterval(tickActivity,15000); window._activityFlushTimer=setInterval(()=>void flushActivity("interval"),60000); tickActivity(); }
+function tickActivity() {
+  const st = window._activityState;
+  if (!st || !currentUser?.id || currentUser.id !== st.userId) return;
+  const now = Date.now();
+  const delta = Math.max(0, now - Number(st.lastTick || now));
+  if (document.visibilityState === "visible") {
+    const safeDelta = Math.min(delta, 120000);
+    st.durationMs += safeDelta;
+    const prevTotal = window.getTotalStudyMs();
+    const localStats = getLocalStudyStats(currentUser.id);
+    const nextTotal = Math.max(prevTotal, localStats.totalStudyMs) + safeDelta;
+    const nextDaily = Math.max(window.getDailyStudyMs(), localStats.dailyStudyMs) + safeDelta;
+    const today = typeof getTodayStr === "function" ? getTodayStr() : new Date().toISOString().slice(0, 10);
+    saveLocalStudyStats(currentUser.id, { totalStudyMs: nextTotal, dailyDate: today, dailyStudyMs: nextDaily });
+    currentUser.totalStudyMs = nextTotal;
+    currentUser.dailyStudyDate = today;
+    currentUser.dailyStudyMs = nextDaily;
+    if (typeof checkNewlyUnlockedThemesAndBadges === "function") checkNewlyUnlockedThemesAndBadges(prevTotal, nextTotal);
+    if (typeof updateDailyGoalUI === "function") updateDailyGoalUI();
+    if (document.getElementById("page-setting")?.classList.contains("active") && typeof updateSettingsStudyCountersUI === "function") {
+      updateSettingsStudyCountersUI();
+    }
+  }
+  st.lastTick = now;
+  st.lastActivity = now;
+  saveActivityState();
+}
+async function flushActivity(reason="periodic") {
+  const st=window._activityState;
+  if(!st?.userId)return;
+  tickActivity();
+  const payload={...st,flushReason:String(reason),timestamp:Date.now()};
+  delete payload.lastTick;
+  try {
+    await setDoc(doc(db,"analytics_activity",`${st.userId}_${st.sessionId}`),payload,{merge:true});
+    if (currentUser?.id === st.userId) {
+      const today = typeof getTodayStr === "function" ? getTodayStr() : new Date().toISOString().slice(0, 10);
+      await updateDoc(doc(db, "users", currentUser.id), {
+        totalStudyMs: window.getTotalStudyMs(),
+        dailyStudyDate: today,
+        dailyStudyMs: window.getDailyStudyMs()
+      });
+    }
+    localStorage.removeItem(activityStorageKey(st.userId));
+  } catch(error) {
+    saveActivityState();
+    console.debug("Activité non synchronisée :",error?.code||error?.message||error);
+  }
+}
+function initLocalActivityTracking(user) { if(!user?.id)return; if(window._activityState?.userId===String(user.id) && window._activityState.sessionId) return; if(window._activityTimer)clearInterval(window._activityTimer); if(window._activityFlushTimer)clearInterval(window._activityFlushTimer); window._activityState=loadActivityState(user); window._activityTimer=setInterval(tickActivity,5000); window._activityFlushTimer=setInterval(()=>void flushActivity("interval"),45000); tickActivity(); }
 function trackActivityPage(page) { const st=window._activityState;if(!st)return;st.lastPage=String(page||"");st.pageViews++;st.lastActivity=Date.now();saveActivityState(); }
 function trackActivityEvent(type) { const st=window._activityState;if(!st)return; const k=String(type||""); if(k==="quiz_start")st.quizStarts++; else if(k==="quiz_complete")st.quizCompletes++; else if(k==="ai_quiz_generated")st.aiQuizGenerations++; else if(k==="search")st.searches++; else if(k==="like")st.likes++; else if(k==="comment")st.comments++; else if(k==="share")st.shares++; else if(k==="post_view")st.postsViewed++; else if(k==="post_create")st.postsCreated++; st.lastActivity=Date.now();saveActivityState(); }
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden") void flushActivity("hidden"); else if(window._activityState) window._activityState.lastTick=Date.now(); });
@@ -313,11 +394,13 @@ function renderStreakRankingRow(user, rank) {
     .slice(0, 2)
     .toUpperCase() || "?";
   const streak = getEffectiveStreak(user);
+  const tier = typeof getFlameTier === "function" ? getFlameTier(streak) : { id: "amber", label: "Flamme Ambrée" };
   const isMe = user.id === currentUser?.id || user.username === currentUser?.username;
   const avatar = user.avatar
     ? `<img class="streak-ranking-avatar-image" src="${user.avatar}" alt="" loading="lazy">`
     : `<span class="streak-ranking-avatar-initials">${initials}</span>`;
   const badge = typeof getBadge === "function" ? getBadge(user) : "";
+  const shields = Math.min(3, Math.max(0, Number(user.streakShields) || 0));
 
   return `
     <div class="streak-ranking-row${isMe ? " is-me" : ""}">
@@ -325,10 +408,10 @@ function renderStreakRankingRow(user, rank) {
       <div class="streak-ranking-avatar">${avatar}</div>
       <div class="streak-ranking-user">
         <div class="streak-ranking-name">${name}${badge}</div>
-        <div class="streak-ranking-username">@${user.username || "—"}${isMe ? " · Toi" : ""}</div>
+        <div class="streak-ranking-username">@${user.username || "—"} · ${tier.label}${shields > 0 ? ` · 🛡️${shields}` : ""}${isMe ? " · Toi" : ""}</div>
       </div>
       <div class="streak-ranking-score">
-        <span class="streak-mini-flame" aria-hidden="true"></span>
+        <span class="streak-mini-flame tier-${tier.id}" aria-hidden="true"></span>
         <strong>${streak} ${streak === 1 ? "jour" : "jours"}</strong>
       </div>
     </div>`;
@@ -543,7 +626,15 @@ window.formatNumber = (num) => {
 };
 
 window.getBadge = (userObj) => {
-  return (userObj && userObj.isVerified) ? `<img src="https://cdn.prod.website-files.com/6214eaa668d0de27c3ea80cf/652fd0e960df145545f25f12_Pastille%20bleu%20certification%20instagram.png" class="verified-icon" title="Compte certifié">` : '';
+  if (!userObj) return '';
+  let out = '';
+  if (userObj.isVerified) {
+    out += `<img src="https://cdn.prod.website-files.com/6214eaa668d0de27c3ea80cf/652fd0e960df145545f25f12_Pastille%20bleu%20certification%20instagram.png" class="verified-icon" title="Compte certifié">`;
+  }
+  if (userObj.equippedBadgeIcon) {
+    out += `<span title="${esc(userObj.equippedBadgeLabel || 'Badge d’assiduité')}" style="margin-left:5px;font-size:14px;vertical-align:middle;">${esc(userObj.equippedBadgeIcon)}</span>`;
+  }
+  return out;
 };
 
 window.updateUnreadDots = (count) => {
@@ -552,17 +643,366 @@ window.updateUnreadDots = (count) => {
   });
 };
 
+const UNLOCKABLE_THEMES = [
+  { id: "light", name: "Clair Classique", desc: "Épuré et lumineux", minMinutes: 0, swatches: ["#f5f5f7", "#ffffff", "#9b8fe4"], swatchBg: "linear-gradient(135deg,#f5f5f7,#ffffff)", lightText: false },
+  { id: "dark", name: "Sombre Standard", desc: "Confort visuel quotidien", minMinutes: 0, swatches: ["#111113", "#1c1c1e", "#9b8fe4"], swatchBg: "linear-gradient(135deg,#111113,#242429)", lightText: true },
+  { id: "paper", name: "Clair Papier", desc: "Teinte cahier chaud anti-fatigue", minMinutes: 15, swatches: ["#f6f1e6", "#fffdf8", "#3b5bdb"], swatchBg: "linear-gradient(135deg,#f6f1e6,#efe3c8)", lightText: false },
+  { id: "oled", name: "Sombre OLED", desc: "Noir pur économe sur mobile", minMinutes: 30, swatches: ["#000000", "#0a0a0d", "#7c8aff"], swatchBg: "linear-gradient(135deg,#000000,#111119)", lightText: true },
+  { id: "aurora", name: "Aurore Snap+", desc: "Dégradé néon rose & lavande façon Snap+", minMinutes: 45, swatches: ["#24143e", "#ff4f9a", "#fde047"], swatchBg: "linear-gradient(135deg,#3b155f 0%,#ff4f9a 60%,#a855f7 100%)", lightText: true },
+  { id: "galaxy", name: "Galaxy Nébuleuse", desc: "Ciel étoilé & nébuleuse cosmique", minMinutes: 60, swatches: ["#070924", "#a855f7", "#38bdf8"], swatchBg: "radial-gradient(circle at 22% 28%,#fff 1px,transparent 2px),radial-gradient(circle at 75% 60%,#bae6fd 1.2px,transparent 2px),linear-gradient(135deg,#050616 0%,#31105f 55%,#0c3866 100%)", lightText: true },
+  { id: "cyber", name: "Néon Cyber+", desc: "Cyan électrique & reflets magenta", minMinutes: 90, swatches: ["#050914", "#00e5ff", "#ff2e93"], swatchBg: "linear-gradient(135deg,#040a18 0%,#0b2848 52%,#5c0c3c 100%)", lightText: true },
+  { id: "sunset", name: "Sunset Doré+", desc: "Ambiance chaleureuse mangue & rose", minMinutes: 120, swatches: ["#1c0b18", "#ff7b54", "#ffd166"], swatchBg: "linear-gradient(135deg,#2d1024 0%,#b83358 52%,#ff7b54 100%)", lightText: true },
+  { id: "custom", name: "Studio Perso+", desc: "Crée tes couleurs, ton FX & ton nom", minMinutes: 180, swatches: ["#0f172a", "#1e293b", "#6366f1"], swatchBg: "linear-gradient(135deg,#0f172a 0%,#312e81 60%,#6366f1 100%)", lightText: true }
+];
+
+const UNLOCKABLE_BADGES = [
+  { id: "studious_15", icon: "📖", label: "Assidu", desc: "15 min de révision", check: (studyMin) => studyMin >= 15 },
+  { id: "endurant_30", icon: "⚡", label: "Endurant", desc: "30 min de révision", check: (studyMin) => studyMin >= 30 },
+  { id: "noctambule_60", icon: "🌌", label: "Explorateur Galaxy", desc: "1 heure de révision", check: (studyMin) => studyMin >= 60 },
+  { id: "tableau_180", icon: "💎", label: "Membre Studio+", desc: "3 heures de révision", check: (studyMin) => studyMin >= 180 },
+  { id: "flame_7", icon: "🔵", label: "Flamme Bleue", desc: "7 jours de série", check: (_m, streak) => streak >= 7 },
+  { id: "flame_14", icon: "🟣", label: "Flamme Plasma", desc: "14 jours de série", check: (_m, streak) => streak >= 14 },
+  { id: "flame_30", icon: "👑", label: "Légende Dorée", desc: "30 jours de série", check: (_m, streak) => streak >= 30 }
+];
+
+function formatStudyDurationHuman(ms) {
+  const totalMin = Math.max(0, Math.floor((Number(ms) || 0) / 60000));
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h > 0) return `${h}h ${String(m).padStart(2, "0")}min`;
+  return `${m} min`;
+}
+
+function getCustomThemeStorageKey() {
+  return `dnb_custom_theme_${currentUser?.username || "guest"}`;
+}
+
+function getCustomThemeConfig() {
+  try {
+    const raw = localStorage.getItem(getCustomThemeStorageKey());
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        name: parsed.name || "Studio Perso+",
+        primary: parsed.primary || "#6366f1",
+        bg: parsed.bg || "#0f172a",
+        card: parsed.card || "#1e293b",
+        ink: parsed.ink || "#f8fafc",
+        fx: ["neon", "galaxy", "none"].includes(parsed.fx) ? parsed.fx : "neon"
+      };
+    }
+  } catch (_) {}
+  return {
+    name: "Studio Perso+",
+    primary: "#6366f1",
+    bg: "#0f172a",
+    card: "#1e293b",
+    ink: "#f8fafc",
+    fx: "neon"
+  };
+}
+
+function hexToRgba(hex, alpha) {
+  const clean = String(hex || "").replace("#", "");
+  if (clean.length !== 6) return `rgba(99,102,241,${alpha})`;
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function mixHexColors(hex1, hex2, weight = 0.22) {
+  const parse = (h, fallback) => {
+    const c = String(h || "").replace("#", "");
+    if (c.length !== 6) return fallback;
+    return [parseInt(c.slice(0, 2), 16), parseInt(c.slice(2, 4), 16), parseInt(c.slice(4, 6), 16)];
+  };
+  const [r1, g1, b1] = parse(hex1, [99, 102, 241]);
+  const [r2, g2, b2] = parse(hex2, [30, 41, 59]);
+  const w = Math.max(0, Math.min(1, Number(weight) || 0));
+  const r = Math.round(r1 * w + r2 * (1 - w));
+  const g = Math.round(g1 * w + g2 * (1 - w));
+  const b = Math.round(b1 * w + b2 * (1 - w));
+  return `#${[r, g, b].map(x => x.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function applyCustomThemeVariables(cfg) {
+  const root = document.documentElement;
+  const primary = cfg.primary || "#6366f1";
+  const card = cfg.card || "#1e293b";
+  root.style.setProperty("--custom-primary", primary);
+  root.style.setProperty("--custom-primary-f", primary);
+  root.style.setProperty("--custom-primary-l", mixHexColors(primary, card, 0.24));
+  root.style.setProperty("--custom-banner-bg", mixHexColors(primary, card, 0.48));
+  root.style.setProperty("--custom-glow", hexToRgba(primary, 0.28));
+  root.style.setProperty("--custom-bg", cfg.bg || "#0f172a");
+  root.style.setProperty("--custom-card", card);
+  root.style.setProperty("--custom-surface", card);
+  root.style.setProperty("--custom-ink", cfg.ink || "#f8fafc");
+  root.style.setProperty("--custom-ink-m", hexToRgba(cfg.ink || "#f8fafc", 0.72));
+  root.style.setProperty("--custom-nav", hexToRgba(cfg.bg || "#0f172a", 0.88));
+  root.style.setProperty("--custom-hl", hexToRgba(cfg.ink || "#f8fafc", 0.16));
+  root.style.setProperty("--custom-hl2", hexToRgba(cfg.ink || "#f8fafc", 0.08));
+  root.setAttribute("data-custom-fx", cfg.fx || "neon");
+}
+
+function isThemeUnlocked(themeId) {
+  const def = UNLOCKABLE_THEMES.find(t => t.id === themeId);
+  if (!def) return false;
+  if (def.minMinutes === 0) return true;
+  const studyMin = Math.floor((window.getTotalStudyMs ? window.getTotalStudyMs() : 0) / 60000);
+  return studyMin >= def.minMinutes;
+}
+
+window.checkNewlyUnlockedThemesAndBadges = (prevMs, nextMs) => {
+  const prevMin = Math.floor((Number(prevMs) || 0) / 60000);
+  const nextMin = Math.floor((Number(nextMs) || 0) / 60000);
+  if (nextMin <= prevMin) return;
+  let unlockedAnything = false;
+  UNLOCKABLE_THEMES.forEach(t => {
+    if (t.minMinutes > 0 && prevMin < t.minMinutes && nextMin >= t.minMinutes) {
+      unlockedAnything = true;
+      showToast(`🎨 Nouveau thème débloqué : ${t.name} !`);
+    }
+  });
+  UNLOCKABLE_BADGES.forEach(b => {
+    if (b.desc.includes("min") || b.desc.includes("heure")) {
+      const wasUnlocked = b.check(prevMin, 0);
+      const isNowUnlocked = b.check(nextMin, 0);
+      if (!wasUnlocked && isNowUnlocked) {
+        unlockedAnything = true;
+        showToast(`🏅 Badge débloqué : ${b.icon} ${b.label} !`);
+      }
+    }
+  });
+  if (unlockedAnything && document.getElementById("page-setting")?.classList.contains("active")) {
+    renderThemesAndRewardsSettings();
+  }
+};
+
 function loadTheme() {
-  const dark = localStorage.getItem("dnb_theme") === "dark";
-  document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  const saved = localStorage.getItem("dnb_theme") || currentUser?.selectedTheme || "light";
+  const themeId = UNLOCKABLE_THEMES.some(t => t.id === saved) ? saved : "light";
+  if (themeId === "custom") {
+    applyCustomThemeVariables(getCustomThemeConfig());
+  } else {
+    document.documentElement.removeAttribute("data-custom-fx");
+  }
+  document.documentElement.setAttribute("data-theme", themeId);
   const t = document.getElementById("tog-dark");
-  if(t) t.checked = dark;
+  if (t) t.checked = themeId === "dark";
 }
 loadTheme();
 
 window.applyTheme = (dark) => {
-  document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
-  localStorage.setItem("dnb_theme", dark ? "dark" : "light");
+  const themeId = dark ? "dark" : "light";
+  window.applyThemeById(themeId);
+};
+
+window.applyThemeById = async (themeId) => {
+  if (!isThemeUnlocked(themeId)) {
+    const def = UNLOCKABLE_THEMES.find(t => t.id === themeId);
+    showToast(`🔒 Débloque ce thème après ${def?.minMinutes || 0} min de révision !`);
+    return;
+  }
+  if (themeId === "custom") {
+    applyCustomThemeVariables(getCustomThemeConfig());
+  } else {
+    document.documentElement.removeAttribute("data-custom-fx");
+  }
+  document.documentElement.setAttribute("data-theme", themeId);
+  localStorage.setItem("dnb_theme", themeId);
+  if (currentUser?.id) {
+    currentUser.selectedTheme = themeId;
+    saveSessionLocally(currentUser);
+    try { await updateDoc(doc(db, "users", currentUser.id), { selectedTheme: themeId }); } catch (_) {}
+  }
+  if (typeof renderThemesAndRewardsSettings === "function") renderThemesAndRewardsSettings();
+};
+
+window.previewTheme = (themeId) => {
+  const prevTheme = document.documentElement.getAttribute("data-theme") || "light";
+  if (themeId === "custom") applyCustomThemeVariables(getCustomThemeConfig());
+  else document.documentElement.removeAttribute("data-custom-fx");
+  document.documentElement.setAttribute("data-theme", themeId);
+  showToast("👀 Aperçu du thème pendant 5 secondes…");
+  clearTimeout(window._themePreviewTimeout);
+  window._themePreviewTimeout = setTimeout(() => {
+    const saved = localStorage.getItem("dnb_theme") || prevTheme || "light";
+    if (saved === "custom") applyCustomThemeVariables(getCustomThemeConfig());
+    else document.documentElement.removeAttribute("data-custom-fx");
+    document.documentElement.setAttribute("data-theme", saved);
+  }, 5000);
+};
+
+window.saveCustomThemeConfig = () => {
+  if (!isThemeUnlocked("custom")) {
+    showToast("🔒 Studio Perso+ se débloque à 3h de révision !");
+    return;
+  }
+  const cfg = {
+    name: document.getElementById("custom-theme-name")?.value.trim() || "Studio Perso+",
+    primary: document.getElementById("custom-color-primary")?.value || "#6366f1",
+    bg: document.getElementById("custom-color-bg")?.value || "#0f172a",
+    card: document.getElementById("custom-color-card")?.value || "#1e293b",
+    ink: document.getElementById("custom-color-ink")?.value || "#f8fafc",
+    fx: document.getElementById("custom-theme-fx")?.value || "neon"
+  };
+  localStorage.setItem(getCustomThemeStorageKey(), JSON.stringify(cfg));
+  applyCustomThemeVariables(cfg);
+  window.applyThemeById("custom");
+  showToast(`🎨 Thème « ${cfg.name} » activé ✓`);
+};
+
+window.resetCustomThemeDefaults = () => {
+  localStorage.removeItem(getCustomThemeStorageKey());
+  const cfg = getCustomThemeConfig();
+  if (document.getElementById("custom-theme-name")) document.getElementById("custom-theme-name").value = cfg.name;
+  if (document.getElementById("custom-color-primary")) document.getElementById("custom-color-primary").value = cfg.primary;
+  if (document.getElementById("custom-color-bg")) document.getElementById("custom-color-bg").value = cfg.bg;
+  if (document.getElementById("custom-color-card")) document.getElementById("custom-color-card").value = cfg.card;
+  if (document.getElementById("custom-color-ink")) document.getElementById("custom-color-ink").value = cfg.ink;
+  if (document.getElementById("custom-theme-fx")) document.getElementById("custom-theme-fx").value = cfg.fx || "neon";
+  applyCustomThemeVariables(cfg);
+  showToast("Couleurs réinitialisées ✓");
+};
+
+window.equipStudyBadge = async (badgeId) => {
+  const studyMin = Math.floor((window.getTotalStudyMs ? window.getTotalStudyMs() : 0) / 60000);
+  const streak = Math.max(Number(currentUser?.maxStreak) || 0, Number(currentUser?.streak) || 0);
+  if (!badgeId) {
+    if (currentUser?.id) {
+      currentUser.equippedBadgeIcon = "";
+      currentUser.equippedBadgeLabel = "";
+      saveSessionLocally(currentUser);
+      try { await updateDoc(doc(db, "users", currentUser.id), { equippedBadgeIcon: "", equippedBadgeLabel: "" }); } catch (_) {}
+    }
+    renderThemesAndRewardsSettings();
+    showToast("Badge retiré ✓");
+    return;
+  }
+  const b = UNLOCKABLE_BADGES.find(item => item.id === badgeId);
+  if (!b || !b.check(studyMin, streak)) {
+    showToast("🔒 Badge pas encore débloqué !");
+    return;
+  }
+  if (currentUser?.id) {
+    currentUser.equippedBadgeIcon = b.icon;
+    currentUser.equippedBadgeLabel = b.label;
+    saveSessionLocally(currentUser);
+    try { await updateDoc(doc(db, "users", currentUser.id), { equippedBadgeIcon: b.icon, equippedBadgeLabel: b.label }); } catch (_) {}
+    const myBadge = getBadge(currentUser);
+    const dn = document.getElementById("drop-name");
+    const drn = document.getElementById("drawer-name");
+    if (dn) dn.innerHTML = (currentUser.displayName || currentUser.username) + myBadge;
+    if (drn) drn.innerHTML = (currentUser.displayName || currentUser.username) + myBadge;
+  }
+  renderThemesAndRewardsSettings();
+  showToast(`🏅 Badge ${b.icon} ${b.label} affiché sur ton profil ✓`);
+};
+
+window.updateSettingsStudyCountersUI = () => {
+  const totalMs = window.getTotalStudyMs ? window.getTotalStudyMs() : 0;
+  const studyMin = Math.floor(totalMs / 60000);
+  const timeEl = document.getElementById("settings-total-study-time");
+  if (timeEl) timeEl.textContent = formatStudyDurationHuman(totalMs);
+
+  const nextLocked = UNLOCKABLE_THEMES.find(t => studyMin < t.minMinutes);
+  const nextEl = document.getElementById("settings-next-unlock");
+  const fillEl = document.getElementById("settings-study-progress");
+  if (nextEl && fillEl) {
+    if (nextLocked) {
+      const rem = nextLocked.minMinutes - studyMin;
+      nextEl.textContent = `Prochain : ${nextLocked.name} dans ${rem} min`;
+      fillEl.style.width = `${Math.min(100, Math.round((studyMin / nextLocked.minMinutes) * 100))}%`;
+    } else {
+      nextEl.textContent = "Tous les thèmes débloqués ✓";
+      fillEl.style.width = "100%";
+    }
+  }
+};
+
+window.renderThemesAndRewardsSettings = () => {
+  const totalMs = window.getTotalStudyMs ? window.getTotalStudyMs() : 0;
+  const studyMin = Math.floor(totalMs / 60000);
+  const maxStreak = Math.max(Number(currentUser?.maxStreak) || 0, Number(currentUser?.streak) || 0);
+  const activeTheme = document.documentElement.getAttribute("data-theme") || "light";
+
+  window.updateSettingsStudyCountersUI();
+
+  const grid = document.getElementById("settings-themes-grid");
+  if (grid) {
+    const customCfg = getCustomThemeConfig();
+    grid.innerHTML = UNLOCKABLE_THEMES.map(t => {
+      const unlocked = studyMin >= t.minMinutes;
+      const isActive = activeTheme === t.id;
+      const displayTitle = t.id === "custom" && customCfg.name ? customCfg.name : t.name;
+      const dots = (t.id === "custom" ? [customCfg.bg, customCfg.card, customCfg.primary] : t.swatches)
+        .map(c => `<span style="background:${c}"></span>`).join("");
+      const reqText = t.minMinutes === 0 ? "Disponible dès le début" : unlocked ? `Débloqué (${t.minMinutes >= 60 ? `${t.minMinutes / 60}h` : `${t.minMinutes} min`})` : `Déblocable à ${t.minMinutes >= 60 ? `${t.minMinutes / 60}h` : `${t.minMinutes} min`}`;
+      const barBg = t.id === "custom"
+        ? `linear-gradient(135deg, ${customCfg.bg}, ${customCfg.primary})`
+        : (t.swatchBg || t.swatches[0]);
+      const barColor = t.lightText ? "#ffffff" : "#1d1d1f";
+      return `
+        <div class="theme-unlock-card${isActive ? " active" : ""}${unlocked ? "" : " locked"}">
+          <div class="theme-swatch-bar" style="background:${barBg};color:${barColor};">
+            <span>${esc(displayTitle)}</span>
+            <div class="theme-swatch-dots">${dots}</div>
+          </div>
+          <div class="theme-unlock-meta">
+            <div class="theme-unlock-title">${esc(t.desc)}</div>
+            <div class="theme-unlock-req">${reqText}</div>
+          </div>
+          <div class="theme-unlock-actions">
+            ${unlocked
+              ? `<button type="button" class="${isActive ? "btn-pill" : "btn-ghost"} btn-sm" onclick="applyThemeById('${t.id}')">${isActive ? "Actif ✓" : "Activer"}</button>`
+              : `<button type="button" class="btn-ghost btn-sm" onclick="previewTheme('${t.id}')">Aperçu 5s</button>`
+            }
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  const customPanel = document.getElementById("settings-custom-theme-panel");
+  if (customPanel) {
+    const unlockedCustom = isThemeUnlocked("custom");
+    customPanel.classList.toggle("hidden", !unlockedCustom);
+    if (unlockedCustom) {
+      const cfg = getCustomThemeConfig();
+      const nameInput = document.getElementById("custom-theme-name");
+      if (nameInput && !nameInput.value) nameInput.value = cfg.name || "Studio Perso+";
+      const p = document.getElementById("custom-color-primary");
+      const b = document.getElementById("custom-color-bg");
+      const c = document.getElementById("custom-color-card");
+      const k = document.getElementById("custom-color-ink");
+      const fx = document.getElementById("custom-theme-fx");
+      if (p) p.value = cfg.primary;
+      if (b) b.value = cfg.bg;
+      if (c) c.value = cfg.card;
+      if (k) k.value = cfg.ink;
+      if (fx) fx.value = cfg.fx || "neon";
+    }
+  }
+
+  const badgesGrid = document.getElementById("settings-badges-grid");
+  if (badgesGrid) {
+    badgesGrid.innerHTML = UNLOCKABLE_BADGES.map(b => {
+      const unlocked = b.check(studyMin, maxStreak);
+      const isEquipped = currentUser?.equippedBadgeIcon === b.icon;
+      return `
+        <button type="button" class="badge-unlock-card${isEquipped ? " active" : ""}${unlocked ? "" : " locked"}" onclick="${unlocked ? (isEquipped ? "equipStudyBadge('')" : `equipStudyBadge('${b.id}')`) : `showToast('🔒 Condition : ${esc(b.desc)}')`}">
+          <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+            <span style="font-size:22px;">${b.icon}</span>
+            <span class="caption" style="font-weight:700;">${isEquipped ? "Affiché ✓" : unlocked ? "Débloqué" : "Verrouillé"}</span>
+          </div>
+          <strong style="font-size:13px;color:var(--ink);">${esc(b.label)}</strong>
+          <span class="caption" style="font-size:11px;">${esc(b.desc)}</span>
+        </button>
+      `;
+    }).join("");
+  }
 };
 
 function loadAnimationsSetting() {
@@ -603,8 +1043,8 @@ onSnapshot(collection(db, "users"), snap => {
   if (document.getElementById("page-fichesrev").classList.contains("active")) loadFRFeed();
   if (document.getElementById("page-quiz").classList.contains("active")) loadQuizFeed();
   
-  if (window._currentViewedUser) {
-    renderPublicProfile(window._currentViewedUser.username);
+  if (window._currentViewedUser && document.getElementById("page-pub-profil")?.classList.contains("active")) {
+    renderPublicProfile(window._currentViewedUser.username, { silent: true });
     if (window._pubTabActive === 'likes') renderPubLikes();
   }
   
@@ -633,9 +1073,17 @@ window.handleCookies = (accept) => {
 };
 
 
+const CUSTOM_STATS_LS_KEY = "dnb_stats_custom_entries_v1";
+
 function formatStatsDate(ts) {
   if (!ts) return "—";
   return new Date(ts).toLocaleString("fr-FR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" });
+}
+function formatShortFrDate(dateStr) {
+  if (!dateStr) return "—";
+  const d = new Date(`${String(dateStr).slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return String(dateStr);
+  return d.toLocaleDateString("fr-FR", { day:"2-digit", month:"2-digit", year:"numeric" });
 }
 function startOfLocalDay(date = new Date()) { const d = new Date(date); d.setHours(0,0,0,0); return d; }
 function statsDateKey(ts) { return new Date(ts).toLocaleDateString("fr-CA"); }
@@ -645,11 +1093,11 @@ function chartDefaults() {
   const muted = getComputedStyle(document.documentElement).getPropertyValue('--ink-m').trim() || ink;
   return { responsive:true, maintainAspectRatio:false,
     interaction:{mode:'index',intersect:false},
-    plugins:{ legend:{display:true,labels:{color:ink,usePointStyle:true,boxWidth:8,padding:16}}, tooltip:{backgroundColor:'rgba(20,20,24,.92)',padding:10,cornerRadius:10,titleColor:'#fff',bodyColor:'#fff',displayColors:true} },
+    plugins:{ legend:{display:true,labels:{color:ink,usePointStyle:true,boxWidth:8,padding:16}}, tooltip:{backgroundColor:'rgba(15,23,42,.94)',padding:10,cornerRadius:10,titleColor:'#fff',bodyColor:'#fff',displayColors:true} },
     scales:{ x:{ticks:{color:muted,maxRotation:0},grid:{display:false}}, y:{beginAtZero:true,ticks:{precision:0,color:muted},grid:{color:'rgba(127,127,127,.12)'}} }
   };
 }
-const STATS_CHART_COLORS = ['#007aff','#5856d6','#34c759','#ff9500','#ff3b30','#af52de','#5ac8fa'];
+const STATS_CHART_COLORS = ['#4f46e5','#0284c7','#10b981','#f59e0b','#ec4899','#7c3aed','#14b8a6'];
 function statsPalette(n){ return Array.from({length:n},(_,i)=>STATS_CHART_COLORS[i % STATS_CHART_COLORS.length]); }
 function makeDoughnutChart(canvasId, labels, values, legendId, totalId){
   const canvas=document.getElementById(canvasId); if(!canvas || !window.Chart) return;
@@ -665,8 +1113,9 @@ function buildHourlyConnectionData(events) {
   return arr;
 }
 function buildDailyData(events, rangeDays) {
+  const effectiveDays = rangeDays >= 365 ? 90 : rangeDays;
   const today=startOfLocalDay(), keys=[], map=new Map();
-  for(let i=rangeDays-1;i>=0;i--){const d=new Date(today);d.setDate(d.getDate()-i);const k=statsDateKey(d.getTime());keys.push(k);map.set(k,{sessions:0,views:0});}
+  for(let i=effectiveDays-1;i>=0;i--){const d=new Date(today);d.setDate(d.getDate()-i);const k=statsDateKey(d.getTime());keys.push(k);map.set(k,{sessions:0,views:0});}
   events.forEach(e=>{const k=statsDateKey(e.timestamp);if(!map.has(k))return;if(e.type==="login")map.get(k).sessions++;if(e.type==="page_view")map.get(k).views++;});
   return {labels:keys.map(k=>new Date(`${k}T00:00:00`).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"})),sessions:keys.map(k=>map.get(k).sessions),views:keys.map(k=>map.get(k).views)};
 }
@@ -675,6 +1124,253 @@ function buildConcurrentByHour(sessions) {
   for(let hour=0;hour<24;hour++){arr[hour]=sessions.reduce((count,s)=>{const start=Number(s.startedAt||0),end=Number(s.endedAt||s.lastSeenAt||start);if(!start)return count;const d=new Date(start);d.setHours(hour,30,0,0);const t=d.getTime();return(start<=t&&end>=t)?count+1:count;},0);}
   return arr;
 }
+window.switchStatsSubtab = (tab, btn) => {
+  document.querySelectorAll(".stats-subtab").forEach(el => el.classList.toggle("active", el === btn || el.dataset.tab === tab));
+  document.querySelectorAll("#page-statistiques [data-stats-section]").forEach(sec => {
+    const name = sec.getAttribute("data-stats-section");
+    const visible = tab === "all" || name === "overview" || name === tab;
+    sec.classList.toggle("hidden", !visible);
+  });
+};
+
+function readLocalCustomStats() {
+  try {
+    const raw = localStorage.getItem(CUSTOM_STATS_LS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
+}
+function writeLocalCustomStats(list) {
+  try { localStorage.setItem(CUSTOM_STATS_LS_KEY, JSON.stringify(list || [])); } catch (_) {}
+}
+
+async function loadCustomStatEntries() {
+  const local = readLocalCustomStats();
+  const byId = new Map();
+  local.forEach(item => { if (item && item.id) byId.set(item.id, item); });
+  try {
+    const snap = await getDocs(collection(db, "analytics_custom_entries"));
+    snap.forEach(d => {
+      const data = d.data() || {};
+      byId.set(d.id, {
+        id: d.id,
+        label: String(data.label || "Indicateur"),
+        category: String(data.category || "Autre"),
+        value: Number(data.value || 0),
+        unit: String(data.unit || ""),
+        date: String(data.date || new Date(data.createdAt || Date.now()).toISOString().slice(0, 10)),
+        note: String(data.note || ""),
+        includeInPdf: data.includeInPdf !== false,
+        createdBy: String(data.createdBy || ""),
+        createdAt: Number(data.createdAt || Date.now()),
+        source: "firebase"
+      });
+    });
+  } catch (_) {}
+  const merged = Array.from(byId.values()).sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")) || (b.createdAt || 0) - (a.createdAt || 0));
+  writeLocalCustomStats(merged);
+  return merged;
+}
+
+window.openStatsAddDataModal = () => {
+  if (!isAdminUser(currentUser)) return showToast("Accès non autorisé.");
+  const dateEl = document.getElementById("stat-custom-date");
+  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0, 10);
+  const labelEl = document.getElementById("stat-custom-label");
+  if (labelEl) labelEl.value = "";
+  const valEl = document.getElementById("stat-custom-value");
+  if (valEl) valEl.value = "";
+  const unitEl = document.getElementById("stat-custom-unit");
+  if (unitEl) unitEl.value = "";
+  const noteEl = document.getElementById("stat-custom-note");
+  if (noteEl) noteEl.value = "";
+  const incEl = document.getElementById("stat-custom-include-pdf");
+  if (incEl) incEl.checked = true;
+  openModal("m-stats-add-data");
+};
+
+window.saveCustomStatEntry = async () => {
+  if (!isAdminUser(currentUser)) return showToast("Accès non autorisé.");
+  const label = String(document.getElementById("stat-custom-label")?.value || "").trim();
+  const category = String(document.getElementById("stat-custom-category")?.value || "Autre").trim();
+  const rawVal = document.getElementById("stat-custom-value")?.value;
+  const value = Number(rawVal);
+  const unit = String(document.getElementById("stat-custom-unit")?.value || "").trim();
+  const date = String(document.getElementById("stat-custom-date")?.value || new Date().toISOString().slice(0, 10)).slice(0, 10);
+  const note = String(document.getElementById("stat-custom-note")?.value || "").trim();
+  const includeInPdf = Boolean(document.getElementById("stat-custom-include-pdf")?.checked);
+
+  if (!label) return showToast("Indique un libellé pour cette donnée.");
+  if (rawVal === "" || Number.isNaN(value)) return showToast("Saisis une valeur numérique valide.");
+
+  const entry = {
+    label,
+    category,
+    value,
+    unit,
+    date,
+    note,
+    includeInPdf,
+    createdBy: currentUser?.username || "admin",
+    createdAt: Date.now()
+  };
+
+  let docId = `local_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  let source = "local";
+  try {
+    const ref = await addDoc(collection(db, "analytics_custom_entries"), entry);
+    docId = ref.id;
+    source = "firebase";
+  } catch (_) {}
+
+  const saved = { id: docId, ...entry, source };
+  const current = (window._statisticsCache?.customEntries || readLocalCustomStats()).filter(x => x.id !== docId);
+  current.unshift(saved);
+  writeLocalCustomStats(current);
+  if (window._statisticsCache) window._statisticsCache.customEntries = current;
+  closeModal("m-stats-add-data");
+  renderCustomStatsSection();
+  updateContentStatsKpiAndChart();
+  showToast("Donnée statistique enregistrée.");
+};
+
+window.toggleCustomStatPdf = async (id) => {
+  const list = window._statisticsCache?.customEntries || readLocalCustomStats();
+  const target = list.find(e => e.id === id);
+  if (!target) return;
+  target.includeInPdf = !target.includeInPdf;
+  writeLocalCustomStats(list);
+  if (target.source === "firebase" || !String(id).startsWith("local_")) {
+    try { await updateDoc(doc(db, "analytics_custom_entries", id), { includeInPdf: target.includeInPdf }); } catch (_) {}
+  }
+  renderCustomStatsSection();
+};
+
+window.deleteCustomStatEntry = async (id) => {
+  if (!isAdminUser(currentUser)) return;
+  const current = (window._statisticsCache?.customEntries || readLocalCustomStats()).filter(e => e.id !== id);
+  writeLocalCustomStats(current);
+  if (window._statisticsCache) window._statisticsCache.customEntries = current;
+  if (!String(id).startsWith("local_")) {
+    try { await deleteDoc(doc(db, "analytics_custom_entries", id)); } catch (_) {}
+  }
+  renderCustomStatsSection();
+  updateContentStatsKpiAndChart();
+  showToast("Donnée supprimée.");
+};
+
+function renderCustomStatsChart(entries) {
+  const canvas = document.getElementById("stats-custom-chart");
+  if (!canvas || !window.Chart) return;
+  if (window._statisticsCharts?.custom) {
+    try { window._statisticsCharts.custom.destroy(); } catch (_) {}
+  }
+  const visible = entries.slice(0, 12).reverse();
+  const labels = visible.length ? visible.map(e => e.label.length > 18 ? e.label.slice(0, 17) + "…" : e.label) : ["Aucune donnée"];
+  const values = visible.length ? visible.map(e => Number(e.value) || 0) : [0];
+  const opts = chartDefaults();
+  opts.plugins.legend.display = false;
+  window._statisticsCharts.custom = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        label: "Valeur",
+        data: values,
+        backgroundColor: visible.length ? statsPalette(values.length) : ["rgba(148,163,184,0.35)"],
+        borderRadius: 8,
+        borderSkipped: false,
+        maxBarThickness: 36
+      }]
+    },
+    options: opts
+  });
+}
+
+window.renderCustomStatsSection = () => {
+  const entries = window._statisticsCache?.customEntries || readLocalCustomStats();
+  const catFilter = document.getElementById("stats-custom-cat-filter")?.value || "all";
+  const filtered = catFilter === "all" ? entries : entries.filter(e => e.category === catFilter);
+
+  const summaryWrap = document.getElementById("stats-custom-summary");
+  if (summaryWrap) {
+    const byCat = new Map();
+    entries.forEach(e => {
+      const k = e.category || "Autre";
+      if (!byCat.has(k)) byCat.set(k, { count: 0, total: 0 });
+      const cur = byCat.get(k);
+      cur.count += 1;
+      cur.total += Number(e.value || 0);
+    });
+    const pdfCount = entries.filter(e => e.includeInPdf !== false).length;
+    summaryWrap.innerHTML = [
+      `<div class="stats-custom-chip"><span>Total ajouts</span><strong>${entries.length}</strong></div>`,
+      `<div class="stats-custom-chip"><span>Inclus PDF</span><strong>${pdfCount}</strong></div>`,
+      ...Array.from(byCat.entries()).map(([cat, info]) => `<div class="stats-custom-chip"><span>${esc(cat)}</span><strong>${info.count} · ${Number.isInteger(info.total) ? info.total : info.total.toFixed(1)}</strong></div>`)
+    ].join("");
+  }
+
+  const tbody = document.getElementById("stats-custom-tbody");
+  if (tbody) {
+    if (!filtered.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="stats-empty">Aucune donnée personnalisée dans cette catégorie. Clique sur « ＋ Ajouter des données ».</td></tr>';
+    } else {
+      tbody.innerHTML = filtered.map(e => `
+        <tr>
+          <td>${esc(formatShortFrDate(e.date))}</td>
+          <td><strong>${esc(e.label)}</strong></td>
+          <td><span class="stats-cat-badge">${esc(e.category || "Autre")}</span></td>
+          <td><strong>${esc(String(e.value))}${e.unit ? ` <small>${esc(e.unit)}</small>` : ""}</strong></td>
+          <td style="max-width:220px; white-space:normal;">${esc(e.note || "—")}</td>
+          <td>
+            <button type="button" class="stats-pdf-pill ${e.includeInPdf !== false ? "on" : ""}" onclick="toggleCustomStatPdf('${esc(e.id)}')">
+              ${e.includeInPdf !== false ? "✓ Inclus" : "Masqué"}
+            </button>
+          </td>
+          <td>
+            <button type="button" class="btn-ghost btn-sm" onclick="deleteCustomStatEntry('${esc(e.id)}')" title="Supprimer">🗑</button>
+          </td>
+        </tr>
+      `).join("");
+    }
+  }
+  renderCustomStatsChart(filtered);
+};
+
+function updateContentStatsKpiAndChart() {
+  const cache = window._statisticsCache || {};
+  const counts = cache.contentCounts || { posts: 0, fiches: 0, quizzes: 0, aiQuizzes: 0 };
+  const customCount = (cache.customEntries || []).length;
+  const totalContents = (counts.posts || 0) + (counts.fiches || 0) + (counts.quizzes || 0) + (counts.aiQuizzes || 0) + customCount;
+  const kpiEl = document.getElementById("stats-kpi-contents");
+  if (kpiEl) kpiEl.textContent = totalContents;
+
+  const canvas = document.getElementById("stats-content-chart");
+  if (!canvas || !window.Chart) return;
+  if (window._statisticsCharts?.contents) {
+    try { window._statisticsCharts.contents.destroy(); } catch (_) {}
+  }
+  const opts = chartDefaults();
+  opts.plugins.legend.display = false;
+  window._statisticsCharts.contents = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: ["Cours", "Fiches / Révisions", "Quiz", "Quiz IA", "Données perso"],
+      datasets: [{
+        label: "Éléments",
+        data: [counts.posts || 0, counts.fiches || 0, counts.quizzes || 0, counts.aiQuizzes || 0, customCount],
+        backgroundColor: ["#4f46e5", "#14b8a6", "#0284c7", "#7c3aed", "#f59e0b"],
+        borderRadius: 8,
+        borderSkipped: false,
+        maxBarThickness: 34
+      }]
+    },
+    options: opts
+  });
+}
+
 window.renderStatisticsUsers=()=> {
   const tb=document.getElementById("stats-users-tbody"); if(!tb)return;
   const search=(document.getElementById("stats-user-search")?.value||"").trim().toLowerCase();
@@ -704,47 +1400,436 @@ function renderActivityRanking(){const tb=document.getElementById("stats-activit
 
 window.loadStatisticsDashboard=async()=>{
   if(!isAdminUser(currentUser)){showToast("Accès non autorisé.");window.location.hash="#accueil";return;}
-  const status=document.getElementById("stats-status"),rangeDays=Math.max(1,Number(document.getElementById("stats-range")?.value||7)),since=Date.now()-rangeDays*86400000;
+  const status=document.getElementById("stats-status");
+  const rangeDays=Math.max(1,Number(document.getElementById("stats-range")?.value||7));
+  const roleFilter=document.getElementById("stats-role-filter")?.value||"all";
+  const since=rangeDays>=3650?0:(Date.now()-rangeDays*86400000);
+  const periodPill=document.getElementById("stats-hero-period-pill");
+  if(periodPill){
+    const periodLabel=rangeDays>=3650?"Tout l'historique":`${rangeDays} jour${rangeDays>1?"s":""}`;
+    periodPill.textContent=`${periodLabel} · ${roleFilter==="all"?"Tous les rôles":roleFilter}`;
+  }
   if(status)status.textContent="Chargement des statistiques…";
   try{
-    const [usersSnap,sessionsSnap,eventsSnap,activitySnap]=await Promise.all([
-      getDocs(collection(db,"users")),
-      getDocs(query(collection(db,"analytics_sessions"),where("startedAt",">=",since))),
-      getDocs(query(collection(db,"analytics_events"),where("timestamp",">=",since))),
-      getDocs(collection(db,"analytics_activity"))
+    const sessionQ=since>0?query(collection(db,"analytics_sessions"),where("startedAt",">=",since)):collection(db,"analytics_sessions");
+    const eventQ=since>0?query(collection(db,"analytics_events"),where("timestamp",">=",since)):collection(db,"analytics_events");
+    const [usersRes,sessionsRes,eventsRes,activityRes,postsRes,quizzesRes,aiQuizzesRes,customEntries]=await Promise.all([
+      getDocs(collection(db,"users")).catch(()=>null),
+      getDocs(sessionQ).catch(()=>null),
+      getDocs(eventQ).catch(()=>null),
+      getDocs(collection(db,"analytics_activity")).catch(()=>null),
+      getDocs(collection(db,"posts")).catch(()=>null),
+      getDocs(collection(db,"quizzes")).catch(()=>null),
+      getDocs(collection(db,"ai_quizzes")).catch(()=>null),
+      loadCustomStatEntries()
     ]);
-    const users=[],sessions=[],events=[],activityDocs=[];usersSnap.forEach(d=>users.push({id:d.id,...d.data()}));sessionsSnap.forEach(d=>sessions.push({id:d.id,...d.data()}));eventsSnap.forEach(d=>events.push({id:d.id,...d.data()}));activitySnap.forEach(d=>activityDocs.push({id:d.id,...d.data()}));
+    if(!usersRes&&!sessionsRes&&!eventsRes) throw new Error("Firestore stats unavailable");
+    const allUsers=[],allSessions=[],allEvents=[],allActivityDocs=[];
+    usersRes?.forEach(d=>allUsers.push({id:d.id,...d.data()}));
+    sessionsRes?.forEach(d=>allSessions.push({id:d.id,...d.data()}));
+    eventsRes?.forEach(d=>allEvents.push({id:d.id,...d.data()}));
+    activityRes?.forEach(d=>allActivityDocs.push({id:d.id,...d.data()}));
+
+    const userRoleMap=new Map();
+    allUsers.forEach(u=>userRoleMap.set(u.id,u.role||"élève"));
+    const matchesRole=(r,uid)=>{
+      if(roleFilter==="all")return true;
+      const resolved=String(r||userRoleMap.get(uid)||"").toLowerCase();
+      return resolved===roleFilter.toLowerCase();
+    };
+    const users=roleFilter==="all"?allUsers:allUsers.filter(u=>matchesRole(u.role,u.id));
+    const sessions=roleFilter==="all"?allSessions:allSessions.filter(s=>matchesRole(s.role,s.userId));
+    const events=roleFilter==="all"?allEvents:allEvents.filter(e=>matchesRole(e.role,e.userId));
+    const activityDocs=roleFilter==="all"?allActivityDocs:allActivityDocs.filter(a=>matchesRole(a.role,a.userId));
+
+    let postsCount=0,fichesCount=0,quizzesCount=quizzesRes?quizzesRes.size:0,aiQuizzesCount=aiQuizzesRes?aiQuizzesRes.size:0;
+    postsRes?.forEach(d=>{const p=d.data()||{};if(String(p.type||"").toLowerCase().includes("fiche"))fichesCount++;else postsCount++;});
+    const contentCounts={posts:postsCount,fiches:fichesCount,quizzes:quizzesCount,aiQuizzes:aiQuizzesCount};
+
     const perUser=new Map();users.forEach(u=>perUser.set(u.id,{id:u.id,username:u.username||u.id,role:u.role||"—",sessions:0,lastLogin:0,lastPage:"—",timezone:"—",countryHint:""}));
     sessions.forEach(s=>{const u=perUser.get(s.userId)||{id:s.userId,username:s.username||s.userId,role:s.role||"—",sessions:0,lastLogin:0,lastPage:"—",timezone:s.timezone||"—",countryHint:s.countryHint||""};u.sessions++;u.lastLogin=Math.max(u.lastLogin||0,Number(s.startedAt||0));u.timezone=s.timezone||u.timezone;u.countryHint=s.countryHint||u.countryHint;perUser.set(s.userId,u);});
     events.filter(e=>e.type==="login").forEach(e=>{const u=perUser.get(e.userId)||{id:e.userId,username:e.username||e.userId,role:e.role||"—",sessions:0,lastLogin:0,lastPage:"—",timezone:e.timezone||"—",countryHint:e.countryHint||""};u.lastLogin=Math.max(u.lastLogin||0,Number(e.timestamp||0));u.timezone=e.timezone||u.timezone;u.countryHint=e.countryHint||u.countryHint;perUser.set(e.userId,u);});
     events.filter(e=>e.type==="page_view").forEach(e=>{const u=perUser.get(e.userId);if(u&&Number(e.timestamp||0)>=Number(u.lastLogin||0))u.lastPage=e.page||u.lastPage;});
     const userRows=Array.from(perUser.values()).sort((a,b)=>(b.lastLogin||0)-(a.lastLogin||0));
     const activity=aggregateActivity(activityDocs,users,since),activityLifetime=aggregateActivity(activityDocs,users,0);
+    const totalStudyMs=activityLifetime.reduce((sum,r)=>sum+Number(r.durationMs||0),0);
     const hourly=buildHourlyConnectionData(events),concurrent=buildConcurrentByHour(sessions),daily=buildDailyData(events,rangeDays);
     const liveCutoff=Date.now()-3*60*1000,live=sessions.filter(s=>Number(s.lastSeenAt||0)>=liveCutoff&&!s.endedAt).length,views=events.filter(e=>e.type==="page_view").length,peak=Math.max(0,...concurrent);
-    window._statisticsCache={users:userRows,sessions,events,hourly,concurrent,daily,activity,activityLifetime};
+    window._statisticsCache={users:userRows,sessions,events,hourly,concurrent,daily,activity,activityLifetime,contentCounts,customEntries,totalStudyMs,roleFilter};
+
     document.getElementById("stats-kpi-users").textContent=users.length;
     document.getElementById("stats-kpi-sessions").textContent=sessions.length;
     document.getElementById("stats-kpi-logins").textContent=events.filter(e=>e.type==="login").length;
     document.getElementById("stats-kpi-peak").textContent=peak;
     document.getElementById("stats-kpi-live").textContent=live;
     document.getElementById("stats-kpi-views").textContent=views;
+    const studyEl=document.getElementById("stats-kpi-study-time");
+    if(studyEl) studyEl.textContent=formatActivityDuration(totalStudyMs);
+
     renderStatisticsUsers();renderStatisticsTimezones(userRows);renderStatisticsPages(events);renderLifetimeActivityRanking();renderActivityRanking();destroyStatsCharts();
     if(window.Chart){
       const opts=chartDefaults();
-      window._statisticsCharts.hourly=new Chart(document.getElementById("stats-hourly-chart"),{type:"bar",data:{labels:Array.from({length:24},(_,i)=>`${String(i).padStart(2,"0")}h`),datasets:[{label:"Connexions",data:hourly,backgroundColor:"rgba(0,122,255,.72)",borderRadius:7,borderSkipped:false,maxBarThickness:20}]},options:opts});
-      window._statisticsCharts.concurrent=new Chart(document.getElementById("stats-concurrent-chart"),{type:"line",data:{labels:Array.from({length:24},(_,i)=>`${String(i).padStart(2,"0")}h`),datasets:[{label:"Connectés estimés",data:concurrent,borderColor:"#5856d6",backgroundColor:"rgba(88,86,214,.12)",pointRadius:2.5,pointHoverRadius:5,tension:.34,fill:true}]},options:opts});
-      window._statisticsCharts.daily=new Chart(document.getElementById("stats-daily-chart"),{type:"line",data:{labels:daily.labels,datasets:[{label:"Sessions",data:daily.sessions,borderColor:"#007aff",backgroundColor:"rgba(0,122,255,.08)",pointRadius:2,tension:.3},{label:"Pages vues",data:daily.views,borderColor:"#34c759",backgroundColor:"rgba(52,199,89,.06)",pointRadius:2,tension:.3}]},options:opts});
+      const hCtx=document.getElementById("stats-hourly-chart")?.getContext("2d");
+      let hBg="rgba(79,70,229,.78)";
+      if(hCtx){const g=hCtx.createLinearGradient(0,0,0,260);g.addColorStop(0,"rgba(79,70,229,.92)");g.addColorStop(1,"rgba(124,58,237,.35)");hBg=g;}
+      window._statisticsCharts.hourly=new Chart(document.getElementById("stats-hourly-chart"),{type:"bar",data:{labels:Array.from({length:24},(_,i)=>`${String(i).padStart(2,"0")}h`),datasets:[{label:"Connexions",data:hourly,backgroundColor:hBg,borderRadius:8,borderSkipped:false,maxBarThickness:22}]},options:opts});
+      window._statisticsCharts.concurrent=new Chart(document.getElementById("stats-concurrent-chart"),{type:"line",data:{labels:Array.from({length:24},(_,i)=>`${String(i).padStart(2,"0")}h`),datasets:[{label:"Connectés estimés",data:concurrent,borderColor:"#7c3aed",backgroundColor:"rgba(124,58,237,.14)",pointRadius:2.5,pointHoverRadius:5,tension:.36,fill:true}]},options:opts});
+      window._statisticsCharts.daily=new Chart(document.getElementById("stats-daily-chart"),{type:"line",data:{labels:daily.labels,datasets:[{label:"Sessions",data:daily.sessions,borderColor:"#4f46e5",backgroundColor:"rgba(79,70,229,.10)",pointRadius:2,tension:.32,fill:true},{label:"Pages vues",data:daily.views,borderColor:"#10b981",backgroundColor:"rgba(16,185,129,.08)",pointRadius:2,tension:.32,fill:true}]},options:opts});
       const roleCounts=new Map(),deviceCounts=new Map(); userRows.forEach(u=>{const role=u.role||"Inconnu";roleCounts.set(role,(roleCounts.get(role)||0)+1);}); sessions.forEach(ss=>{const device=ss.device||"Inconnu";deviceCounts.set(device,(deviceCounts.get(device)||0)+1);});
       window._statisticsCharts.roles=makeDoughnutChart("stats-role-chart",Array.from(roleCounts.keys()),Array.from(roleCounts.values()),"stats-role-legend","stats-role-total");
       window._statisticsCharts.devices=makeDoughnutChart("stats-device-chart",Array.from(deviceCounts.keys()),Array.from(deviceCounts.values()),"stats-device-legend",null);
     }
-    if(status)status.textContent=`Données internes : ${rangeDays} jour${rangeDays>1?"s":""}. Dernière actualisation ${formatStatsDate(Date.now())}.`;
+    updateContentStatsKpiAndChart();
+    renderCustomStatsSection();
+    if(status)status.textContent=`Données internes : ${rangeDays>=3650?"Tout l'historique":`${rangeDays} jour${rangeDays>1?"s":""}`}. Dernière actualisation ${formatStatsDate(Date.now())}.`;
   }catch(error){console.error("Erreur statistiques :",error);if(status)status.textContent="Impossible de charger les statistiques. Vérifie les règles Firestore pour analytics_events et analytics_sessions.";showToast("Statistiques indisponibles.");}
 };
-function statisticsExportPayload(){return{generatedAt:new Date().toISOString(),rangeDays:Number(document.getElementById("stats-range")?.value||7),summary:{users:document.getElementById("stats-kpi-users")?.textContent||"0",sessions:document.getElementById("stats-kpi-sessions")?.textContent||"0",logins:document.getElementById("stats-kpi-logins")?.textContent||"0",peakConcurrent:document.getElementById("stats-kpi-peak")?.textContent||"0",liveNow:document.getElementById("stats-kpi-live")?.textContent||"0",pageViews:document.getElementById("stats-kpi-views")?.textContent||"0"},hourlyConnections:window._statisticsCache.hourly||[],concurrentByHour:window._statisticsCache.concurrent||[],daily:window._statisticsCache.daily||{},users:window._statisticsCache.users||[],sessions:window._statisticsCache.sessions||[],events:window._statisticsCache.events||[],activity:window._statisticsCache.activity||[],activityLifetime:window._statisticsCache.activityLifetime||[]};}
+function statisticsExportPayload(){return{generatedAt:new Date().toISOString(),rangeDays:Number(document.getElementById("stats-range")?.value||7),roleFilter:document.getElementById("stats-role-filter")?.value||"all",summary:{users:document.getElementById("stats-kpi-users")?.textContent||"0",sessions:document.getElementById("stats-kpi-sessions")?.textContent||"0",logins:document.getElementById("stats-kpi-logins")?.textContent||"0",peakConcurrent:document.getElementById("stats-kpi-peak")?.textContent||"0",liveNow:document.getElementById("stats-kpi-live")?.textContent||"0",pageViews:document.getElementById("stats-kpi-views")?.textContent||"0",totalStudyTime:document.getElementById("stats-kpi-study-time")?.textContent||"0 min",totalContents:document.getElementById("stats-kpi-contents")?.textContent||"0"},contentCounts:window._statisticsCache.contentCounts||{},customEntries:window._statisticsCache.customEntries||[],hourlyConnections:window._statisticsCache.hourly||[],concurrentByHour:window._statisticsCache.concurrent||[],daily:window._statisticsCache.daily||{},users:window._statisticsCache.users||[],sessions:window._statisticsCache.sessions||[],events:window._statisticsCache.events||[],activity:window._statisticsCache.activity||[],activityLifetime:window._statisticsCache.activityLifetime||[]};}
 window.exportStatisticsJSON=()=>{if(!isAdminUser(currentUser))return showToast("Accès non autorisé.");const blob=new Blob([JSON.stringify(statisticsExportPayload(),null,2)],{type:"application/json;charset=utf-8"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`dnb-statistiques-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(a.href);};
-window.exportStatisticsPDF=()=>{if(!isAdminUser(currentUser))return showToast("Accès non autorisé.");if(!window.jspdf?.jsPDF)return showToast("Le module PDF n'est pas disponible.");const{jsPDF}=window.jspdf,p=statisticsExportPayload(),doc=new jsPDF({unit:"mm",format:"a4"});doc.setFontSize(20);doc.text("DnB Reviz — Rapport statistiques",14,18);doc.setFontSize(10);doc.text(`Généré le ${new Date().toLocaleString("fr-FR")} · Période: ${p.rangeDays} jour(s)`,14,25);let y=35;doc.setFontSize(12);[`Utilisateurs connus : ${p.summary.users}`,`Sessions : ${p.summary.sessions}`,`Connexions : ${p.summary.logins}`,`Pic de connectés estimé : ${p.summary.peakConcurrent}`,`Connectés maintenant : ${p.summary.liveNow}`,`Pages vues : ${p.summary.pageViews}`].forEach(t=>{doc.text(t,14,y);y+=7;});y+=4;doc.setFontSize(14);doc.text("Connexions par heure",14,y);y+=7;doc.setFontSize(10);for(let i=0;i<24;i+=4){const row=[0,1,2,3].map(j=>{const h=i+j;return`${String(h).padStart(2,"0")}h: ${p.hourlyConnections[h]||0}`;}).join("    ");doc.text(row,14,y);y+=6;}y+=4;doc.setFontSize(14);doc.text("Utilisateurs",14,y);y+=7;doc.setFontSize(9);(p.users||[]).slice(0,30).forEach(u=>{const line=`@${u.username||u.id} · ${u.role||"—"} · ${formatStatsDate(u.lastLogin)} · ${u.sessions||0} session(s) · ${[u.timezone,u.countryHint].filter(Boolean).join(" · ")||"—"}`;const wrapped=doc.splitTextToSize(line,180);if(y>275){doc.addPage();y=18;}doc.text(wrapped,14,y);y+=5*wrapped.length;});doc.save(`dnb-statistiques-${new Date().toISOString().slice(0,10)}.pdf`);};
+
+window.openStatsPdfModal = () => {
+  if (!isAdminUser(currentUser)) return showToast("Accès non autorisé.");
+  openModal("m-stats-pdf-export");
+};
+
+window.exportStatisticsPDF = () => window.openStatsPdfModal();
+
+function captureChartAsWhitePng(canvasId) {
+  const src = document.getElementById(canvasId);
+  if (!src || !src.width || !src.height) return null;
+  try {
+    const off = document.createElement("canvas");
+    off.width = src.width;
+    off.height = src.height;
+    const ctx = off.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, off.width, off.height);
+    ctx.drawImage(src, 0, 0);
+    return {
+      dataUrl: off.toDataURL("image/png", 1.0),
+      ratio: off.height / off.width
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+window.generateStylizedStatisticsPDF = () => {
+  if (!isAdminUser(currentUser)) return showToast("Accès non autorisé.");
+  if (!window.jspdf?.jsPDF) return showToast("Le module PDF n'est pas disponible.");
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const pageW = 210, pageH = 297, margin = 14, contentW = pageW - margin * 2;
+  const p = statisticsExportPayload();
+
+  const reportTitle = String(document.getElementById("pdf-report-title")?.value || "DnB Reviz — Rapport Statistiques").trim();
+  const reportSub = String(document.getElementById("pdf-report-subtitle")?.value || "Bilan administrateur consolidé").trim();
+  const reportNote = String(document.getElementById("pdf-report-note")?.value || "").trim();
+
+  const incKpis = Boolean(document.getElementById("pdf-inc-kpis")?.checked);
+  const incCharts = Boolean(document.getElementById("pdf-inc-charts")?.checked);
+  const incCustom = Boolean(document.getElementById("pdf-inc-custom")?.checked);
+  const incRanking = Boolean(document.getElementById("pdf-inc-ranking")?.checked);
+  const incPages = Boolean(document.getElementById("pdf-inc-pages")?.checked);
+  const incUsers = Boolean(document.getElementById("pdf-inc-users")?.checked);
+
+  let y = 0;
+
+  const ensureSpace = (neededMm) => {
+    if (y + neededMm > pageH - 18) {
+      doc.addPage();
+      y = 16;
+    }
+  };
+
+  const drawSectionHeading = (tag, title) => {
+    ensureSpace(16);
+    doc.setFillColor(238, 242, 255);
+    doc.roundedRect(margin, y, contentW, 10, 2, 2, "F");
+    doc.setFillColor(79, 70, 229);
+    doc.rect(margin, y, 2.2, 10, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    doc.setTextColor(79, 70, 229);
+    doc.text(tag.toUpperCase(), margin + 5, y + 3.8);
+    doc.setFontSize(11);
+    doc.setTextColor(15, 23, 42);
+    doc.text(title, margin + 5, y + 8.3);
+    y += 13;
+  };
+
+  const drawStyledPdfTable = (headers, colWidths, rows) => {
+    const rowH = 6.8;
+    const drawHeader = () => {
+      ensureSpace(rowH + 6);
+      doc.setFillColor(79, 70, 229);
+      doc.roundedRect(margin, y, contentW, rowH, 1.5, 1.5, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(255, 255, 255);
+      let x = margin + 2.5;
+      headers.forEach((h, i) => {
+        doc.text(String(h), x, y + 4.7);
+        x += colWidths[i];
+      });
+      y += rowH;
+    };
+
+    drawHeader();
+    rows.forEach((row, idx) => {
+      if (y + rowH > pageH - 18) {
+        doc.addPage();
+        y = 16;
+        drawHeader();
+      }
+      if (idx % 2 === 0) {
+        doc.setFillColor(248, 250, 252);
+        doc.rect(margin, y, contentW, rowH, "F");
+      } else {
+        doc.setFillColor(255, 255, 255);
+        doc.rect(margin, y, contentW, rowH, "F");
+      }
+      doc.setDrawColor(226, 232, 240);
+      doc.line(margin, y + rowH, margin + contentW, y + rowH);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(30, 41, 59);
+      let x = margin + 2.5;
+      row.forEach((cell, i) => {
+        const maxW = Math.max(10, colWidths[i] - 3);
+        let txt = String(cell ?? "—");
+        while (txt.length > 3 && doc.getTextWidth(txt) > maxW) txt = txt.slice(0, -4) + "…";
+        doc.text(txt, x, y + 4.6);
+        x += colWidths[i];
+      });
+      y += rowH;
+    });
+    y += 5;
+  };
+
+  // En-tête stylisé
+  doc.setFillColor(79, 70, 229);
+  doc.rect(0, 0, pageW, 38, "F");
+  doc.setFillColor(168, 85, 247);
+  doc.rect(0, 35, pageW, 3, "F");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(17);
+  doc.setTextColor(255, 255, 255);
+  doc.text(reportTitle, margin, 15, { maxWidth: contentW });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  doc.setTextColor(224, 231, 255);
+  doc.text(reportSub, margin, 22.5, { maxWidth: contentW });
+
+  const periodTxt = p.rangeDays >= 3650 ? "Tout l'historique" : `${p.rangeDays} jour(s)`;
+  const roleTxt = p.roleFilter === "all" ? "Tous rôles" : p.roleFilter;
+  const metaLine = `Généré le ${new Date().toLocaleString("fr-FR")}  ·  Période : ${periodTxt}  ·  Filtre : ${roleTxt}  ·  Par @${currentUser?.username || "admin"}`;
+  doc.setFontSize(8);
+  doc.setTextColor(238, 242, 255);
+  doc.text(metaLine, margin, 30.5, { maxWidth: contentW });
+
+  y = 45;
+
+  // Synthèse Admin optionnelle
+  if (reportNote) {
+    const lines = doc.splitTextToSize(reportNote, contentW - 10);
+    const boxH = Math.max(14, lines.length * 4.5 + 8);
+    ensureSpace(boxH + 4);
+    doc.setFillColor(245, 243, 255);
+    doc.setDrawColor(196, 181, 253);
+    doc.roundedRect(margin, y, contentW, boxH, 2.5, 2.5, "FD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(109, 40, 217);
+    doc.text("NOTE DE SYNTHÈSE ADMINISTRATEUR", margin + 4, y + 5.5);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(30, 41, 59);
+    doc.text(lines, margin + 4, y + 10.5);
+    y += boxH + 6;
+  }
+
+  // Cartes KPI
+  if (incKpis) {
+    drawSectionHeading("Vue globale", "Indicateurs clés de performance (KPI)");
+    const kpis = [
+      { label: "Utilisateurs", val: p.summary.users, sub: "comptes suivis", accent: [79, 70, 229] },
+      { label: "Sessions", val: p.summary.sessions, sub: "sur la période", accent: [2, 132, 199] },
+      { label: "Connexions", val: p.summary.logins, sub: "entrées enregistrées", accent: [124, 58, 237] },
+      { label: "Pic simultané", val: p.summary.peakConcurrent, sub: "connectés max", accent: [217, 119, 6] },
+      { label: "En ligne", val: p.summary.liveNow, sub: "activité récente", accent: [16, 185, 129] },
+      { label: "Pages vues", val: p.summary.pageViews, sub: "vues internes", accent: [236, 72, 153] },
+      { label: "Temps révisé", val: p.summary.totalStudyTime, sub: "cumulé", accent: [20, 184, 166] },
+      { label: "Contenus & ajouts", val: p.summary.totalContents, sub: "base & perso", accent: [245, 158, 11] }
+    ];
+    const gap = 3.5;
+    const cardW = (contentW - gap * 3) / 4;
+    const cardH = 21;
+    kpis.forEach((k, idx) => {
+      const col = idx % 4;
+      const row = Math.floor(idx / 4);
+      if (col === 0) ensureSpace(cardH + 4);
+      const x = margin + col * (cardW + gap);
+      const cy = y + row * (cardH + gap);
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(x, cy, cardW, cardH, 2.2, 2.2, "FD");
+      doc.setFillColor(...k.accent);
+      doc.roundedRect(x, cy, cardW, 1.8, 1, 1, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7.5);
+      doc.setTextColor(100, 116, 139);
+      doc.text(k.label.toUpperCase(), x + 3, cy + 6.5);
+      doc.setFontSize(13);
+      doc.setTextColor(15, 23, 42);
+      doc.text(String(k.val), x + 3, cy + 13.5);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(100, 116, 139);
+      doc.text(k.sub, x + 3, cy + 18.2);
+    });
+    y += 2 * (cardH + gap) + 4;
+  }
+
+  // Graphiques haute définition
+  if (incCharts) {
+    const chartDefs = [
+      { id: "stats-hourly-chart", title: "Connexions par heure (24 h)" },
+      { id: "stats-daily-chart", title: "Évolution sessions & pages vues" },
+      { id: "stats-content-chart", title: "Répartition des contenus" },
+      { id: "stats-custom-chart", title: "Indicateurs personnalisés" }
+    ];
+    const captured = chartDefs
+      .map(c => ({ ...c, img: captureChartAsWhitePng(c.id) }))
+      .filter(c => c.img);
+
+    if (captured.length) {
+      drawSectionHeading("Visualisations", "Graphiques d'activité DnB Reviz");
+      const boxGap = 5;
+      const boxW = (contentW - boxGap) / 2;
+      for (let i = 0; i < captured.length; i += 2) {
+        const pair = captured.slice(i, i + 2);
+        const boxH = 54;
+        ensureSpace(boxH + 6);
+        pair.forEach((item, j) => {
+          const x = margin + j * (boxW + boxGap);
+          doc.setFillColor(255, 255, 255);
+          doc.setDrawColor(226, 232, 240);
+          doc.roundedRect(x, y, boxW, boxH, 2.5, 2.5, "FD");
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(8.5);
+          doc.setTextColor(30, 41, 59);
+          doc.text(item.title, x + 3.5, y + 6);
+          const imgW = boxW - 6;
+          const imgH = Math.min(43, imgW * item.img.ratio);
+          doc.addImage(item.img.dataUrl, "PNG", x + 3, y + 8.5, imgW, imgH);
+        });
+        y += boxH + 5;
+      }
+    }
+  }
+
+  // Données personnalisées
+  if (incCustom) {
+    const customPdfRows = (p.customEntries || []).filter(e => e.includeInPdf !== false);
+    if (customPdfRows.length) {
+      drawSectionHeading("Ajouts manuels", `Données personnalisées (${customPdfRows.length})`);
+      drawStyledPdfTable(
+        ["Date", "Indicateur", "Catégorie", "Valeur", "Note"],
+        [24, 52, 34, 26, 46],
+        customPdfRows.map(e => [
+          formatShortFrDate(e.date),
+          e.label,
+          e.category || "Autre",
+          `${e.value}${e.unit ? " " + e.unit : ""}`,
+          e.note || "—"
+        ])
+      );
+    }
+  }
+
+  // Classement Top Élèves
+  if (incRanking) {
+    const rankingRows = [...(p.activityLifetime || [])]
+      .filter(r => r.role !== "professeur" && r.role !== "admin")
+      .sort((a, b) => b.durationMs - a.durationMs)
+      .slice(0, 20);
+    if (rankingRows.length) {
+      drawSectionHeading("Assiduité", "Top Élèves — Temps actif cumulé");
+      drawStyledPdfTable(
+        ["#", "Élève", "Temps total", "Sessions", "Pages", "Quiz", "Quiz IA"],
+        [12, 52, 32, 22, 22, 22, 20],
+        rankingRows.map((r, i) => [
+          `#${i + 1}`,
+          `@${r.username || r.id}`,
+          formatActivityDuration(r.durationMs),
+          r.sessions || 0,
+          r.pageViews || 0,
+          r.quizCompletes || 0,
+          r.aiQuizGenerations || 0
+        ])
+      );
+    }
+  }
+
+  // Pages les plus consultées
+  if (incPages) {
+    const hiddenPages = new Set(["admin", "statistiques"]);
+    const counts = new Map();
+    (p.events || [])
+      .filter(e => e.type === "page_view" && !hiddenPages.has(String(e.page || "").toLowerCase()))
+      .forEach(e => { const pg = e.page || "inconnu"; counts.set(pg, (counts.get(pg) || 0) + 1); });
+    const topPages = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 12);
+    if (topPages.length) {
+      drawSectionHeading("Navigation", "Pages les plus consultées");
+      drawStyledPdfTable(
+        ["Page", "Vues", "Part du trafic"],
+        [100, 36, 46],
+        (() => {
+          const total = topPages.reduce((s, [, n]) => s + n, 0) || 1;
+          return topPages.map(([pg, n]) => [pg, n, `${Math.round((n / total) * 100)} %`]);
+        })()
+      );
+    }
+  }
+
+  // Détail utilisateurs & sessions
+  if (incUsers && (p.users || []).length) {
+    drawSectionHeading("Comptes suivis", `Détail utilisateurs & sessions (top ${Math.min(35, p.users.length)})`);
+    drawStyledPdfTable(
+      ["Utilisateur", "Rôle", "Dernière connexion", "Sess.", "Dernière page", "Zone"],
+      [42, 24, 36, 14, 34, 32],
+      p.users.slice(0, 35).map(u => [
+        `@${u.username || u.id}`,
+        u.role || "—",
+        formatStatsDate(u.lastLogin),
+        u.sessions || 0,
+        u.lastPage || "—",
+        [u.timezone, u.countryHint].filter(Boolean).join(" · ") || "—"
+      ])
+    );
+  }
+
+  // Pied de page sur chaque page
+  const totalPages = doc.getNumberOfPages();
+  for (let pg = 1; pg <= totalPages; pg++) {
+    doc.setPage(pg);
+    doc.setDrawColor(226, 232, 240);
+    doc.line(margin, pageH - 13, pageW - margin, pageH - 13);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text("DnB Reviz · Rapport Statistiques Administrateur", margin, pageH - 8);
+    doc.text(`Page ${pg} / ${totalPages}`, pageW - margin, pageH - 8, { align: "right" });
+  }
+
+  doc.save(`dnb-reviz-statistiques-${new Date().toISOString().slice(0, 10)}.pdf`);
+  closeModal("m-stats-pdf-export");
+  showToast("Rapport PDF stylisé téléchargé !");
+};
 
 function handleHashChange() {
   let hash = window.location.hash.trim();
@@ -777,6 +1862,14 @@ function handleHashChange() {
 
 function showInternalView(target) {
   if (target === 'matieres') target = 'accueil';
+  if (target !== 'pub-profil') {
+    window._currentViewedUser = null;
+    window._pubFeedKey = null;
+    if (window._pubFeedUnsub) { try { window._pubFeedUnsub(); } catch (_) {} window._pubFeedUnsub = null; }
+    if (window._pubLikesUnsubPosts) { try { window._pubLikesUnsubPosts(); } catch (_) {} window._pubLikesUnsubPosts = null; }
+    if (window._pubLikesUnsubQuizzes) { try { window._pubLikesUnsubQuizzes(); } catch (_) {} window._pubLikesUnsubQuizzes = null; }
+    if (window._pubLikesUnsubAIQuizzes) { try { window._pubLikesUnsubAIQuizzes(); } catch (_) {} window._pubLikesUnsubAIQuizzes = null; }
+  }
   if (target === 'admin') {
     const isAdmin = currentUser && (currentUser.role === 'admin' || (currentUser.subRoles && currentUser.subRoles.includes('admin')));
     if (!isAdmin) { 
@@ -821,7 +1914,11 @@ function showInternalView(target) {
   if (target === 'messages') loadDMChats();
   if (target === 'quiz') loadQuizFeed();
   if (target === 'exercices') loadExercicesFeed();
-  if (target === 'setting') { loadAIQuizHistory(); loadAnimationsSetting(); }
+  if (target === 'setting') {
+    loadAIQuizHistory();
+    loadAnimationsSetting();
+    if (typeof renderThemesAndRewardsSettings === "function") renderThemesAndRewardsSettings();
+  }
   if (target === 'cours') loadCoursFeed();
   if (target === 'fichesrev') loadFRFeed();
   if (target === 'accueil') {
@@ -983,10 +2080,200 @@ function getDateFromTimestamp(timestamp) {
   return `${y}-${m}-${day}`;
 }
 
-function renderStreakBadge(streak, id) {
-  return `<span id="${id}" style="background: #ff6b00; color:white; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight:bold;">
-  🔥 Série : ${streak} jours
-</span>`;
+window.getFlameTier = function getFlameTier(streak) {
+  const n = Math.max(0, Number(streak) || 0);
+  if (n >= 30) {
+    return {
+      id: "gold",
+      label: "Flamme Dorée",
+      palette: ["#78350f", "#d97706", "#facc15", "#fef9c3", "#ffffff"],
+      particles: 7
+    };
+  }
+  if (n >= 14) {
+    return {
+      id: "plasma",
+      label: "Flamme Plasma",
+      palette: ["#4c1d95", "#9333ea", "#d946ef", "#f5d0fe", "#ffffff"],
+      particles: 5
+    };
+  }
+  if (n >= 7) {
+    return {
+      id: "blue",
+      label: "Flamme Bleue",
+      palette: ["#1e3a8a", "#0284c7", "#38bdf8", "#bae6fd", "#ffffff"],
+      particles: 4
+    };
+  }
+  return {
+    id: "amber",
+    label: "Flamme Ambrée",
+    palette: ["#b91c1c", "#ea580c", "#ff8c00", "#fde047", "#fffbeb"],
+    particles: 3
+  };
+};
+
+function renderRealisticFlameSVG(tierId, isPending, isShieldProtected) {
+  const wrap = document.getElementById("home-flame-svg-wrap");
+  const particlesEl = document.getElementById("home-flame-particles");
+  if (!wrap) return;
+  const tier = window.getFlameTier(tierId === "gold" ? 30 : tierId === "plasma" ? 14 : tierId === "blue" ? 7 : 0);
+  const [cDeep, cOuter, cMid, cCore, cTip] = isShieldProtected
+    ? ["#0c4a6e", "#0284c7", "#38bdf8", "#bae6fd", "#f0f9ff"]
+    : tier.palette;
+  const uid = `flame_${tier.id}`;
+
+  wrap.innerHTML = `
+    <svg viewBox="0 0 80 96" aria-hidden="true" style="opacity:${isPending ? "0.86" : "1"}">
+      <defs>
+        <linearGradient id="${uid}_outer" x1="50%" y1="100%" x2="50%" y2="0%">
+          <stop offset="0%" stop-color="${cDeep}" />
+          <stop offset="48%" stop-color="${cOuter}" />
+          <stop offset="100%" stop-color="${cMid}" />
+        </linearGradient>
+        <linearGradient id="${uid}_mid" x1="50%" y1="100%" x2="50%" y2="0%">
+          <stop offset="0%" stop-color="${cOuter}" />
+          <stop offset="55%" stop-color="${cMid}" />
+          <stop offset="100%" stop-color="${cCore}" />
+        </linearGradient>
+        <radialGradient id="${uid}_core" cx="50%" cy="68%" r="52%">
+          <stop offset="0%" stop-color="${cTip}" />
+          <stop offset="58%" stop-color="${cCore}" />
+          <stop offset="100%" stop-color="${cMid}" stop-opacity="0" />
+        </radialGradient>
+      </defs>
+      <!-- Outer organic silhouette -->
+      <path class="flame-outer-tongue"
+        d="M40 6 C42 18, 57 26, 62 41 C67 55, 62 77, 48 86 C42 90, 34 90, 27 85 C15 77, 12 58, 19 42 C22 34, 28 29, 28 20 C32 25, 34 29, 36 31 C35 21, 37 12, 40 6 Z"
+        fill="url(#${uid}_outer)" />
+      <!-- Middle rising tongue -->
+      <path class="flame-mid-tongue"
+        d="M41 22 C45 33, 55 41, 56 54 C57 68, 49 82, 39 84 C29 84, 23 71, 24 57 C25 46, 33 38, 35 29 C37 32, 38 35, 39 37 C39 31, 40 26, 41 22 Z"
+        fill="url(#${uid}_mid)" />
+      <!-- Hot luminescent core -->
+      <path class="flame-core-tongue"
+        d="M40 46 C44 54, 49 60, 48 70 C47 78, 43 82, 39 82 C34 82, 30 77, 31 68 C32 59, 37 53, 40 46 Z"
+        fill="url(#${uid}_core)" />
+      ${isShieldProtected ? `<ellipse cx="40" cy="86" rx="22" ry="4" fill="none" stroke="#bae6fd" stroke-width="2" stroke-opacity="0.75"/>` : ""}
+    </svg>
+  `;
+
+  if (particlesEl) {
+    const count = tier.particles;
+    particlesEl.innerHTML = Array.from({ length: count }, (_, i) => {
+      const sx = ((i - (count - 1) / 2) * 8).toFixed(1);
+      const ex = (Number(sx) * 1.6 + (i % 2 === 0 ? 5 : -5)).toFixed(1);
+      const delay = (i * 0.35).toFixed(2);
+      return `<span class="flame-spark" style="--sx:${sx}px;--ex:${ex}px;animation-delay:${delay}s;"></span>`;
+    }).join("");
+  }
+}
+
+window.triggerStreakCelebration = function triggerStreakCelebration() {
+  const card = document.getElementById("home-streak-card");
+  const burst = document.getElementById("home-streak-celebration");
+  if (!card || !burst) return;
+  card.classList.remove("streak-celebrating");
+  void card.offsetWidth;
+  card.classList.add("streak-celebrating");
+
+  const colors = ["#facc15", "#ff7a00", "#38bdf8", "#c026d3", "#34c759"];
+  burst.innerHTML = Array.from({ length: 18 }, (_, i) => {
+    const tx = Math.round((Math.random() - 0.5) * 240);
+    const ty = Math.round(-25 - Math.random() * 80);
+    const rot = Math.round((Math.random() - 0.5) * 360);
+    const left = 48 + Math.round((Math.random() - 0.5) * 28);
+    const color = colors[i % colors.length];
+    return `<span class="celebration-confetti" style="left:${left}px;top:45px;background:${color};--tx:${tx}px;--ty:${ty}px;--rot:${rot}deg;animation-delay:${(i * 0.02).toFixed(2)}s;"></span>`;
+  }).join("");
+
+  setTimeout(() => {
+    card.classList.remove("streak-celebrating");
+    burst.innerHTML = "";
+  }, 1500);
+};
+
+window.getDailyGoalMinutes = () => {
+  const saved = Number(localStorage.getItem(`dnb_daily_goal_${currentUser?.username || "guest"}`));
+  const fromUser = Number(currentUser?.dailyGoalMinutes);
+  return [10, 15, 30, 45, 60].includes(saved) ? saved : ([10, 15, 30, 45, 60].includes(fromUser) ? fromUser : 15);
+};
+
+window.setDailyGoalMinutes = async (mins) => {
+  const valid = [10, 15, 30, 45, 60].includes(Number(mins)) ? Number(mins) : 15;
+  localStorage.setItem(`dnb_daily_goal_${currentUser?.username || "guest"}`, String(valid));
+  if (currentUser?.id) {
+    currentUser.dailyGoalMinutes = valid;
+    saveSessionLocally(currentUser);
+    try { await updateDoc(doc(db, "users", currentUser.id), { dailyGoalMinutes: valid }); } catch (_) {}
+  }
+  document.querySelectorAll("#daily-goal-options .daily-goal-opt").forEach(btn => {
+    btn.classList.toggle("active", Number(btn.dataset.mins) === valid);
+  });
+  updateDailyGoalUI();
+  showToast(`🎯 Objectif quotidien fixé à ${valid} min/jour ✓`);
+};
+
+window.openDailyGoalModal = () => {
+  const currentGoal = window.getDailyGoalMinutes();
+  document.querySelectorAll("#daily-goal-options .daily-goal-opt").forEach(btn => {
+    btn.classList.toggle("active", Number(btn.dataset.mins) === currentGoal);
+  });
+  const shields = Math.min(3, Math.max(0, Number(currentUser?.streakShields) || 0));
+  const sc = document.getElementById("modal-shield-count");
+  if (sc) sc.textContent = `${shields} / 3`;
+  openModal("m-daily-goal");
+};
+
+window.updateDailyGoalUI = () => {
+  if (!currentUser) return;
+  const goalMin = window.getDailyGoalMinutes();
+  const dailyMs = window.getDailyStudyMs ? window.getDailyStudyMs() : 0;
+  const doneMin = Math.floor(dailyMs / 60000);
+  const pct = Math.min(100, Math.round((doneMin / goalMin) * 100));
+  const textEl = document.getElementById("home-daily-goal-text");
+  const fillEl = document.getElementById("home-daily-goal-fill");
+  const shieldEl = document.getElementById("home-streak-shield-inline");
+  const shields = Math.min(3, Math.max(0, Number(currentUser.streakShields) || 0));
+  if (shieldEl) shieldEl.textContent = `🛡️ ${shields}/3`;
+  if (textEl) {
+    textEl.textContent = doneMin >= goalMin
+      ? `Objectif du jour atteint (${doneMin} / ${goalMin} min) ✓`
+      : `Objectif du jour : ${doneMin} / ${goalMin} min`;
+  }
+  if (fillEl) fillEl.style.width = `${pct}%`;
+};
+
+window.awardStreakShieldIfEligible = async (source, milestoneValue) => {
+  if (!currentUser?.id || isProfessorUser(currentUser)) return false;
+  const currentShields = Math.min(3, Math.max(0, Number(currentUser.streakShields) || 0));
+  if (currentShields >= 3) return false;
+
+  const key = `${source}:${milestoneValue}`;
+  const earnedList = Array.isArray(currentUser.shieldMilestones) ? [...currentUser.shieldMilestones] : [];
+  if (earnedList.includes(key)) return false;
+
+  const nextShields = Math.min(3, currentShields + 1);
+  earnedList.push(key);
+  currentUser.streakShields = nextShields;
+  currentUser.shieldMilestones = earnedList.slice(-30);
+  saveSessionLocally(currentUser);
+  updateDailyGoalUI();
+  try {
+    await updateDoc(doc(db, "users", currentUser.id), {
+      streakShields: nextShields,
+      shieldMilestones: currentUser.shieldMilestones
+    });
+  } catch (_) {}
+  showToast(`🛡️ +1 Bouclier de gel de flamme gagné ! (${nextShields}/3)`);
+  return true;
+};
+
+function getDateStrOffset(daysOffset) {
+  const d = new Date();
+  d.setDate(d.getDate() + daysOffset);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function getStreakStorageKey(username) {
@@ -1052,7 +2339,9 @@ function updateStreakBadgeUI(streak, options = {}) {
 
   const displayStreak = Number(options.displayStreak ?? streak) || 0;
   const isPending = !!options.pending;
+  const isShieldProtected = !!options.shieldProtected || currentUser.shieldUsedOnDate === getTodayStr();
   const homeStreak = document.getElementById("home-streak-count");
+  const tier = window.getFlameTier(Number(streak) || displayStreak);
 
   currentUser.streak = Number(streak) || 0;
 
@@ -1060,8 +2349,20 @@ function updateStreakBadgeUI(streak, options = {}) {
     homeStreak.textContent = `${displayStreak} ${displayStreak > 1 ? "jours" : "jour"}`;
   }
 
+  const tierLabelEl = document.getElementById("home-streak-tier-label");
+  if (tierLabelEl) {
+    tierLabelEl.textContent = isShieldProtected ? `${tier.label} · Protégée` : tier.label;
+  }
+
   const card = document.getElementById("home-streak-card");
-  if (card) card.classList.toggle("streak-pending", isPending);
+  if (card) {
+    card.classList.remove("streak-tier-amber", "streak-tier-blue", "streak-tier-plasma", "streak-tier-gold", "streak-tier-frozen");
+    card.classList.add(isShieldProtected ? "streak-tier-frozen" : `streak-tier-${tier.id}`);
+    card.classList.toggle("streak-pending", isPending);
+  }
+
+  renderRealisticFlameSVG(tier.id, isPending, isShieldProtected);
+  updateDailyGoalUI();
 
   if (options.status) updateStreakStatus(options.status);
   updateStreakRankingUI();
@@ -1243,6 +2544,11 @@ async function confirmPendingStreak() {
     pending: false,
     status: "Flamme du jour confirmée ✓"
   });
+  window.triggerStreakCelebration();
+
+  if (newStreak > 0 && newStreak % 2 === 0) {
+    window.awardStreakShieldIfEligible("streak", newStreak);
+  }
 
   scheduleNextStreakDay();
 }
@@ -1251,7 +2557,7 @@ function animateStreakExtinguish(lostStreak) {
   const card = document.getElementById("home-streak-card");
   if (!card) return;
 
-  const flame = card.querySelector(".duo-flame");
+  const flame = card.querySelector(".flame-svg-wrap");
   card.classList.remove("streak-extinguishing");
   void card.offsetWidth;
   card.classList.add("streak-extinguishing");
@@ -1360,6 +2666,43 @@ async function checkStreak(u) {
     return;
   }
 
+  // Streak Freeze (Bouclier) when exactly 1 full day was missed (dayGap === 2)
+  if (dayGap === 2 && (Number(u.streakShields) || 0) > 0) {
+    const remainingShields = Math.max(0, (Number(u.streakShields) || 0) - 1);
+    const yesterday = getDateStrOffset(-1);
+    try {
+      await updateDoc(doc(db, "users", u.id), {
+        streakShields: remainingShields,
+        lastActiveDate: yesterday,
+        shieldUsedOnDate: today
+      });
+    } catch (_) {}
+    currentUser.streakShields = remainingShields;
+    currentUser.lastActiveDate = yesterday;
+    currentUser.shieldUsedOnDate = today;
+    saveSessionLocally(currentUser);
+    showToast(`🛡️ Bouclier activé ! Ta série de ${currentStreak} jours a été protégée.`);
+
+    const windowKey = `day:${today}`;
+    const storedWatch = getStoredStreakWatch(u.username, windowKey);
+    window._streakState = {
+      pending: true,
+      confirmed: false,
+      dayKey: today,
+      windowKey,
+      accumulatedMs: storedWatch.accumulatedMs
+    };
+    updateStreakBadgeUI(currentStreak, {
+      displayStreak: currentStreak,
+      pending: true,
+      shieldProtected: true,
+      status: `🛡️ Série sauvée par un bouclier ! Encore ${Math.max(1, Math.ceil((STREAK_CONFIRM_MS - storedWatch.accumulatedMs) / 1000))}s aujourd'hui`
+    });
+    startStreakMinuteTimer();
+    scheduleNextStreakDay();
+    return;
+  }
+
   if (dayGap === 1) {
     const windowKey = `day:${today}`;
     const storedWatch = getStoredStreakWatch(u.username, windowKey);
@@ -1406,6 +2749,91 @@ async function checkStreak(u) {
   scheduleNextStreakDay();
 }
 
+async function backfillHistoricalStudyTime(u) {
+  if (!u?.id || window._historicalBackfillRanFor === u.id) return;
+  window._historicalBackfillRanFor = u.id;
+
+  const today = typeof getTodayStr === "function" ? getTodayStr() : new Date().toISOString().slice(0, 10);
+  const actMap = new Map();
+  const sessMap = new Map();
+
+  const safeQuery = async (colName, field, val, targetMap) => {
+    if (!val) return;
+    try {
+      const snap = await getDocs(query(collection(db, colName), where(field, "==", val)));
+      snap.forEach(d => targetMap.set(d.id, d.data()));
+    } catch (err) {
+      console.debug(`Backfill ${colName} (${field}) ignoré :`, err?.code || err?.message || err);
+    }
+  };
+
+  await Promise.all([
+    safeQuery("analytics_activity", "userId", u.id, actMap),
+    safeQuery("analytics_activity", "username", u.username, actMap),
+    safeQuery("analytics_sessions", "userId", u.id, sessMap),
+    safeQuery("analytics_sessions", "username", u.username, sessMap)
+  ]);
+
+  let activityTotalMs = 0;
+  let dailyActivityMs = 0;
+  actMap.forEach(a => {
+    const dur = Math.max(0, Number(a?.durationMs) || 0);
+    activityTotalMs += dur;
+    const ts = Number(a?.timestamp || 0);
+    if (ts && typeof getDateFromTimestamp === "function" && getDateFromTimestamp(ts) === today) {
+      dailyActivityMs += dur;
+    }
+  });
+
+  let sessionsTotalMs = 0;
+  let dailySessionsMs = 0;
+  sessMap.forEach(s => {
+    const start = Number(s?.startedAt || 0);
+    const end = Number(s?.endedAt || s?.lastSeenAt || start);
+    if (!start || end <= start) return;
+    const span = Math.max(0, Math.min(4 * 3600 * 1000, end - start));
+    sessionsTotalMs += span;
+    if (typeof getDateFromTimestamp === "function" && getDateFromTimestamp(start) === today) {
+      dailySessionsMs += span;
+    }
+  });
+
+  const confirmMs = typeof STREAK_CONFIRM_MS === "number" ? STREAK_CONFIRM_MS : 60000;
+  const streakBaselineMs = Math.max(Number(u.maxStreak) || 0, Number(u.streak) || 0) * confirmMs + Math.max(0, Number(u.streakWatchMs) || 0);
+
+  const prevTotal = typeof window.getTotalStudyMs === "function" ? window.getTotalStudyMs() : (Number(u.totalStudyMs) || 0);
+  const prevDaily = typeof window.getDailyStudyMs === "function" ? window.getDailyStudyMs() : 0;
+  const mergedTotal = Math.max(prevTotal, Number(u.totalStudyMs) || 0, activityTotalMs, sessionsTotalMs, streakBaselineMs);
+  const mergedDaily = Math.max(prevDaily, dailyActivityMs, dailySessionsMs);
+
+  if (!window.currentUser || window.currentUser.id !== u.id) return;
+
+  window.currentUser.totalStudyMs = mergedTotal;
+  window.currentUser.dailyStudyDate = today;
+  window.currentUser.dailyStudyMs = mergedDaily;
+  saveLocalStudyStats(u.id, { totalStudyMs: mergedTotal, dailyDate: today, dailyStudyMs: mergedDaily });
+  saveSessionLocally(window.currentUser);
+
+  if (mergedTotal > prevTotal && typeof checkNewlyUnlockedThemesAndBadges === "function") {
+    checkNewlyUnlockedThemesAndBadges(prevTotal, mergedTotal);
+  }
+  if (typeof updateDailyGoalUI === "function") updateDailyGoalUI();
+  if (typeof renderThemesAndRewardsSettings === "function") renderThemesAndRewardsSettings();
+
+  if (!u.historicalStudySynced || mergedTotal > (Number(u.totalStudyMs) || 0)) {
+    try {
+      await updateDoc(doc(db, "users", u.id), {
+        totalStudyMs: mergedTotal,
+        dailyStudyDate: today,
+        dailyStudyMs: mergedDaily,
+        historicalStudySynced: true
+      });
+    } catch (err) {
+      console.debug("Synchronisation historique non enregistrée :", err?.code || err?.message || err);
+    }
+  }
+}
+
 function hydrateSession(u, options = {}) {
   window.currentUser = u;
   saveSessionLocally(u);
@@ -1420,6 +2848,22 @@ function hydrateSession(u, options = {}) {
   if (!options.skipStreakCheck) checkStreak(u).catch(error => console.error("Erreur du système de série :", error));
   window.applyMaintenanceUI();
   loadTheme();
+  if (u?.id) {
+    const localStats = getLocalStudyStats(u.id);
+    const today = typeof getTodayStr === "function" ? getTodayStr() : new Date().toISOString().slice(0, 10);
+    const mergedTotal = Math.max(Number(u.totalStudyMs) || 0, localStats.totalStudyMs);
+    const remoteDaily = u.dailyStudyDate === today ? (Number(u.dailyStudyMs) || 0) : 0;
+    const mergedDaily = Math.max(remoteDaily, localStats.dailyStudyMs);
+    u.totalStudyMs = mergedTotal;
+    u.dailyStudyDate = today;
+    u.dailyStudyMs = mergedDaily;
+    saveLocalStudyStats(u.id, { totalStudyMs: mergedTotal, dailyDate: today, dailyStudyMs: mergedDaily });
+  }
+  if (typeof updateDailyGoalUI === "function") updateDailyGoalUI();
+  if (typeof renderThemesAndRewardsSettings === "function") renderThemesAndRewardsSettings();
+  if (u?.id && !options.skipStreakCheck) {
+    backfillHistoricalStudyTime(u).catch(() => {});
+  }
 
   setAvatar(u.avatar, u.displayName || u.username);
   
@@ -1661,6 +3105,7 @@ window.saveProfile = async () => {
   await updateDoc(doc(db, "users", currentUser.id), updates);
   
   Object.assign(currentUser, updates);
+  window.usersMap.set(currentUser.username, { ...currentUser });
   saveSessionLocally(currentUser);
   
   const myBadge = getBadge(currentUser);
@@ -1740,6 +3185,38 @@ window.changePassword = async () => {
   showToast("Mot de passe changé ✓");
 };
 
+window.syncExerciseSubjectSelects = function syncExerciseSubjectSelects() {
+  const entries = Array.from(window.subjectsMap.entries()).sort((a, b) => a[0].localeCompare(b[0], "fr"));
+  const selExCreate = document.getElementById("ex-create-subject");
+  if (selExCreate) {
+    const prev = selExCreate.value;
+    let html = entries.map(([name, icon]) => `<option value="${esc(name)}">${icon || "📚"} ${esc(name)}</option>`).join("");
+    html += `<option value="autre">✏️ Autre (matière personnalisée)...</option>`;
+    selExCreate.innerHTML = html;
+    if (prev && (window.subjectsMap.has(prev) || prev === "autre")) {
+      selExCreate.value = prev;
+    } else if (entries.length > 0) {
+      selExCreate.value = entries[0][0];
+    } else {
+      selExCreate.value = "autre";
+    }
+    if (typeof window.handleExerciceSubjectChange === "function") {
+      window.handleExerciceSubjectChange({ target: selExCreate });
+    }
+  }
+  const selExFilter = document.getElementById("ex-filter-modal-subject");
+  if (selExFilter) {
+    const prevF = selExFilter.value;
+    let htmlF = `<option value="all">Toutes les matières</option>`;
+    htmlF += entries.map(([name, icon]) => `<option value="${esc(name)}">${icon || "📚"} ${esc(name)}</option>`).join("");
+    htmlF += `<option value="autre">Autre</option>`;
+    selExFilter.innerHTML = htmlF;
+    if (prevF && Array.from(selExFilter.options).some(o => o.value === prevF)) {
+      selExFilter.value = prevF;
+    }
+  }
+};
+
 function loadMatieres() {
   onSnapshot(collection(db, "subjects"), (snap) => {
     const isAdmin = currentUser.role === "admin" || (currentUser.subRoles && currentUser.subRoles.includes("admin"));
@@ -1775,6 +3252,7 @@ function loadMatieres() {
       selQuizIA.innerHTML += opt;
     });
     selQuizIA.innerHTML += `<option value="autre">Autre (préciser...)</option>`;
+    window.syncExerciseSubjectSelects();
   });
 }
 function sanitizeRichText(html) {
@@ -3136,25 +4614,52 @@ function escapeHTML(str) {
     }[tag]));
 }
 
-window.renderPublicProfile = (uname) => {
-  document.querySelectorAll(".page-view").forEach(p => p.classList.remove("active"));
-  document.querySelectorAll(".nav-tab").forEach(b => b.classList.remove("active"));
-  
+window.renderPublicProfile = (uname, opts = {}) => {
+  const silent = Boolean(opts?.silent);
   const pubPage = document.getElementById("page-pub-profil");
-  if (pubPage) {
-    pubPage.classList.remove("active");
-    void pubPage.offsetWidth; 
-    pubPage.classList.add("active");
+  if (!silent) {
+    document.querySelectorAll(".page-view").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".nav-tab").forEach(b => b.classList.remove("active"));
+    if (pubPage) {
+      pubPage.classList.remove("active");
+      void pubPage.offsetWidth;
+      pubPage.classList.add("active");
+    }
+  } else if (!pubPage?.classList.contains("active")) {
+    return;
   }
-  
+
   const loading = document.getElementById("pub-loading-overlay");
   const wrapper = document.getElementById("pub-content-wrapper");
-  loading.style.display = "flex";
-  wrapper.style.display = "none";
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  if (!silent) {
+    loading.style.display = "flex";
+    wrapper.style.display = "none";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
-  setTimeout(() => {
-    const targetUser = window.usersMap.get(uname);
+  setTimeout(async () => {
+    if (!document.getElementById("page-pub-profil")?.classList.contains("active")) return;
+    let targetUser = window.usersMap.get(uname);
+    if (!targetUser && uname) {
+      const lower = String(uname).toLowerCase();
+      for (const u of window.usersMap.values()) {
+        if (String(u.username || "").toLowerCase() === lower) {
+          targetUser = u;
+          break;
+        }
+      }
+    }
+    if (!targetUser && uname) {
+      try {
+        const snap = await getDocs(query(collection(db, "users"), where("username", "==", uname)));
+        if (!snap.empty) {
+          const d = snap.docs[0];
+          targetUser = { id: d.id, ...d.data() };
+          window.usersMap.set(targetUser.username, targetUser);
+        }
+      } catch (_) {}
+    }
+    if (!document.getElementById("page-pub-profil")?.classList.contains("active")) return;
     if (!targetUser) { 
       loading.style.display = "none"; 
       showToast("Membre introuvable"); 
@@ -3167,11 +4672,22 @@ window.renderPublicProfile = (uname) => {
 
     window._currentViewedUser = targetUser;
 
-    document.getElementById("pub-banner").style.backgroundImage = targetUser.banner ? `url('${targetUser.banner}')` : "";
+    const bannerEl = document.getElementById("pub-banner");
+    if (bannerEl) {
+      const rawBanner = (targetUser.banner || "").trim();
+      if (rawBanner) {
+        const safeUrl = rawBanner.replace(/"/g, '\\"');
+        bannerEl.style.backgroundImage = `url("${safeUrl}")`;
+        bannerEl.classList.add("has-banner");
+      } else {
+        bannerEl.style.backgroundImage = "";
+        bannerEl.classList.remove("has-banner");
+      }
+    }
 
     const imgEl = document.getElementById("pub-av-img"), initEl = document.getElementById("pub-av-init");
     if (targetUser.avatar) {
-      imgEl.src = targetUser.avatar; 
+      if (imgEl.getAttribute("src") !== targetUser.avatar) imgEl.src = targetUser.avatar; 
       imgEl.style.display = "block"; 
       initEl.style.display = "none";
     } else {
@@ -3233,6 +4749,12 @@ window.renderPublicProfile = (uname) => {
         followBtn.className = "btn-pill"; 
       }
     }
+
+    const feedKey = `${targetUser.username}::${window._pubTabActive}::${window._pubSubjFilter}`;
+    if (silent && window._pubFeedKey === feedKey && (window._pubFeedUnsub || window._pubTabActive === 'likes')) {
+      return;
+    }
+    window._pubFeedKey = feedKey;
 
     if (window._pubFeedUnsub) { window._pubFeedUnsub(); window._pubFeedUnsub = null; }
     
@@ -4987,12 +6509,180 @@ window._exRemainingSeconds = 0;
 window._exTotalSeconds = 0;
 window._exTimerPaused = false;
 window._exMode = "clavier";
+window._exFormat = "mix";
+window._exGradingTone = "bac";
 window._currentExercice = null;
 window._currentExerciceAnswers = [];
+window._currentStructuredAnswers = {};
+window._matchingSelection = { qid: null, leftId: null };
+window._svgZoomLevels = {};
 window._currentSelfEval = { confidenceStars: 4, estimatedScore: 14, reflections: "" };
 window._exerciceFilterTab = "all";
 window._exerciceSubjectFilter = "all";
 window._exerciceSortOrder = "newest";
+
+const MATCH_WIRE_COLORS = ["#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6"];
+
+function escapeHtmlText(str) {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function renderMathHTML(rawText) {
+  const input = String(rawText ?? "");
+  if (!input) return "";
+  const tokens = [];
+  const mathRegex = /\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)|\$([^$\n]{1,350}?)\$/g;
+  const tokenized = input.replace(mathRegex, (full, dDollar, dBracket, iParen, iDollar) => {
+    const isDisplay = Boolean(dDollar || dBracket);
+    const expr = (dDollar || dBracket || iParen || iDollar || "").trim();
+    if (!expr) return full;
+    const idx = tokens.length;
+    tokens.push({ expr, isDisplay });
+    return `@@DNB_MATH_${idx}@@`;
+  });
+
+  let html = escapeHtmlText(tokenized).replace(/\n/g, "<br>");
+  html = html.replace(/@@DNB_MATH_(\d+)@@/g, (_m, idxStr) => {
+    const item = tokens[Number(idxStr)];
+    if (!item) return "";
+    if (window.katex && typeof window.katex.renderToString === "function") {
+      try {
+        return window.katex.renderToString(item.expr, {
+          displayMode: item.isDisplay,
+          throwOnError: false,
+          strict: false
+        });
+      } catch (_) {}
+    }
+    return `<code>${escapeHtmlText(item.expr)}</code>`;
+  });
+  return html;
+}
+window.renderMathHTML = renderMathHTML;
+
+function sanitizeSvgMarkup(rawSvg) {
+  const txt = String(rawSvg || "").trim();
+  if (!txt || !txt.includes("<svg")) {
+    return `<svg viewBox="0 0 600 340" xmlns="http://www.w3.org/2000/svg"><rect width="600" height="340" fill="#f8fafc"/><text x="300" y="170" text-anchor="middle" fill="#64748b" font-size="15">Schéma SVG indisponible</text></svg>`;
+  }
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(txt, "text/html");
+    const svg = doc.querySelector("svg");
+    if (!svg) throw new Error("SVG introuvable");
+    svg.querySelectorAll("script, foreignObject, iframe, object, embed").forEach(el => el.remove());
+    svg.querySelectorAll("*").forEach(el => {
+      Array.from(el.attributes).forEach(attr => {
+        const n = attr.name.toLowerCase();
+        const v = String(attr.value || "").trim().toLowerCase();
+        if (n.startsWith("on") || v.startsWith("javascript:")) {
+          el.removeAttribute(attr.name);
+        }
+      });
+    });
+    if (!svg.getAttribute("viewBox")) {
+      svg.setAttribute("viewBox", "0 0 600 340");
+    }
+    svg.removeAttribute("width");
+    svg.removeAttribute("height");
+    return svg.outerHTML;
+  } catch (_) {
+    return `<svg viewBox="0 0 600 340" xmlns="http://www.w3.org/2000/svg"><rect width="600" height="340" fill="#f8fafc"/><text x="300" y="170" text-anchor="middle" fill="#64748b" font-size="15">Schéma non valide</text></svg>`;
+  }
+}
+
+function parseSvgViewBox(viewBoxStr) {
+  const parts = String(viewBoxStr || "0 0 600 340").trim().split(/[\s,]+/).map(Number);
+  if (parts.length === 4 && parts.every(Number.isFinite) && parts[2] > 0 && parts[3] > 0) {
+    return { minX: parts[0], minY: parts[1], width: parts[2], height: parts[3] };
+  }
+  return { minX: 0, minY: 0, width: 600, height: 340 };
+}
+
+function renderInteractiveSvgBlock(q, blockKey) {
+  const diagram = q.svgDiagram;
+  if (!diagram || !diagram.svgMarkup) return "";
+  const vb = parseSvgViewBox(diagram.viewBox);
+  const keyPoints = Array.isArray(diagram.keyPoints) ? diagram.keyPoints : [];
+  window._svgZoomLevels[blockKey] = 1;
+
+  const hotspotsHtml = keyPoints.map((kp, kpIdx) => {
+    const xPct = Math.min(96, Math.max(4, ((Number(kp.x) - vb.minX) / vb.width) * 100));
+    const yPct = Math.min(94, Math.max(6, ((Number(kp.y) - vb.minY) / vb.height) * 100));
+    return `
+      <button type="button"
+        class="ex-svg-hotspot"
+        data-block="${escapeHtmlText(blockKey)}"
+        data-kp="${kpIdx}"
+        style="left:${xPct.toFixed(2)}%;top:${yPct.toFixed(2)}%;"
+        title="${escapeHtmlText(kp.label || `Point ${kpIdx + 1}`)}"
+        onclick="selectSvgKeyPoint('${escapeHtmlText(blockKey)}', ${kpIdx})"
+        onmouseenter="selectSvgKeyPoint('${escapeHtmlText(blockKey)}', ${kpIdx})"
+      ></button>
+    `;
+  }).join("");
+
+  const firstHint = keyPoints.length > 0
+    ? `Clique ou survole les ${keyPoints.length} point(s) clé(s) sur le graphique pour inspecter leurs valeurs.`
+    : (diagram.xAxisLabel || diagram.yAxisLabel ? `Axes : ${escapeHtmlText(diagram.xAxisLabel || "X")} / ${escapeHtmlText(diagram.yAxisLabel || "Y")}` : "Utilise les boutons + / - pour zoomer sur le schéma.");
+
+  return `
+    <div class="ex-svg-card" id="ex-svg-card-${escapeHtmlText(blockKey)}">
+      <div class="ex-svg-toolbar">
+        <div class="ex-svg-title">📈 ${escapeHtmlText(diagram.title || "Graphique / Schéma interactif")}</div>
+        <div class="ex-svg-controls">
+          <button type="button" class="btn-ghost btn-sm" onclick="zoomExerciseSvg('${escapeHtmlText(blockKey)}', -0.25)" title="Dézoomer">−</button>
+          <span class="caption" id="ex-svg-zoom-val-${escapeHtmlText(blockKey)}" style="min-width:44px;text-align:center;font-weight:700;">100%</span>
+          <button type="button" class="btn-ghost btn-sm" onclick="zoomExerciseSvg('${escapeHtmlText(blockKey)}', 0.25)" title="Zoomer">+</button>
+          <button type="button" class="btn-ghost btn-sm" onclick="zoomExerciseSvg('${escapeHtmlText(blockKey)}', 0)" title="Réinitialiser le zoom">Reset</button>
+        </div>
+      </div>
+      <div class="ex-svg-stage">
+        <div class="ex-svg-canvas-inner" id="ex-svg-inner-${escapeHtmlText(blockKey)}">
+          ${sanitizeSvgMarkup(diagram.svgMarkup)}
+          ${hotspotsHtml}
+        </div>
+      </div>
+      <div class="ex-svg-tooltip" id="ex-svg-tooltip-${escapeHtmlText(blockKey)}">
+        <span>${firstHint}</span>
+      </div>
+    </div>
+  `;
+}
+
+window.zoomExerciseSvg = (blockKey, delta) => {
+  const inner = document.getElementById(`ex-svg-inner-${blockKey}`);
+  const label = document.getElementById(`ex-svg-zoom-val-${blockKey}`);
+  if (!inner) return;
+  const cur = window._svgZoomLevels[blockKey] || 1;
+  const next = delta === 0 ? 1 : Math.min(2.5, Math.max(0.75, Number((cur + delta).toFixed(2))));
+  window._svgZoomLevels[blockKey] = next;
+  inner.style.transform = `scale(${next})`;
+  if (label) label.textContent = `${Math.round(next * 100)}%`;
+};
+
+window.selectSvgKeyPoint = (blockKey, kpIdx) => {
+  const ex = window._currentExercice;
+  if (!ex) return;
+  const parts = String(blockKey).split("_");
+  const qid = parts[parts.length - 1];
+  const q = (ex.questions || []).find(item => String(item.id) === String(qid));
+  const kp = q?.svgDiagram?.keyPoints?.[kpIdx];
+  if (!kp) return;
+
+  document.querySelectorAll(`#ex-svg-inner-${blockKey} .ex-svg-hotspot`).forEach(btn => {
+    btn.classList.toggle("active", Number(btn.dataset.kp) === kpIdx);
+  });
+  const tip = document.getElementById(`ex-svg-tooltip-${blockKey}`);
+  if (tip) {
+    tip.innerHTML = `<div><strong>📍 ${escapeHtmlText(kp.label || `Point ${kpIdx + 1}`)}</strong> — ${renderMathHTML(kp.detail || "")}</div>`;
+  }
+};
 
 // Audio Bell Chime generator via Web Audio API (exam end sound)
 function playExamBellChime() {
@@ -5002,7 +6692,6 @@ function playExamBellChime() {
     const ctx = new AudioCtx();
     const now = ctx.currentTime;
 
-    // Dual-harmonic chime 1 (High tone)
     const osc1 = ctx.createOscillator();
     const gain1 = ctx.createGain();
     osc1.type = "sine";
@@ -5015,7 +6704,6 @@ function playExamBellChime() {
     osc1.start(now);
     osc1.stop(now + 1.2);
 
-    // Dual-harmonic chime 2 (Warm bell fundamental)
     const osc2 = ctx.createOscillator();
     const gain2 = ctx.createGain();
     osc2.type = "sine";
@@ -5028,7 +6716,6 @@ function playExamBellChime() {
     osc2.start(now + 0.28);
     osc2.stop(now + 1.6);
 
-    // Final resonant bell chime 3
     const osc3 = ctx.createOscillator();
     const gain3 = ctx.createGain();
     osc3.type = "triangle";
@@ -5070,36 +6757,73 @@ function saveExerciceToHistory(ex) {
   }
 }
 
+window.selectExerciceFormat = (fmt) => {
+  window._exFormat = fmt || "mix";
+  document.querySelectorAll("#ex-type-grid .ex-type-card").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.exType === window._exFormat);
+  });
+};
+
+window.selectGradingTone = (tone) => {
+  window._exGradingTone = tone || "bac";
+  document.querySelectorAll(".ex-tone-card").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.tone === window._exGradingTone);
+  });
+};
+
+function getGradingToneLabel(tone) {
+  if (tone === "strict") return "Sévère (aucun cadeau)";
+  if (tone === "kind") return "Bienveillant (sans excès)";
+  return "Comme au Bac (officiel)";
+}
+
+function getExerciseTypeLabel(type) {
+  switch (type) {
+    case "questions": return "Questions rédigées";
+    case "matching": return "Reliage";
+    case "graph": return "Graphique SVG";
+    case "qcm_open": return "QCM + Rédaction";
+    case "mix":
+    default:
+      return "Mix complet";
+  }
+}
+
 // Open creation modal
 window.openCreateExerciceModal = () => {
   window._exUploadedPDFs = [];
   const listDiv = document.getElementById("ex-pdf-list");
   if (listDiv) listDiv.innerHTML = "";
-  
-  // Reset fields
+
+  if (typeof window.syncExerciseSubjectSelects === "function") {
+    window.syncExerciseSubjectSelects();
+  }
+
   const subjSelect = document.getElementById("ex-create-subject");
-  if (subjSelect) subjSelect.value = "Mathématiques";
-  const otherWrap = document.getElementById("ex-create-subject-other-wrap");
-  if (otherWrap) otherWrap.style.display = "none";
+  if (subjSelect) {
+    if (subjSelect.options.length > 1) {
+      subjSelect.selectedIndex = 0;
+    }
+    handleExerciceSubjectChange({ target: subjSelect });
+  }
+
   const otherInput = document.getElementById("ex-create-subject-other");
   if (otherInput) otherInput.value = "";
   const topicInput = document.getElementById("ex-create-topic");
   if (topicInput) topicInput.value = "";
   const detailsInput = document.getElementById("ex-create-details");
   if (detailsInput) detailsInput.value = "";
-  
-  // Mode Clavier default
-  selectExerciceMode("clavier");
 
-  // Timer default 60 min
+  selectExerciceMode("clavier");
+  selectExerciceFormat("mix");
+  selectGradingTone("bac");
+
   setExerciceDuration(60);
   const timerToggle = document.getElementById("ex-enable-timer");
   if (timerToggle) timerToggle.checked = true;
   toggleExerciceTimerFields({ target: { checked: true } });
 
-  // Populate liked courses/quizzes dropdown
   populateLikedItemsDropdown();
-
   openModal("m-create-exercice");
 };
 
@@ -5111,7 +6835,6 @@ function populateLikedItemsDropdown() {
   const myUsername = currentUser ? currentUser.username : "";
   const allLiked = [];
 
-  // Find liked courses/posts from window._liveCoursData / window._liveFRData
   const postsPool = [...(window._liveCoursData || []), ...(window._liveFRData || [])];
   postsPool.forEach(p => {
     if (p.likes && Array.isArray(p.likes) && (p.likes.includes(myUsername) || !myUsername)) {
@@ -5126,7 +6849,6 @@ function populateLikedItemsDropdown() {
     }
   });
 
-  // Find liked quizzes from window._liveQuizzesData
   const quizPool = [...(window._liveQuizzesData || []), ...(window._liveAIQuizzesData || [])];
   quizPool.forEach(q => {
     if (q.likes && Array.isArray(q.likes) && (q.likes.includes(myUsername) || !myUsername)) {
@@ -5159,14 +6881,12 @@ function populateLikedItemsDropdown() {
   }
 }
 
-// Subject Change
 window.handleExerciceSubjectChange = (e) => {
   const isOther = e.target.value === "autre";
   const wrap = document.getElementById("ex-create-subject-other-wrap");
   if (wrap) wrap.style.display = isOther ? "block" : "none";
 };
 
-// PDF Upload for Course context
 window.handleExercicePDFUpload = async (e) => {
   const files = Array.from(e.target.files || []);
   if (!files.length) return;
@@ -5189,7 +6909,7 @@ window.handleExercicePDFUpload = async (e) => {
         mimeType: "application/pdf",
         base64: base64
       });
-    } catch (err) {
+    } catch (_) {
       showToast("Erreur de lecture de " + f.name);
     }
   }
@@ -5207,8 +6927,6 @@ function readFileAsBase64(file) {
   });
 }
 
-// Extraction locale du texte PDF : les fichiers ne sont plus envoyés à une
-// route Gemini qui n'existe pas sur GitHub Pages.
 async function extractExercisePDFContext(pdfFiles = []) {
   if (!pdfFiles.length) return { text: "", imageParts: [] };
   if (!window.pdfjsLib) {
@@ -5220,7 +6938,7 @@ async function extractExercisePDFContext(pdfFiles = []) {
 
   const textSections = [];
   const imageParts = [];
-  let remainingText = 28000;
+  let remainingText = 26000;
 
   for (const pdf of pdfFiles) {
     const dataUrl = String(pdf.base64 || "");
@@ -5250,11 +6968,9 @@ async function extractExercisePDFContext(pdfFiles = []) {
         remainingText -= clipped.length;
       }
 
-      // Les trois premières pages de documents peuvent aussi être analysées
-      // visuellement (schémas, graphiques ou PDF numérisés).
       if (imageParts.length < 3) {
         const baseViewport = page.getViewport({ scale: 1 });
-        const scale = Math.min(1.6, 1600 / Math.max(baseViewport.width, baseViewport.height));
+        const scale = Math.min(1.5, 1400 / Math.max(baseViewport.width, baseViewport.height));
         const viewport = page.getViewport({ scale });
         const canvas = window.document.createElement("canvas");
         canvas.width = Math.ceil(viewport.width);
@@ -5263,8 +6979,8 @@ async function extractExercisePDFContext(pdfFiles = []) {
         if (context) {
           await page.render({ canvasContext: context, viewport }).promise;
           imageParts.push({
-            type: "image_url",
-            image_url: { url: canvas.toDataURL("image/jpeg", 0.72) }
+            mimeType: "image/jpeg",
+            base64: canvas.toDataURL("image/jpeg", 0.72)
           });
         }
         canvas.width = 0;
@@ -5272,12 +6988,12 @@ async function extractExercisePDFContext(pdfFiles = []) {
       }
     }
 
-    textSections.push(`Document : ${pdf.name || "Cours PDF"} (${pdfDocument.numPages} page(s))\n${pagesText.join("\n") || "Aucun texte sélectionnable détecté ; jusqu’à trois pages ont été transmises en image si possible."}`);
+    textSections.push(`Document : ${pdf.name || "Cours PDF"} (${pdfDocument.numPages} page(s))\n${pagesText.join("\n") || "Aucun texte sélectionnable détecté ; pages transmises en image."}`);
     if (remainingText <= 0) break;
   }
 
   return {
-    text: textSections.join("\n\n").slice(0, 28000),
+    text: textSections.join("\n\n").slice(0, 26000),
     imageParts
   };
 }
@@ -5295,8 +7011,8 @@ function renderExercicePDFList() {
     <div style="display:flex; justify-content:space-between; align-items:center; background:var(--card-bg); border:1px solid var(--hl); padding:8px 12px; border-radius:10px; font-size:13px;">
       <div style="display:flex; align-items:center; gap:8px; overflow:hidden;">
         <span style="font-size:16px;">📄</span>
-        <span style="font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(pdf.name)}</span>
-        <span class="caption">(${pdf.size})</span>
+        <span style="font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtmlText(pdf.name)}</span>
+        <span class="caption">(${escapeHtmlText(pdf.size)})</span>
       </div>
       <button class="btn-ghost btn-sm del" style="padding:2px 8px; font-size:11px;" onclick="removeExercicePDF(${idx})">✕</button>
     </div>
@@ -5308,7 +7024,6 @@ window.removeExercicePDF = (idx) => {
   renderExercicePDFList();
 };
 
-// Timer selection
 window.setExerciceDuration = (minutes) => {
   minutes = Math.min(240, Math.max(5, Number(minutes) || 60));
   window._exDuration = minutes;
@@ -5338,7 +7053,6 @@ window.toggleExerciceTimerFields = (e) => {
   if (cfg) cfg.style.display = enabled ? "flex" : "none";
 };
 
-// Mode selection
 window.selectExerciceMode = (mode) => {
   window._exMode = mode;
   const cardClavier = document.getElementById("ex-mode-card-clavier");
@@ -5347,36 +7061,65 @@ window.selectExerciceMode = (mode) => {
   if (cardPapier) cardPapier.classList.toggle("active", mode === "papier");
 };
 
-// Vérifie et homogénéise la réponse structurée de l'IA avant de l'enregistrer.
 function normalizeGeneratedExercise(data, params) {
   if (!data || typeof data !== "object" || !Array.isArray(data.questions)) {
     throw new Error("La réponse générée ne contient pas de liste de questions exploitable.");
   }
-  if (data.questions.length < 3 || data.questions.length > 6) {
-    throw new Error("Le sujet doit contenir entre 3 et 6 questions.");
+  if (data.questions.length < 1 || data.questions.length > 6) {
+    throw new Error("Le sujet doit contenir entre 1 et 6 questions.");
   }
 
-  const questions = data.questions.map((question, index) => {
-    const points = Number(question?.points);
-    if (!String(question?.text || "").trim() || !Number.isFinite(points) || points <= 0) {
-      throw new Error(`La question ${index + 1} est incomplète ou son barème est invalide.`);
-    }
-    return {
-      ...question,
+  let questions = data.questions.map((question, index) => {
+    const qType = ["open", "qcm", "matching", "graph"].includes(question?.type) ? question.type : "open";
+    const points = Math.max(0.5, Number(question?.points) || 2);
+    const base = {
       id: index + 1,
       questionNumber: index + 1,
-      title: String(question.title || `Question ${index + 1}`),
-      text: String(question.text).trim(),
+      type: qType,
+      title: String(question?.title || `Question ${index + 1}`),
+      text: String(question?.text || "").trim(),
       points: Number(points.toFixed(2)),
-      hint: String(question.hint || ""),
-      rubric: String(question.rubric || "Critères d'évaluation à préciser."),
-      expectedAnswerSnippet: String(question.expectedAnswerSnippet || "")
+      hint: String(question?.hint || ""),
+      rubric: String(question?.rubric || "Critères d'évaluation à préciser."),
+      expectedAnswerSnippet: String(question?.expectedAnswerSnippet || "")
     };
+    if (!base.text) {
+      throw new Error(`La question ${index + 1} est incomplète.`);
+    }
+    if (qType === "qcm" && Array.isArray(question.options)) {
+      base.options = question.options.slice(0, 6).map(o => String(o));
+      base.correctOptionIndex = Number.isInteger(question.correctOptionIndex) ? question.correctOptionIndex : 0;
+      base.requiresJustification = Boolean(question.requiresJustification);
+    }
+    if (qType === "matching") {
+      base.leftItems = Array.isArray(question.leftItems) ? question.leftItems : [];
+      base.rightItems = Array.isArray(question.rightItems) ? question.rightItems : [];
+      base.correctPairs = question.correctPairs && typeof question.correctPairs === "object" ? question.correctPairs : {};
+    }
+    if (question.svgDiagram && typeof question.svgDiagram === "object") {
+      base.svgDiagram = {
+        title: String(question.svgDiagram.title || "Graphique / Schéma"),
+        xAxisLabel: String(question.svgDiagram.xAxisLabel || ""),
+        yAxisLabel: String(question.svgDiagram.yAxisLabel || ""),
+        viewBox: String(question.svgDiagram.viewBox || "0 0 600 340"),
+        svgMarkup: String(question.svgDiagram.svgMarkup || ""),
+        keyPoints: Array.isArray(question.svgDiagram.keyPoints) ? question.svgDiagram.keyPoints : []
+      };
+    }
+    return base;
   });
 
-  const total = Number(questions.reduce((sum, question) => sum + question.points, 0).toFixed(2));
-  if (total !== 20) {
-    throw new Error(`Le barème généré totalise ${total}/20 au lieu de 20/20.`);
+  const sum = Number(questions.reduce((acc, q) => acc + q.points, 0).toFixed(2));
+  if (Math.abs(sum - 20) > 0.01 && sum > 0) {
+    let running = 0;
+    questions = questions.map((q, idx) => {
+      if (idx === questions.length - 1) {
+        return { ...q, points: Number((20 - running).toFixed(2)) };
+      }
+      const scaled = Math.max(0.5, Math.round((q.points / sum) * 20 * 2) / 2);
+      running += scaled;
+      return { ...q, points: Number(scaled.toFixed(2)) };
+    });
   }
 
   return {
@@ -5385,17 +7128,19 @@ function normalizeGeneratedExercise(data, params) {
     subject: params.subject,
     topic: params.topic,
     level: params.level,
+    exerciseType: params.exerciseType || data.exerciseType || "mix",
+    gradingTone: params.gradingTone || data.gradingTone || "bac",
     instructions: String(data.instructions || "Répondez à chaque question en justifiant soigneusement votre démarche."),
     totalPoints: 20,
     questions
   };
 }
 
-// Generate Exercise with AI
+// Generate Exercise with Server-Side Gemini AI
 window.handleGenerateAIExercice = async () => {
   const subjSelect = document.getElementById("ex-create-subject");
-  let subject = subjSelect ? subjSelect.value : "Mathématiques";
-  if (subject === "autre") {
+  let subject = subjSelect ? subjSelect.value : "";
+  if (!subject || subject === "autre") {
     const otherVal = document.getElementById("ex-create-subject-other")?.value.trim();
     if (!otherVal) {
       showToast("Veuillez préciser le nom de votre matière personnalisée.");
@@ -5422,7 +7167,10 @@ window.handleGenerateAIExercice = async () => {
   }
 
   const durationMinutes = window._exTimerActive ? window._exDuration : 0;
-  const mode = window._exMode;
+  const mode = window._exMode || "clavier";
+  const exerciseType = window._exFormat || "mix";
+  const gradingTone = window._exGradingTone || "bac";
+
   const loadingDiv = document.getElementById("ex-create-loading");
   const actionsDiv = document.getElementById("ex-create-actions");
   if (loadingDiv) loadingDiv.style.display = "block";
@@ -5430,70 +7178,34 @@ window.handleGenerateAIExercice = async () => {
 
   try {
     const pdfContext = await extractExercisePDFContext(window._exUploadedPDFs || []);
-    const parameters = { subject, topic, level, details, linkedContext, durationMinutes, mode };
-    const promptText = `Crée un sujet d'exercice complet, authentique et rigoureux pour un élève.
+    const parameters = {
+      subject,
+      topic,
+      level,
+      details,
+      linkedContext,
+      durationMinutes,
+      mode,
+      exerciseType,
+      gradingTone
+    };
 
-PARAMÈTRES :
-${JSON.stringify(parameters, null, 2)}
-
-${pdfContext.text ? `CONTENU DES DOCUMENTS FOURNIS :\n${pdfContext.text}\n` : ""}
-
-CONSIGNES IMPÉRATIVES :
-1. Génère de 3 à 6 questions progressives, variées et adaptées à la matière, au thème et au niveau demandés.
-2. Le total des points doit être EXACTEMENT 20. La somme numérique de questions[].points doit donc être égale à 20, sans approximation.
-3. Chaque question doit contenir un énoncé complet, clair, autonome et sans ambiguïté.
-4. Chaque question doit contenir un barème détaillé dans rubric, une indication méthodologique dans hint (chaîne vide si inutile) et une synthèse de la réponse attendue dans expectedAnswerSnippet.
-5. Utilise les documents fournis comme source prioritaire, sans inventer de contenu qui les contredirait. Les extraits textuels peuvent couvrir plusieurs pages ; les images jointes montrent jusqu’à trois pages au total, en privilégiant le début des documents.
-6. Les consignes doivent être adaptées à la matière : calculs et unités en sciences, rédaction et citations en français, analyse de documents en histoire-géographie, etc.
-7. N'inclus pas les réponses attendues dans le texte visible des questions.
-
-RENVOIE UNIQUEMENT UN OBJET JSON VALIDE, sans Markdown, avec cette structure :
-{
-  "title": "Titre du contrôle",
-  "subject": "Matière",
-  "topic": "Thème",
-  "level": "Niveau",
-  "durationMinutes": 60,
-  "mode": "clavier",
-  "instructions": "Consignes générales pour l'élève",
-  "totalPoints": 20,
-  "questions": [
-    {
-      "id": 1,
-      "questionNumber": 1,
-      "title": "Thème de la question",
-      "text": "Énoncé complet",
-      "points": 5,
-      "hint": "Indice facultatif",
-      "rubric": "Critères et répartition précise des points",
-      "expectedAnswerSnippet": "Synthèse de la solution attendue"
-    }
-  ]
-}`;
-
-    const userContent = [
-      { type: "text", text: promptText },
-      ...pdfContext.imageParts
-    ];
-    const systemPrompt = "Tu es un professeur expérimenté de l'Éducation nationale française. Produis un sujet pédagogique rigoureux, parfaitement adapté au niveau demandé. Respecte strictement le JSON et le barème total de 20 points.";
-
-    let data = await callGroqAPI(systemPrompt, userContent, {
-      maxCompletionTokens: 8192,
-      temperature: 0.35
+    const resp = await fetch("/api/gemini/generate-exercise", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...parameters,
+        pdfExtractedText: pdfContext.text,
+        pdfImages: pdfContext.imageParts
+      })
     });
 
-    try {
-      data = normalizeGeneratedExercise(data, parameters);
-    } catch (validationError) {
-      // Une seconde passe corrige les petits écarts de format ou de barème.
-      const repairPrompt = `Corrige le JSON d'exercice ci-dessous. Conserve le fond des questions, mais assure-toi qu'il y a entre 3 et 6 questions, que chaque question possède text et points, et que la somme des points est EXACTEMENT 20. Réponds uniquement avec le JSON corrigé.\n\nErreur détectée : ${validationError.message}\n\nJSON à corriger :\n${JSON.stringify(data)}`;
-      data = await callGroqAPI(systemPrompt, repairPrompt, {
-        maxCompletionTokens: 8192,
-        temperature: 0.15
-      });
-      data = normalizeGeneratedExercise(data, parameters);
+    const payload = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      throw new Error(payload.error || `Erreur serveur (${resp.status})`);
     }
 
+    const data = normalizeGeneratedExercise(payload, parameters);
     data.id = "ex_" + Date.now();
     data.createdAt = Date.now();
     data.author = currentUser ? currentUser.username : "Élève";
@@ -5513,17 +7225,181 @@ RENVOIE UNIQUEMENT UN OBJET JSON VALIDE, sans Markdown, avec cette structure :
   }
 };
 
+function ensureStructuredSlot(qid) {
+  const k = String(qid);
+  if (!window._currentStructuredAnswers[k]) {
+    window._currentStructuredAnswers[k] = {
+      qcmIndex: null,
+      qcmText: "",
+      matchingPairs: {},
+      justification: ""
+    };
+  }
+  return window._currentStructuredAnswers[k];
+}
+
+window.selectQcmOption = (qid, optIndex) => {
+  const ex = window._currentExercice;
+  const q = (ex?.questions || []).find(item => String(item.id) === String(qid));
+  if (!q) return;
+  const slot = ensureStructuredSlot(qid);
+  slot.qcmIndex = optIndex;
+  slot.qcmText = q.options?.[optIndex] || "";
+  document.querySelectorAll(`[data-qcm-qid="${qid}"]`).forEach(btn => {
+    btn.classList.toggle("active", Number(btn.dataset.optIdx) === optIndex);
+  });
+};
+
+window.selectMatchNode = (qid, side, itemId) => {
+  const k = String(qid);
+  const slot = ensureStructuredSlot(k);
+  if (side === "left") {
+    if (window._matchingSelection.qid === k && window._matchingSelection.leftId === itemId) {
+      window._matchingSelection = { qid: null, leftId: null };
+    } else {
+      window._matchingSelection = { qid: k, leftId: itemId };
+    }
+    updateMatchingVisuals(k);
+    return;
+  }
+
+  if (side === "right") {
+    if (window._matchingSelection.qid === k && window._matchingSelection.leftId) {
+      const leftId = window._matchingSelection.leftId;
+      // Unpair previous left mapped to this right item so bijection stays clean
+      Object.keys(slot.matchingPairs).forEach(existingL => {
+        if (slot.matchingPairs[existingL] === itemId) {
+          delete slot.matchingPairs[existingL];
+        }
+      });
+      slot.matchingPairs[leftId] = itemId;
+      window._matchingSelection = { qid: null, leftId: null };
+      updateMatchingVisuals(k);
+    } else {
+      // Clicking a paired right item without active left removes its pair
+      let changed = false;
+      Object.keys(slot.matchingPairs).forEach(existingL => {
+        if (slot.matchingPairs[existingL] === itemId) {
+          delete slot.matchingPairs[existingL];
+          changed = true;
+        }
+      });
+      if (changed) updateMatchingVisuals(k);
+      else showToast("Sélectionne d'abord un élément dans la colonne de gauche.");
+    }
+  }
+};
+
+window.resetMatchingQuestion = (qid) => {
+  const k = String(qid);
+  const slot = ensureStructuredSlot(k);
+  slot.matchingPairs = {};
+  if (window._matchingSelection.qid === k) {
+    window._matchingSelection = { qid: null, leftId: null };
+  }
+  updateMatchingVisuals(k);
+};
+
+function updateMatchingVisuals(qid) {
+  const k = String(qid);
+  const board = document.getElementById(`ex-match-board-${k}`);
+  if (!board) return;
+  const slot = ensureStructuredSlot(k);
+  const pairs = slot.matchingPairs || {};
+  const leftKeys = Object.keys(pairs);
+
+  const colorByLeft = {};
+  const colorByRight = {};
+  leftKeys.forEach((lid, idx) => {
+    const col = MATCH_WIRE_COLORS[idx % MATCH_WIRE_COLORS.length];
+    colorByLeft[lid] = col;
+    colorByRight[pairs[lid]] = col;
+  });
+
+  board.querySelectorAll(".ex-match-node[data-side='left']").forEach(btn => {
+    const id = btn.dataset.itemId;
+    const isSel = window._matchingSelection.qid === k && window._matchingSelection.leftId === id;
+    const col = colorByLeft[id] || "";
+    btn.classList.toggle("selected", isSel);
+    btn.classList.toggle("paired", Boolean(col));
+    if (col) btn.style.setProperty("--match-color", col);
+    else btn.style.removeProperty("--match-color");
+  });
+
+  board.querySelectorAll(".ex-match-node[data-side='right']").forEach(btn => {
+    const id = btn.dataset.itemId;
+    const col = colorByRight[id] || "";
+    btn.classList.toggle("paired", Boolean(col));
+    if (col) btn.style.setProperty("--match-color", col);
+    else btn.style.removeProperty("--match-color");
+  });
+
+  const counterEl = document.getElementById(`ex-match-count-${k}`);
+  if (counterEl) {
+    const q = (window._currentExercice?.questions || []).find(item => String(item.id) === k);
+    const total = q?.leftItems?.length || leftKeys.length;
+    counterEl.textContent = `${leftKeys.length} / ${total} relié(s)`;
+  }
+
+  requestAnimationFrame(() => drawMatchingLines(k));
+}
+
+function drawMatchingLines(qid) {
+  const k = String(qid);
+  const board = document.getElementById(`ex-match-board-${k}`);
+  const svg = document.getElementById(`ex-match-svg-${k}`);
+  if (!board || !svg) return;
+
+  const rect = board.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  svg.setAttribute("viewBox", `0 0 ${rect.width} ${rect.height}`);
+
+  const slot = ensureStructuredSlot(k);
+  const pairs = slot.matchingPairs || {};
+  let paths = "";
+
+  Object.entries(pairs).forEach(([lid, rid], idx) => {
+    const lNode = board.querySelector(`.ex-match-node[data-side='left'][data-item-id="${CSS.escape(lid)}"]`);
+    const rNode = board.querySelector(`.ex-match-node[data-side='right'][data-item-id="${CSS.escape(rid)}"]`);
+    if (!lNode || !rNode) return;
+    const lRect = lNode.getBoundingClientRect();
+    const rRect = rNode.getBoundingClientRect();
+    const x1 = lRect.right - rect.left;
+    const y1 = lRect.top + lRect.height / 2 - rect.top;
+    const x2 = rRect.left - rect.left;
+    const y2 = rRect.top + rRect.height / 2 - rect.top;
+    const dx = Math.max(24, (x2 - x1) * 0.45);
+    const color = MATCH_WIRE_COLORS[idx % MATCH_WIRE_COLORS.length];
+    paths += `<path d="M ${x1.toFixed(1)} ${y1.toFixed(1)} C ${(x1 + dx).toFixed(1)} ${y1.toFixed(1)}, ${(x2 - dx).toFixed(1)} ${y2.toFixed(1)}, ${x2.toFixed(1)} ${y2.toFixed(1)}" fill="none" stroke="${color}" stroke-width="2.6" stroke-linecap="round" opacity="0.9"/>`;
+  });
+
+  svg.innerHTML = paths;
+}
+
+window.addEventListener("resize", () => {
+  if (!window._currentExercice) return;
+  (window._currentExercice.questions || []).forEach(q => {
+    if (q.type === "matching") drawMatchingLines(q.id);
+  });
+});
+
 // Start exercise session
 window.startExerciceSession = (exercice) => {
   window._currentExercice = exercice;
-  window._currentExerciceAnswers = [];
+  window._currentExerciceAnswers = Array.isArray(exercice.studentAnswers)
+    ? exercice.studentAnswers.map(a => ({ ...a }))
+    : [];
+  window._currentStructuredAnswers = exercice.structuredAnswers && typeof exercice.structuredAnswers === "object"
+    ? JSON.parse(JSON.stringify(exercice.structuredAnswers))
+    : {};
+  window._matchingSelection = { qid: null, leftId: null };
   window._exPaperPhotos = [];
+  window._exGradingTone = exercice.gradingTone || window._exGradingTone || "bac";
 
-  // Populate header
   document.getElementById("ex-take-title").innerText = exercice.title || "Entraînement";
   document.getElementById("ex-take-subject-badge").innerText = exercice.subject;
   document.getElementById("ex-take-level-badge").innerText = exercice.level || "Standard";
-  
+
   const modeBadge = document.getElementById("ex-take-mode-badge");
   if (modeBadge) {
     modeBadge.innerText = exercice.mode === "papier" ? "📝 Copie Papier" : "💻 Clavier Numérique";
@@ -5531,14 +7407,14 @@ window.startExerciceSession = (exercice) => {
     modeBadge.style.color = exercice.mode === "papier" ? "#b25e00" : "#248a3d";
   }
 
-  document.getElementById("ex-take-instructions").innerText = exercice.instructions || "Répondez aux questions avec clarté et précision méthodologique.";
+  document.getElementById("ex-take-instructions").innerHTML = renderMathHTML(
+    exercice.instructions || "Répondez aux questions avec clarté et précision méthodologique."
+  );
 
-  // Render questions
   const container = document.getElementById("ex-take-content");
   container.innerHTML = "";
 
   if (exercice.mode === "papier") {
-    // Instruction banner for paper mode
     const paperBanner = document.createElement("div");
     paperBanner.style.cssText = "background:rgba(88,86,214,.08); border:1px solid rgba(88,86,214,.25); border-radius:16px; padding:18px; margin-bottom:12px;";
     paperBanner.innerHTML = `
@@ -5547,7 +7423,7 @@ window.startExerciceSession = (exercice) => {
         <h3 style="margin:0; font-size:16px; color:#5856d6;">Mode Rédaction Manuscrite sur Feuille Papier</h3>
       </div>
       <p class="caption" style="margin:0 0 12px 0; line-height:1.5;">
-        Munissez-vous de vos feuilles de brouillon ou copies et de vos stylos. Traitez les questions ci-dessous en numérotant bien chaque réponse. Une fois terminé, prenez votre travail en photo et téléversez les pages ci-dessous pour la correction de l'IA.
+        Munissez-vous de vos feuilles et stylos. Numérotez bien chaque question (y compris les paires de reliage ou lettres QCM), puis prenez votre copie en photo ci-dessous pour la correction stylo rouge.
       </p>
       <div class="ex-photo-upload-area" onclick="document.getElementById('ex-paper-photo-input').click()">
         <input type="file" id="ex-paper-photo-input" accept="image/jpeg,image/png,image/webp" multiple capture="environment" style="display:none;" onchange="handleExercicePaperPhotos(event)">
@@ -5560,49 +7436,118 @@ window.startExerciceSession = (exercice) => {
     container.appendChild(paperBanner);
   }
 
-  // Render question cards
+  const letters = ["A", "B", "C", "D", "E", "F"];
   (exercice.questions || []).forEach((q, idx) => {
+    const qid = q.id || (idx + 1);
+    const savedText = (window._currentExerciceAnswers.find(a => String(a.questionId) === String(qid))?.answerText) || "";
+    const slot = ensureStructuredSlot(qid);
+
     const qBox = document.createElement("div");
     qBox.className = "ex-question-box";
-    qBox.id = `ex-q-box-${q.id || idx}`;
+    qBox.id = `ex-q-box-${qid}`;
+
+    const qFormatTag = q.type === "qcm" ? "QCM" : q.type === "matching" ? "Reliage" : q.type === "graph" ? "Graphique SVG" : "Rédaction";
 
     const hintHtml = q.hint ? `
       <div style="margin-top:10px;">
         <button type="button" class="btn-ghost btn-sm" style="font-size:12px; padding:3px 10px;" onclick="toggleExerciceHint(${idx})">💡 Voir l'indice</button>
-        <div class="ex-hint-content" id="ex-hint-${idx}" style="display:none;">${esc(q.hint)}</div>
+        <div class="ex-hint-content" id="ex-hint-${idx}" style="display:none;">${renderMathHTML(q.hint)}</div>
       </div>
     ` : "";
 
-    const answerArea = exercice.mode === "clavier" ? `
+    const svgHtml = q.svgDiagram?.svgMarkup
+      ? renderInteractiveSvgBlock(q, `take_${qid}`)
+      : "";
+
+    let interactionHtml = "";
+
+    if (q.type === "qcm" && Array.isArray(q.options) && q.options.length > 0) {
+      const optsHtml = q.options.map((opt, optIdx) => {
+        const isActive = slot.qcmIndex === optIdx;
+        if (exercice.mode === "papier") {
+          return `<div class="ex-qcm-opt" style="cursor:default;"><span class="ex-qcm-letter">${letters[optIdx] || optIdx + 1}</span><span>${renderMathHTML(opt)}</span></div>`;
+        }
+        return `
+          <button type="button" class="ex-qcm-opt${isActive ? " active" : ""}" data-qcm-qid="${qid}" data-opt-idx="${optIdx}" onclick="selectQcmOption(${qid}, ${optIdx})">
+            <span class="ex-qcm-letter">${letters[optIdx] || optIdx + 1}</span>
+            <span>${renderMathHTML(opt)}</span>
+          </button>
+        `;
+      }).join("");
+      interactionHtml += `<div class="ex-qcm-list">${optsHtml}</div>`;
+    }
+
+    if (q.type === "matching" && Array.isArray(q.leftItems) && Array.isArray(q.rightItems)) {
+      const leftHtml = q.leftItems.map((item, lIdx) => `
+        <button type="button" class="ex-match-node" data-side="left" data-item-id="${escapeHtmlText(item.id)}" ${exercice.mode === "clavier" ? `onclick="selectMatchNode('${qid}', 'left', '${esc(item.id)}')"` : "disabled"}>
+          <span><strong>${lIdx + 1}.</strong> ${renderMathHTML(item.text)}</span>
+          <span class="ex-match-dot"></span>
+        </button>
+      `).join("");
+      const rightHtml = q.rightItems.map((item, rIdx) => `
+        <button type="button" class="ex-match-node" data-side="right" data-item-id="${escapeHtmlText(item.id)}" ${exercice.mode === "clavier" ? `onclick="selectMatchNode('${qid}', 'right', '${esc(item.id)}')"` : "disabled"}>
+          <span class="ex-match-dot"></span>
+          <span><strong>${letters[rIdx] || rIdx + 1}.</strong> ${renderMathHTML(item.text)}</span>
+        </button>
+      `).join("");
+
+      interactionHtml += `
+        <div class="ex-matching-wrap">
+          <div class="ex-matching-toolbar">
+            <span>${exercice.mode === "clavier" ? "Clique à gauche puis à droite pour relier chaque notion :" : "Recopie les paires sur ta feuille (ex: 1-B, 2-A...) :"}</span>
+            ${exercice.mode === "clavier" ? `
+              <div style="display:flex; align-items:center; gap:8px;">
+                <strong id="ex-match-count-${qid}">0 / ${q.leftItems.length} relié(s)</strong>
+                <button type="button" class="btn-ghost btn-sm" onclick="resetMatchingQuestion('${qid}')">Réinitialiser</button>
+              </div>
+            ` : ""}
+          </div>
+          <div class="ex-matching-board" id="ex-match-board-${qid}">
+            <svg class="ex-matching-svg" id="ex-match-svg-${qid}"></svg>
+            <div class="ex-matching-col">${leftHtml}</div>
+            <div class="ex-matching-col">${rightHtml}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    const needsTextBox = exercice.mode === "clavier" && (q.type === "open" || q.type === "graph" || (q.type === "qcm" && q.requiresJustification !== false));
+    const answerArea = needsTextBox ? `
       <div style="margin-top:14px;">
-        <label style="font-size:13px; font-weight:700; color:var(--ink); margin-bottom:6px; display:block;">Ta réponse rédigée :</label>
-        <textarea class="ex-q-textarea" id="ex-answer-q-${q.id || idx}" data-qid="${q.id || idx}" placeholder="Rédige ta réponse complète avec démarches et justifications..." oninput="handleAnswerInput(${q.id || idx})"></textarea>
+        <label style="font-size:13px; font-weight:700; color:var(--ink); margin-bottom:6px; display:block;">
+          ${q.type === "qcm" ? "Justification de ton choix :" : "Ta réponse rédigée :"}
+        </label>
+        <textarea class="ex-q-textarea" id="ex-answer-q-${qid}" data-qid="${qid}" placeholder="${q.type === "qcm" ? "Explique brièvement pourquoi tu as choisi cette option..." : "Rédige ta réponse complète avec démarches, formules et unités..."}" oninput="handleAnswerInput(${qid})">${escapeHtmlText(savedText)}</textarea>
       </div>
-    ` : `
+    ` : (exercice.mode === "papier" ? `
       <div style="margin-top:10px; font-size:12px; color:var(--ink-m); font-style:italic;">
-        ✍️ À rédiger sur votre copie papier (n°${q.questionNumber || idx + 1}).
+        ✍️ À traiter sur votre copie papier (n°${q.questionNumber || idx + 1}).
       </div>
-    `;
+    ` : "");
 
     qBox.innerHTML = `
       <div class="ex-q-header">
-        <div style="display:flex; align-items:center; gap:8px;">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           <span style="font-weight:800; font-size:16px; color:var(--primary);">Question ${q.questionNumber || idx + 1}</span>
-          ${q.title ? `<span style="font-size:14px; font-weight:600; color:var(--ink);">${esc(q.title)}</span>` : ""}
+          ${q.title ? `<span style="font-size:14px; font-weight:600; color:var(--ink);">${escapeHtmlText(q.title)}</span>` : ""}
+          <span class="ex-badge-soft" style="font-size:11px;">${qFormatTag}</span>
         </div>
         <span class="ex-q-points">${q.points || 0} pt${(q.points || 0) > 1 ? "s" : ""}</span>
       </div>
-      <div style="font-size:15px; line-height:1.6; color:var(--ink); white-space:pre-wrap;">${esc(q.text)}</div>
+      <div style="font-size:15px; line-height:1.65; color:var(--ink);">${renderMathHTML(q.text)}</div>
+      ${svgHtml}
       ${hintHtml}
+      ${interactionHtml}
       ${answerArea}
     `;
 
     container.appendChild(qBox);
+    if (q.type === "matching") {
+      setTimeout(() => updateMatchingVisuals(qid), 60);
+    }
   });
 
-  // Start timer if applicable
   initExerciceTimer(exercice.durationMinutes);
-
   openModal("m-take-exercice");
 };
 
@@ -5614,12 +7559,14 @@ window.toggleExerciceHint = (idx) => {
 window.handleAnswerInput = (qid) => {
   const ta = document.getElementById(`ex-answer-q-${qid}`);
   if (!ta) return;
-  const existing = window._currentExerciceAnswers.find(a => a.questionId === qid);
+  const existing = window._currentExerciceAnswers.find(a => String(a.questionId) === String(qid));
   if (existing) {
     existing.answerText = ta.value;
   } else {
     window._currentExerciceAnswers.push({ questionId: qid, answerText: ta.value });
   }
+  const slot = ensureStructuredSlot(qid);
+  slot.justification = ta.value;
 };
 
 // Timer Logic
@@ -5656,10 +7603,7 @@ function initExerciceTimer(minutes) {
       window._exTimerInterval = null;
       window._exRemainingSeconds = 0;
       updateTimerDisplay();
-
-      // Ring chime sound
       playExamBellChime();
-
       if (alertEl) alertEl.style.display = "block";
       showToast("⏰ Le temps imparti de l'exercice est écoulé !");
     }
@@ -5698,7 +7642,6 @@ window.toggleExerciceTimerPause = () => {
   if (status) status.innerText = window._exTimerPaused ? "En pause" : "Chronomètre actif";
 };
 
-// Paper Mode Photos
 window.handleExercicePaperPhotos = async (e) => {
   const files = Array.from(e.target.files || []);
   if (!files.length) return;
@@ -5747,8 +7690,36 @@ window.removeExercicePhoto = (idx) => {
   renderPaperPhotosGrid();
 };
 
+function collectAllStudentAnswers() {
+  const ex = window._currentExercice;
+  if (!ex) return { textAnswers: [], structuredAnswers: {} };
+
+  const textAnswers = [];
+  (ex.questions || []).forEach(q => {
+    const qid = q.id;
+    const ta = document.getElementById(`ex-answer-q-${qid}`);
+    const slot = ensureStructuredSlot(qid);
+    const val = ta ? ta.value.trim() : (slot.justification || "");
+    textAnswers.push({ questionId: qid, answerText: val });
+    if (ta) slot.justification = val;
+  });
+
+  window._currentExerciceAnswers = textAnswers;
+  return {
+    textAnswers,
+    structuredAnswers: window._currentStructuredAnswers || {}
+  };
+}
+
 window.confirmExitExercice = () => {
   if (confirm("Voulez-vous vraiment quitter cette session d'exercice ? Vos réponses actuelles sont conservées localement.")) {
+    const ex = window._currentExercice;
+    if (ex) {
+      const { textAnswers, structuredAnswers } = collectAllStudentAnswers();
+      ex.studentAnswers = textAnswers;
+      ex.structuredAnswers = structuredAnswers;
+      saveExerciceToHistory(ex);
+    }
     if (window._exTimerInterval) {
       clearInterval(window._exTimerInterval);
       window._exTimerInterval = null;
@@ -5757,11 +7728,9 @@ window.confirmExitExercice = () => {
   }
 };
 
-// Self-Evaluation Modal
 window.openSelfEvaluationModal = () => {
   if (!window._currentExercice) return;
 
-  // Verify answers provided
   if (window._currentExercice.mode === "papier") {
     if (window._exPaperPhotos.length === 0) {
       if (!confirm("Vous n'avez pas encore téléversé de photo de votre copie papier. Voulez-vous quand même continuer pour la correction ?")) {
@@ -5769,27 +7738,20 @@ window.openSelfEvaluationModal = () => {
       }
     }
   } else {
-    // Collect textarea answers
-    window._currentExerciceAnswers = [];
-    (window._currentExercice.questions || []).forEach(q => {
-      const ta = document.getElementById(`ex-answer-q-${q.id}`);
-      if (ta) {
-        window._currentExerciceAnswers.push({
-          questionId: q.id,
-          answerText: ta.value.trim()
-        });
-      }
-    });
-
-    const hasAnyAnswer = window._currentExerciceAnswers.some(a => a.answerText.length > 0);
-    if (!hasAnyAnswer) {
+    const { textAnswers, structuredAnswers } = collectAllStudentAnswers();
+    const hasText = textAnswers.some(a => a.answerText.length > 0);
+    const hasStruct = Object.values(structuredAnswers).some(s =>
+      (s.qcmIndex !== null && s.qcmIndex !== undefined) ||
+      (s.matchingPairs && Object.keys(s.matchingPairs).length > 0)
+    );
+    if (!hasText && !hasStruct) {
       if (!confirm("Vous n'avez saisi aucune réponse aux questions. Voulez-vous quand même lancer la correction du professeur ?")) {
         return;
       }
     }
   }
 
-  // Reset self evaluation defaults
+  selectGradingTone(window._currentExercice.gradingTone || window._exGradingTone || "bac");
   setSelfEvalStars(4);
   const rangeInput = document.getElementById("self-eval-score-range");
   if (rangeInput) rangeInput.value = 14;
@@ -5827,7 +7789,7 @@ window.handleSelfEvalScoreChange = (e) => {
   if (disp) disp.innerText = `${score} / 20`;
 };
 
-function normalizeExerciseGrading(result, exercise) {
+function normalizeExerciseGrading(result, exercise, gradingTone) {
   if (!result || typeof result !== "object") {
     throw new Error("La correction générée est vide ou invalide.");
   }
@@ -5838,11 +7800,28 @@ function normalizeExerciseGrading(result, exercise) {
     const maxPoints = Number(question.points) || 0;
     const rawPoints = Number(evaluation.pointsAwarded);
     const pointsAwarded = Number(Math.min(maxPoints, Math.max(0, Number.isFinite(rawPoints) ? rawPoints : 0)).toFixed(2));
+    const criteria = Array.isArray(evaluation.criteriaBreakdown)
+      ? evaluation.criteriaBreakdown.map(c => ({
+          label: String(c?.label || "Critère"),
+          awarded: Number(c?.awarded ?? 0),
+          max: Number(c?.max ?? 0)
+        }))
+      : [];
+    const annotations = Array.isArray(evaluation.annotations)
+      ? evaluation.annotations.map(seg => ({
+          text: String(seg?.text || ""),
+          status: ["correct", "imprecise", "error", "neutral"].includes(seg?.status) ? seg.status : "neutral",
+          comment: String(seg?.comment || "")
+        })).filter(seg => seg.text.length > 0)
+      : [];
+
     return {
       questionId: question.id,
       pointsAwarded,
       maxPoints,
       status: pointsAwarded >= maxPoints ? "correct" : pointsAwarded > 0 ? "partial" : "incorrect",
+      criteriaBreakdown: criteria,
+      annotations,
       feedback: String(evaluation.feedback || "La réponse n'a pas pu être évaluée en détail."),
       idealSolution: String(evaluation.idealSolution || question.expectedAnswerSnippet || question.rubric || "")
     };
@@ -5851,6 +7830,8 @@ function normalizeExerciseGrading(result, exercise) {
   const totalScore = Number(questionEvaluations.reduce((sum, item) => sum + item.pointsAwarded, 0).toFixed(2));
   return {
     ...result,
+    gradingToneUsed: result.gradingToneUsed || gradingTone || "bac",
+    bulletinComment: String(result.bulletinComment || result.generalAppreciation || "Travail examiné avec attention."),
     totalScore,
     maxScore: 20,
     questionEvaluations,
@@ -5859,7 +7840,7 @@ function normalizeExerciseGrading(result, exercise) {
   };
 }
 
-// Submit for AI Grading
+// Submit for Server-Side Gemini AI Grading
 window.submitExerciceForGrading = async () => {
   if (!window._currentExercice) return;
 
@@ -5873,80 +7854,54 @@ window.submitExerciceForGrading = async () => {
 
   try {
     const exercise = window._currentExercice;
-    const mode = exercise.mode || window._exMode;
+    const mode = exercise.mode || window._exMode || "clavier";
+    const gradingTone = window._exGradingTone || exercise.gradingTone || "bac";
+    const { textAnswers, structuredAnswers } = collectAllStudentAnswers();
     const paperPhotos = (window._exPaperPhotos || []).slice(0, 3);
-    const gradingPrompt = `Tu es un professeur correcteur français neutre, précis et exigeant mais constructif.
 
-SUJET D'ORIGINE :
-${JSON.stringify({
-  title: exercise.title,
-  subject: exercise.subject,
-  topic: exercise.topic,
-  level: exercise.level,
-  instructions: exercise.instructions,
-  totalPoints: 20,
-  questions: exercise.questions
-}, null, 2)}
+    const resp = await fetch("/api/gemini/grade-exercise", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        exercise,
+        mode,
+        textAnswers,
+        structuredAnswers,
+        paperPhotos,
+        selfAssessment: window._currentSelfEval,
+        gradingTone
+      })
+    });
 
-MODE DE RÉPONSE : ${mode === "papier" ? "Copie manuscrite photographiée. Analyse attentivement les images jointes et associe les réponses à chaque numéro de question." : "Réponses saisies au clavier."}
-
-RÉPONSES SAISIES :
-${JSON.stringify(window._currentExerciceAnswers || [], null, 2)}
-
-AUTO-ÉVALUATION :
-${JSON.stringify(window._currentSelfEval || {}, null, 2)}
-
-PHOTOS : ${paperPhotos.length} image(s) jointe(s), dans la limite de trois images par analyse. En mode papier, fonde la correction sur les pages visibles et signale toute partie illisible.
-
-DIRECTIVES DE NOTATION :
-1. Évalue chaque question séparément, en respectant strictement son barème.
-2. Ne donne aucun point pour un résultat non justifié lorsque la justification est demandée ; valorise les démarches correctes.
-3. Calcule la note finale comme la somme exacte des points attribués, sur 20.
-4. Fournis un retour concret, une solution idéale et une appréciation globale utile pour progresser.
-5. N'invente jamais une réponse de l'élève. En cas d'absence ou d'illisibilité, indique-le et attribue les points en conséquence.
-
-Réponds exclusivement avec un JSON valide de cette forme :
-{
-  "totalScore": 13.5,
-  "maxScore": 20,
-  "mention": "Assez bien",
-  "generalAppreciation": "Appréciation générale argumentée",
-  "selfAssessmentCritique": "Analyse de l'auto-évaluation",
-  "strengths": ["Point fort"],
-  "improvements": ["Axe de progrès"],
-  "questionEvaluations": [
-    {
-      "questionId": 1,
-      "pointsAwarded": 3,
-      "maxPoints": 4,
-      "status": "partial",
-      "feedback": "Analyse précise de la réponse",
-      "idealSolution": "Solution détaillée attendue"
+    const payload = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      throw new Error(payload.error || `Erreur serveur (${resp.status})`);
     }
-  ]
-}`;
 
-    const userContent = [
-      { type: "text", text: gradingPrompt },
-      ...paperPhotos.map(photo => ({
-        type: "image_url",
-        image_url: { url: photo.base64 }
-      }))
-    ];
-    const gradingResultRaw = await callGroqAPI(
-      "Tu es un professeur correcteur spécialisé. Évalue les réponses avec impartialité et renvoie uniquement le JSON demandé.",
-      userContent,
-      { maxCompletionTokens: 8192, temperature: 0.2 }
-    );
-    const gradingResult = normalizeExerciseGrading(gradingResultRaw, exercise);
+    const gradingResult = normalizeExerciseGrading(payload, exercise, gradingTone);
 
     exercise.result = gradingResult;
-    exercise.studentAnswers = window._currentExerciceAnswers;
+    exercise.gradingTone = gradingTone;
+    exercise.studentAnswers = textAnswers;
+    exercise.structuredAnswers = structuredAnswers;
     exercise.paperPhotosCount = paperPhotos.length;
-    exercise.selfAssessment = window._currentSelfEval;
+    exercise.selfAssessment = { ...window._currentSelfEval };
     exercise.gradedAt = Date.now();
 
     saveExerciceToHistory(exercise);
+
+    // Award streak shield every 5 passed exercises (>= 10/20)
+    if (gradingResult.totalScore >= 10 && currentUser?.id) {
+      const nextCount = (Number(currentUser.passedExercisesCount) || 0) + 1;
+      currentUser.passedExercisesCount = nextCount;
+      saveSessionLocally(currentUser);
+      try {
+        await updateDoc(doc(db, "users", currentUser.id), { passedExercisesCount: nextCount });
+      } catch (_) {}
+      if (typeof window.awardStreakShieldIfEligible === "function") {
+        window.awardStreakShieldIfEligible("exercises", nextCount);
+      }
+    }
 
     if (window._exTimerInterval) {
       clearInterval(window._exTimerInterval);
@@ -5967,21 +7922,117 @@ Réponds exclusivement avec un JSON valide de cette forme :
   }
 };
 
+function formatStudentPlainAnswer(ex, q) {
+  const qid = q.id;
+  const studentAnsObj = (ex.studentAnswers || []).find(a => String(a.questionId) === String(qid));
+  const struct = (ex.structuredAnswers || {})[String(qid)];
+  const parts = [];
+
+  if (q.type === "qcm" && struct && struct.qcmIndex !== null && struct.qcmIndex !== undefined) {
+    const letter = ["A", "B", "C", "D", "E", "F"][struct.qcmIndex] || (struct.qcmIndex + 1);
+    parts.push(`Choix sélectionné : ${letter}. ${struct.qcmText || q.options?.[struct.qcmIndex] || ""}`);
+  }
+  if (q.type === "matching" && struct && struct.matchingPairs && Object.keys(struct.matchingPairs).length > 0) {
+    const pairLines = Object.entries(struct.matchingPairs).map(([lid, rid]) => {
+      const lTxt = (q.leftItems || []).find(i => i.id === lid)?.text || lid;
+      const rTxt = (q.rightItems || []).find(i => i.id === rid)?.text || rid;
+      return `• ${lTxt} → ${rTxt}`;
+    });
+    parts.push(pairLines.join("\n"));
+  }
+  if (studentAnsObj && studentAnsObj.answerText) {
+    parts.push(studentAnsObj.answerText);
+  }
+  if (parts.length > 0) return parts.join("\n");
+  if (ex.mode === "papier") return `[Réponse sur copie papier téléversée — ${ex.paperPhotosCount || 1} photo(s)]`;
+  return "(Aucune réponse saisie)";
+}
+
+function renderAnnotatedPaperHtml(qEval, fallbackText) {
+  const anns = Array.isArray(qEval.annotations) && qEval.annotations.length > 0 ? qEval.annotations : null;
+  if (!anns) {
+    return `<div>${renderMathHTML(fallbackText)}</div>`;
+  }
+  return anns.map(seg => {
+    const cls = seg.status === "correct"
+      ? "ex-ann-correct"
+      : seg.status === "imprecise"
+        ? "ex-ann-imprecise"
+        : seg.status === "error"
+          ? "ex-ann-error"
+          : "";
+    const commentHtml = seg.comment
+      ? `<span class="ex-ann-note">✒️ ${escapeHtmlText(seg.comment)}</span>`
+      : "";
+    const textHtml = renderMathHTML(seg.text);
+    return cls ? `<span class="${cls}">${textHtml}</span>${commentHtml} ` : `<span>${textHtml}</span>${commentHtml} `;
+  }).join("");
+}
+
+function renderStructuredComparisonHtml(ex, q) {
+  const struct = (ex.structuredAnswers || {})[String(q.id)];
+  if (q.type === "qcm" && Array.isArray(q.options)) {
+    const letters = ["A", "B", "C", "D", "E", "F"];
+    const picked = struct?.qcmIndex;
+    const expected = q.correctOptionIndex;
+    return `
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+        ${q.options.map((opt, idx) => {
+          const isPicked = picked === idx;
+          const isCorrect = expected === idx;
+          let bg = "var(--file-bg)";
+          let border = "var(--hl)";
+          let tag = "";
+          if (isCorrect) { bg = "rgba(34,197,94,.14)"; border = "#16a34a"; tag = " ✓ Attendu"; }
+          if (isPicked && !isCorrect) { bg = "rgba(239,68,68,.12)"; border = "#dc2626"; tag = " ✕ Ton choix"; }
+          if (isPicked && isCorrect) { tag = " ✓ Ton choix"; }
+          return `<span style="font-size:12px;padding:4px 9px;border-radius:8px;background:${bg};border:1px solid ${border};color:var(--ink);"><strong>${letters[idx]}.</strong> ${renderMathHTML(opt)}${tag ? ` <strong>${tag}</strong>` : ""}</span>`;
+        }).join("")}
+      </div>
+    `;
+  }
+  if (q.type === "matching" && Array.isArray(q.leftItems) && q.correctPairs) {
+    const studentPairs = struct?.matchingPairs || {};
+    return `
+      <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px;">
+        ${q.leftItems.map(li => {
+          const sRid = studentPairs[li.id];
+          const cRid = q.correctPairs[li.id];
+          const sTxt = (q.rightItems || []).find(r => r.id === sRid)?.text || "Non relié";
+          const cTxt = (q.rightItems || []).find(r => r.id === cRid)?.text || cRid || "—";
+          const ok = sRid && sRid === cRid;
+          return `
+            <div style="font-size:12px;padding:6px 10px;border-radius:8px;background:${ok ? "rgba(34,197,94,.12)" : "rgba(239,68,68,.09)"};border:1px solid ${ok ? "rgba(22,163,74,.4)" : "rgba(220,38,38,.3)"};color:var(--ink);">
+              <strong>${renderMathHTML(li.text)}</strong> → ${renderMathHTML(sTxt)} ${ok ? "✅" : `<span style="color:#dc2626;font-weight:700;">(Attendu : ${renderMathHTML(cTxt)})</span>`}
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }
+  return "";
+}
+
 function displayExerciceResults(ex) {
   const res = ex.result;
   if (!res) return;
+  window._currentExercice = ex;
 
   document.getElementById("ex-result-title").innerText = ex.title;
   document.getElementById("ex-result-meta").innerText = `${ex.subject} · ${ex.level || "Standard"} · ${new Date(ex.gradedAt || Date.now()).toLocaleDateString("fr-FR")}`;
 
-  // Big score & mention
   const scoreEl = document.getElementById("ex-result-score");
   if (scoreEl) scoreEl.innerHTML = `${res.totalScore}<span style="font-size:24px; color:var(--ink-m);">/20</span>`;
-  
+
   const mentionEl = document.getElementById("ex-result-mention");
   if (mentionEl) mentionEl.innerText = res.mention || (res.totalScore >= 16 ? "Très bien" : res.totalScore >= 14 ? "Bien" : res.totalScore >= 12 ? "Assez bien" : res.totalScore >= 10 ? "Passable" : "Insuffisant");
 
-  // Comparison with self-evaluation
+  const toneBadge = document.getElementById("ex-result-tone-badge");
+  if (toneBadge) toneBadge.innerText = getGradingToneLabel(res.gradingToneUsed || ex.gradingTone || "bac");
+
+  const bulletinEl = document.getElementById("ex-result-bulletin");
+  if (bulletinEl) bulletinEl.innerText = res.bulletinComment || res.generalAppreciation || "Travail sérieux.";
+
   const selfScoreEl = document.getElementById("ex-result-self-score");
   const gapEl = document.getElementById("ex-result-gap");
   const selfCommentEl = document.getElementById("ex-result-self-comment");
@@ -5997,28 +8048,27 @@ function displayExerciceResults(ex) {
     selfCommentEl.innerText = res.selfAssessmentCritique || (gap > 0 ? "Tu as fait preuve d'une modestie appréciable, ton travail est meilleur que prévu !" : gap < 0 ? "Attention à ne pas sous-estimer la sévérité du barème officiel et l'exigence de rédaction." : "Estimation parfaite de ta copie !");
   }
 
-  // Professor Appreciation
   const appEl = document.getElementById("ex-result-appreciation");
-  if (appEl) appEl.innerText = `« ${res.generalAppreciation || "Copie corrigée avec rigueur."} »`;
+  if (appEl) appEl.innerHTML = `« ${renderMathHTML(res.generalAppreciation || "Copie corrigée avec rigueur.")} »`;
 
-  // Strengths & Improvements
   const strList = document.getElementById("ex-result-strengths");
   if (strList) {
-    strList.innerHTML = (res.strengths || ["Rigueur des démarches", "Bonne compréhension globale"]).map(s => `<li>${esc(s)}</li>`).join("");
+    strList.innerHTML = (res.strengths || ["Rigueur des démarches"]).map(s => `<li>${renderMathHTML(s)}</li>`).join("");
   }
   const impList = document.getElementById("ex-result-improvements");
   if (impList) {
-    impList.innerHTML = (res.improvements || ["Préciser les unités et justifications", "Approfondir la conclusion"]).map(s => `<li>${esc(s)}</li>`).join("");
+    impList.innerHTML = (res.improvements || ["Préciser les unités et justifications"]).map(s => `<li>${renderMathHTML(s)}</li>`).join("");
   }
 
-  // Detailed Questions corrections
   const qContainer = document.getElementById("ex-result-questions-container");
   if (qContainer) {
     qContainer.innerHTML = (ex.questions || []).map((q, idx) => {
-      const qEval = (res.questionEvaluations || []).find(e => e.questionId === q.id) || res.questionEvaluations?.[idx] || {
+      const qEval = (res.questionEvaluations || []).find(e => String(e.questionId) === String(q.id)) || res.questionEvaluations?.[idx] || {
         pointsAwarded: q.points || 0,
         maxPoints: q.points || 0,
         status: "correct",
+        criteriaBreakdown: [],
+        annotations: [],
         feedback: "Bonne réponse.",
         idealSolution: q.rubric || "Réponse attendue."
       };
@@ -6028,14 +8078,18 @@ function displayExerciceResults(ex) {
       const statusClass = qEval.status === "correct" || ptsAwarded === maxPts ? "correct" : ptsAwarded > 0 ? "partial" : "incorrect";
       const statusBadgeText = statusClass === "correct" ? "✓ Validé" : statusClass === "partial" ? "⚠ Partiel" : "✕ Erreur";
 
-      const studentAnsObj = (ex.studentAnswers || []).find(a => a.questionId === q.id);
-      const studentAnsText = studentAnsObj ? studentAnsObj.answerText : (ex.mode === "papier" ? `[Réponse sur copie papier téléversée - ${ex.paperPhotosCount || 1} photo(s)]` : "Pas de réponse fournie");
+      const fallbackAnswerText = formatStudentPlainAnswer(ex, q);
+      const criteriaHtml = Array.isArray(qEval.criteriaBreakdown) && qEval.criteriaBreakdown.length > 0
+        ? `<div class="ex-criteria-row">${qEval.criteriaBreakdown.map(c => `<span class="ex-criterion-item">${escapeHtmlText(c.label)}<span>+${c.awarded} / ${c.max} pt${c.max > 1 ? "s" : ""}</span></span>`).join("")}</div>`
+        : "";
+
+      const svgReview = q.svgDiagram?.svgMarkup ? renderInteractiveSvgBlock(q, `res_${q.id}`) : "";
 
       return `
         <div class="ex-res-q-box ${statusClass}">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
             <div style="font-weight:700; font-size:15px; color:var(--ink);">
-              Question ${q.questionNumber || idx + 1} ${q.title ? `— ${esc(q.title)}` : ""}
+              Question ${q.questionNumber || idx + 1} ${q.title ? `— ${escapeHtmlText(q.title)}` : ""}
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
               <span class="type-tag" style="font-weight:700;">${ptsAwarded} / ${maxPts} pts</span>
@@ -6043,26 +8097,29 @@ function displayExerciceResults(ex) {
             </div>
           </div>
 
-          <div style="font-size:14px; color:var(--ink-m); margin-bottom:12px; line-height:1.5;">
-            <strong>Énoncé :</strong> ${esc(q.text)}
+          <div style="font-size:14px; color:var(--ink-m); margin-bottom:10px; line-height:1.55;">
+            <strong>Énoncé :</strong> ${renderMathHTML(q.text)}
           </div>
 
-          <!-- Student's answer -->
-          <div style="background:var(--file-bg); border-left:3px solid var(--primary); padding:10px 14px; border-radius:0 8px 8px 0; margin-bottom:12px;">
-            <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--primary); margin-bottom:4px;">Ta réponse :</div>
-            <div style="font-size:13px; color:var(--ink); white-space:pre-wrap;">${esc(studentAnsText)}</div>
+          ${svgReview}
+          ${renderStructuredComparisonHtml(ex, q)}
+
+          <!-- Copie d'examen annotée façon stylo rouge -->
+          <div class="ex-exam-paper">
+            <div class="ex-exam-margin-score">${ptsAwarded}<br>/${maxPts}</div>
+            ${renderAnnotatedPaperHtml(qEval, fallbackAnswerText)}
           </div>
 
-          <!-- Professor's feedback -->
-          <div style="background:rgba(0,0,0,0.03); border-radius:10px; padding:12px; margin-bottom:10px;">
-            <div style="font-size:12px; font-weight:700; color:var(--ink); margin-bottom:4px;">👨‍🏫 Analyse et annotation du professeur :</div>
-            <div style="font-size:13px; line-height:1.5; color:var(--ink);">${esc(qEval.feedback || "Démarche examinée.")}</div>
+          ${criteriaHtml}
+
+          <div style="background:rgba(220,38,38,0.05); border:1px solid rgba(220,38,38,0.18); border-radius:10px; padding:12px; margin-top:12px; margin-bottom:10px;">
+            <div style="font-size:12px; font-weight:700; color:#dc2626; margin-bottom:4px;">✒️ Remarque du correcteur :</div>
+            <div style="font-size:13px; line-height:1.5; color:var(--ink);">${renderMathHTML(qEval.feedback || "Démarche examinée.")}</div>
           </div>
 
-          <!-- Ideal Solution -->
           <div style="background:rgba(52,199,89,0.06); border:1px solid rgba(52,199,89,0.25); border-radius:10px; padding:12px;">
-            <div style="font-size:12px; font-weight:700; color:#248a3d; margin-bottom:4px;">✨ Solution modèle attendue :</div>
-            <div style="font-size:13px; line-height:1.5; color:var(--ink); white-space:pre-wrap;">${esc(qEval.idealSolution || q.expectedAnswerSnippet || "Se référer aux formules du cours.")}</div>
+            <div style="font-size:12px; font-weight:700; color:#248a3d; margin-bottom:4px;">✨ Corrigé type attendu :</div>
+            <div style="font-size:13px; line-height:1.55; color:var(--ink);">${renderMathHTML(qEval.idealSolution || q.expectedAnswerSnippet || "Se référer aux formules du cours.")}</div>
           </div>
         </div>
       `;
@@ -6073,6 +8130,158 @@ function displayExerciceResults(ex) {
 }
 
 // PDF EXPORT (Uncorrected & Graded)
+const EX_PDF_LAYOUT = {
+  pageWidth: 210,
+  pageHeight: 297,
+  left: 14,
+  right: 196,
+  width: 182,
+  top: 18,
+  bottom: 279,
+  lineHeight: 4.5
+};
+
+function safePdfText(value, fallback = "—") {
+  const normalized = String(value ?? "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[\t ]+\n/g, "\n")
+    .replace(/[“”]/g, '"')
+    .replace(/[’‘]/g, "'")
+    .replace(/[–—]/g, "-")
+    .replace(/\u00a0/g, " ")
+    .trim();
+  return normalized || fallback;
+}
+
+function pdfLines(doc, text, width, fontSize = 9, fontStyle = "normal") {
+  doc.setFont("helvetica", fontStyle);
+  doc.setFontSize(fontSize);
+  return doc.splitTextToSize(safePdfText(text), width);
+}
+
+function pdfNewPage(doc) {
+  doc.addPage();
+  return EX_PDF_LAYOUT.top;
+}
+
+function drawPdfWrappedBlock(doc, state, title, content, options = {}) {
+  const x = options.x ?? EX_PDF_LAYOUT.left;
+  const width = options.width ?? EX_PDF_LAYOUT.width;
+  const padding = options.padding ?? 4;
+  const fontSize = options.fontSize ?? 9;
+  const titleFontSize = options.titleFontSize ?? 9.5;
+  const lineHeight = options.lineHeight ?? (fontSize * 0.5);
+  const titleLineHeight = options.titleLineHeight ?? (titleFontSize * 0.5);
+  const fill = options.fill ?? [248, 250, 252];
+  const border = options.border ?? [203, 213, 225];
+  const titleColor = options.titleColor ?? [30, 41, 59];
+  const textColor = options.textColor ?? [51, 65, 85];
+  const bodyWidth = width - padding * 2;
+  const titleLines = title ? pdfLines(doc, title, bodyWidth, titleFontSize, "bold") : [];
+  const titleHeight = titleLines.length ? titleLines.length * titleLineHeight + 2 : 0;
+  const lines = pdfLines(doc, content, bodyWidth, fontSize, "normal");
+  let lineIndex = 0;
+  let continuation = false;
+
+  while (lineIndex < lines.length) {
+    let y = state.y;
+    const remainingPage = EX_PDF_LAYOUT.bottom - y;
+    const minCardHeight = padding * 2 + titleHeight + lineHeight;
+    if (remainingPage < minCardHeight) {
+      y = pdfNewPage(doc);
+      state.y = y;
+      continuation = lineIndex > 0;
+    }
+
+    const usable = EX_PDF_LAYOUT.bottom - state.y - padding * 2 - titleHeight;
+    const linesPerPage = Math.max(1, Math.floor(usable / lineHeight));
+    const chunk = lines.slice(lineIndex, lineIndex + linesPerPage);
+    const blockHeight = padding * 2 + titleHeight + chunk.length * lineHeight;
+
+    doc.setFillColor(...fill);
+    doc.setDrawColor(...border);
+    doc.setLineWidth(0.35);
+    doc.roundedRect(x, state.y, width, blockHeight, 2, 2, "FD");
+
+    let textY = state.y + padding + titleLineHeight;
+    if (titleLines.length) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(titleFontSize);
+      doc.setTextColor(...titleColor);
+      const labelLines = continuation ? [...titleLines.slice(0, 1), "(suite)"] : titleLines;
+      labelLines.forEach((line, index) => {
+        if (index < titleLines.length) doc.text(line, x + padding, state.y + padding + titleLineHeight * (index + 0.85));
+      });
+      textY = state.y + padding + titleHeight;
+    }
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(fontSize);
+    doc.setTextColor(...textColor);
+    chunk.forEach((line, index) => {
+      doc.text(line, x + padding, textY + lineHeight * (index + 0.85));
+    });
+
+    state.y += blockHeight + (options.gapAfter ?? 4);
+    lineIndex += chunk.length;
+    continuation = lineIndex < lines.length;
+
+    if (lineIndex < lines.length) {
+      state.y = pdfNewPage(doc);
+    }
+  }
+
+  return state.y;
+}
+
+function drawPdfHeader(doc, title, subtitle, options = {}) {
+  const x = EX_PDF_LAYOUT.left;
+  const y = options.y ?? 18;
+  const width = EX_PDF_LAYOUT.width;
+  const titleWidth = options.titleWidth ?? width - 10;
+  const titleSize = options.titleSize ?? 15;
+  const subtitleSize = options.subtitleSize ?? 8.5;
+  const titleLines = pdfLines(doc, title, titleWidth, titleSize, "bold").slice(0, 3);
+  const subtitleLines = pdfLines(doc, subtitle, options.subtitleWidth ?? width - 10, subtitleSize, "normal").slice(0, 3);
+  const height = Math.max(options.minHeight ?? 27, 8 + titleLines.length * 6 + subtitleLines.length * 4.2 + 4);
+
+  doc.setFillColor(15, 23, 42);
+  doc.roundedRect(x, y, width, height, 2, 2, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(titleSize);
+  doc.setTextColor(255, 255, 255);
+  titleLines.forEach((line, index) => doc.text(line, x + 6, y + 8 + index * 6));
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(subtitleSize);
+  subtitleLines.forEach((line, index) => doc.text(line, x + 6, y + 8 + titleLines.length * 6 + index * 4.2));
+  return y + height + 8;
+}
+
+function addExercicePdfFooters(doc, label) {
+  const pageCount = doc.getNumberOfPages();
+  for (let page = 1; page <= pageCount; page += 1) {
+    doc.setPage(page);
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.25);
+    doc.line(14, 285, 196, 285);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`DnB Reviz · ${label}`, 14, 290);
+    doc.text(`Page ${page} / ${pageCount}`, 196, 290, { align: "right" });
+  }
+}
+
+function exercicePdfFileSlug(title) {
+  return safePdfText(title, "exercice")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 70) || "exercice";
+}
+
 window.exportExerciceUncorrectedPDF = () => {
   const ex = window._currentExercice;
   if (!ex) return;
@@ -6081,97 +8290,38 @@ window.exportExerciceUncorrectedPDF = () => {
     return;
   }
 
+  collectAllStudentAnswers();
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const doc = new jsPDF({ unit: "mm", format: "a4", compress: true });
+  const subject = safePdfText(ex.subject, "Non précisée");
+  const level = safePdfText(ex.level, "Standard");
+  const headerSubtitle = `Matière : ${subject} · Niveau : ${level} · Barème : 20 points`;
+  const state = { y: drawPdfHeader(doc, "DnB Reviz — Sujet d'entraînement et copie", headerSubtitle, { minHeight: 29 }) };
 
-  let y = 20;
-
-  // Header Banner
-  doc.setFillColor(15, 23, 42); // Slate 900
-  doc.rect(14, y, 182, 22, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.text("DnB Reviz — Sujet d'Entraînement & Copie", 20, y + 10);
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Matière : ${ex.subject}  |  Niveau : ${ex.level || "Standard"}  |  Barème : 20 points`, 20, y + 17);
-
-  y += 30;
-
-  // Meta info box
-  doc.setTextColor(30, 41, 59);
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text(`Titre : ${ex.title || "Exercice"}`, 14, y);
-  y += 6;
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Élève : ${currentUser ? currentUser.username : "Élève"}  ·  Généré le : ${new Date(ex.createdAt || Date.now()).toLocaleDateString("fr-FR")}`, 14, y);
-  y += 6;
-  if (ex.instructions) {
-    const instLines = doc.splitTextToSize(`Consignes : ${ex.instructions}`, 180);
-    doc.text(instLines, 14, y);
-    y += instLines.length * 5 + 4;
-  }
-
-  y += 4;
-
-  // Questions and User Answers
-  (ex.questions || []).forEach((q, idx) => {
-    if (y > 240) {
-      doc.addPage();
-      y = 20;
-    }
-
-    // Question Box (Navy header with color differentiator)
-    doc.setFillColor(241, 245, 249); // light slate background
-    doc.setDrawColor(37, 99, 235); // Blue border
-    doc.setLineWidth(0.5);
-    
-    const qText = `Question ${q.questionNumber || idx + 1} (${q.points} points) : ${q.text}`;
-    const qLines = doc.splitTextToSize(qText, 172);
-    const boxH = Math.max(16, qLines.length * 5 + 8);
-
-    doc.roundedRect(14, y, 182, boxH, 2, 2, "FD");
-    doc.setTextColor(30, 58, 138); // Dark blue for question
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.text(qLines, 18, y + 7);
-
-    y += boxH + 6;
-
-    // Student Answer Box (Emerald/Indigo border differentiating clearly)
-    const ansObj = (window._currentExerciceAnswers || []).find(a => a.questionId === q.id);
-    const ansText = ansObj ? ansObj.answerText : (ex.mode === "papier" ? `[Réponse rédigée sur copie papier manuscrite — ${window._exPaperPhotos.length} photo(s) téléversée(s)]` : "(Aucune réponse saisie)");
-
-    doc.setFillColor(248, 250, 252);
-    doc.setDrawColor(16, 185, 129); // Emerald border for student answer
-    doc.setLineWidth(0.4);
-
-    const aLines = doc.splitTextToSize(`Réponse de l'élève :\n${ansText}`, 172);
-    const aBoxH = Math.max(16, aLines.length * 5 + 8);
-
-    if (y + aBoxH > 275) {
-      doc.addPage();
-      y = 20;
-    }
-
-    doc.roundedRect(14, y, 182, aBoxH, 2, 2, "FD");
-    doc.setTextColor(5, 150, 105);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.text("Réponse de l'élève :", 18, y + 6);
-
-    doc.setTextColor(30, 41, 59);
-    doc.setFont("helvetica", "normal");
-    const actualAnsLines = doc.splitTextToSize(ansText, 172);
-    doc.text(actualAnsLines, 18, y + 12);
-
-    y += aBoxH + 10;
+  drawPdfWrappedBlock(doc, state, "Informations", `Titre : ${safePdfText(ex.title, "Exercice")}\nÉlève : ${safePdfText(currentUser?.username, "Élève")}\nGénéré le : ${new Date(ex.createdAt || Date.now()).toLocaleDateString("fr-FR")}`, {
+    fill: [241, 245, 249], border: [203, 213, 225], titleColor: [30, 41, 59], textColor: [51, 65, 85]
   });
 
-  doc.save(`dnb-copie-${(ex.title || "exercice").toLowerCase().replace(/[^a-z0-9]/g, "_")}.pdf`);
+  if (ex.instructions) {
+    drawPdfWrappedBlock(doc, state, "Consignes", ex.instructions, {
+      fill: [255, 251, 235], border: [245, 158, 11], titleColor: [146, 64, 14], textColor: [71, 85, 105]
+    });
+  }
+
+  (ex.questions || []).forEach((question, index) => {
+    const number = question.questionNumber || index + 1;
+    drawPdfWrappedBlock(doc, state, `Question ${number} · ${safePdfText(question.points, "—")} point(s)`, question.text, {
+      fill: [239, 246, 255], border: [59, 130, 246], titleColor: [30, 58, 138], textColor: [30, 41, 59], fontSize: 9.2
+    });
+
+    const answerText = formatStudentPlainAnswer({ ...ex, studentAnswers: window._currentExerciceAnswers, structuredAnswers: window._currentStructuredAnswers }, question);
+    drawPdfWrappedBlock(doc, state, "Réponse de l'élève", answerText, {
+      fill: [236, 253, 245], border: [16, 185, 129], titleColor: [5, 150, 105], textColor: [30, 41, 59]
+    });
+  });
+
+  addExercicePdfFooters(doc, "Sujet non corrigé");
+  doc.save(`dnb-copie-${exercicePdfFileSlug(ex.title)}.pdf`);
   showToast("Copie d'entraînement (non corrigée) exportée en PDF ✓");
 };
 
@@ -6187,132 +8337,77 @@ window.exportExerciceGradedPDF = () => {
   }
 
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const res = ex.result;
+  const doc = new jsPDF({ unit: "mm", format: "a4", compress: true });
+  const result = ex.result;
+  const state = { y: 18 };
+  const titleLines = pdfLines(doc, "DnB Reviz — Rapport de correction", 126, 14, "bold").slice(0, 2);
+  const meta = `Sujet : ${safePdfText(ex.title, "Exercice")} · Matière : ${safePdfText(ex.subject, "Non précisée")} · Posture : ${getGradingToneLabel(result.gradingToneUsed || ex.gradingTone)}`;
+  const metaLines = pdfLines(doc, meta, 126, 8, "normal").slice(0, 3);
+  const headerHeight = Math.max(39, 8 + titleLines.length * 5.8 + metaLines.length * 4 + 4);
 
-  let y = 18;
-
-  // Header Banner with Score
   doc.setFillColor(15, 23, 42);
-  doc.rect(14, y, 182, 30, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(16);
+  doc.roundedRect(14, state.y, 182, headerHeight, 2, 2, "F");
   doc.setFont("helvetica", "bold");
-  doc.text("DnB Reviz — Rapport de Correction Officielle", 20, y + 9);
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Sujet : ${ex.title || "Exercice"}  ·  Matière : ${ex.subject}  ·  Niveau : ${ex.level || "Standard"}`, 20, y + 16);
-
-  // Big Score badge on the right
-  doc.setFillColor(37, 99, 235);
-  doc.roundedRect(148, y + 4, 42, 22, 3, 3, "F");
-  doc.setTextColor(255, 255, 255);
   doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text(`${res.totalScore} / 20`, 154, y + 14);
-  doc.setFontSize(8);
-  doc.text(`Mention : ${res.mention || "Bien"}`, 154, y + 21);
-
-  y += 38;
-
-  // Comparison & Appreciation Card
-  doc.setFillColor(241, 245, 249);
-  doc.setDrawColor(203, 213, 225);
-  doc.roundedRect(14, y, 182, 32, 2, 2, "FD");
-
-  doc.setTextColor(30, 41, 59);
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  const selfScore = ex.selfAssessment?.estimatedScore ?? "—";
-  doc.text(`Auto-évaluation élève : ${selfScore}/20   |   Note finale attribuée : ${res.totalScore}/20`, 18, y + 7);
-
-  doc.setFontSize(9);
+  doc.setTextColor(255, 255, 255);
+  titleLines.forEach((line, index) => doc.text(line, 19, state.y + 8 + index * 5.8));
   doc.setFont("helvetica", "normal");
-  doc.text(`Commentaire lucidité : ${res.selfAssessmentCritique || "Bonne auto-évaluation."}`, 18, y + 13);
+  doc.setFontSize(8);
+  metaLines.forEach((line, index) => doc.text(line, 19, state.y + 8 + titleLines.length * 5.8 + index * 4));
 
-  const appText = `Appréciation générale : « ${res.generalAppreciation || "Travail sérieux."} »`;
-  const appLines = doc.splitTextToSize(appText, 172);
-  doc.text(appLines, 18, y + 19);
+  doc.setFillColor(37, 99, 235);
+  doc.roundedRect(151, state.y + 5, 39, 26, 2, 2, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(255, 255, 255);
+  doc.text(`${safePdfText(result.totalScore, "—")} / 20`, 170.5, state.y + 16, { align: "center" });
+  doc.setFontSize(7.5);
+  doc.text(`Mention : ${safePdfText(result.mention, "—")}`, 170.5, state.y + 24, { align: "center" });
+  state.y += headerHeight + 8;
 
-  y += 38;
-
-  // Questions breakdown
-  (ex.questions || []).forEach((q, idx) => {
-    const qEval = (res.questionEvaluations || []).find(e => e.questionId === q.id) || res.questionEvaluations?.[idx] || {
-      pointsAwarded: q.points || 0,
-      maxPoints: q.points || 0,
-      feedback: "Bonne démarche.",
-      idealSolution: q.rubric || ""
-    };
-
-    if (y > 230) {
-      doc.addPage();
-      y = 20;
-    }
-
-    // Question Header Box
-    doc.setFillColor(248, 250, 252);
-    doc.setDrawColor(59, 130, 246);
-    doc.setLineWidth(0.4);
-
-    const qTitle = `Question ${q.questionNumber || idx + 1} — Note : ${qEval.pointsAwarded ?? 0} / ${qEval.maxPoints ?? q.points ?? 0} pts`;
-    doc.roundedRect(14, y, 182, 10, 2, 2, "FD");
-    doc.setTextColor(30, 58, 138);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.text(qTitle, 18, y + 7);
-
-    y += 14;
-
-    // Enoncé text
-    doc.setTextColor(71, 85, 105);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    const qLines = doc.splitTextToSize(`Énoncé : ${q.text}`, 176);
-    doc.text(qLines, 16, y);
-    y += qLines.length * 4.5 + 4;
-
-    // Student answer
-    const ansObj = (ex.studentAnswers || []).find(a => a.questionId === q.id);
-    const ansText = ansObj ? ansObj.answerText : (ex.mode === "papier" ? `[Copie papier manuscrite téléversée]` : "(Aucune réponse)");
-    doc.setTextColor(16, 185, 129);
-    doc.setFont("helvetica", "bold");
-    doc.text("Copie de l'élève :", 16, y);
-    y += 4.5;
-    doc.setTextColor(30, 41, 59);
-    doc.setFont("helvetica", "normal");
-    const ansLines = doc.splitTextToSize(ansText, 176);
-    doc.text(ansLines, 16, y);
-    y += ansLines.length * 4.5 + 4;
-
-    // Professor correction & feedback
-    doc.setTextColor(220, 38, 38);
-    doc.setFont("helvetica", "bold");
-    doc.text("Correction du Professeur :", 16, y);
-    y += 4.5;
-    doc.setTextColor(30, 41, 59);
-    doc.setFont("helvetica", "normal");
-    const fbLines = doc.splitTextToSize(qEval.feedback || "Démarche analysée.", 176);
-    doc.text(fbLines, 16, y);
-    y += fbLines.length * 4.5 + 4;
-
-    // Ideal solution
-    if (qEval.idealSolution) {
-      doc.setTextColor(37, 99, 235);
-      doc.setFont("helvetica", "bold");
-      doc.text("Solution modèle attendue :", 16, y);
-      y += 4.5;
-      doc.setTextColor(71, 85, 105);
-      doc.setFont("helvetica", "normal");
-      const idLines = doc.splitTextToSize(qEval.idealSolution, 176);
-      doc.text(idLines, 16, y);
-      y += idLines.length * 4.5 + 4;
-    }
-
-    y += 6;
+  const selfScore = ex.selfAssessment?.estimatedScore ?? "—";
+  const appreciation = safePdfText(result.generalAppreciation, "Travail examiné.");
+  const bulletin = safePdfText(result.bulletinComment, appreciation);
+  drawPdfWrappedBlock(doc, state, "Bilan général & Bulletin", `Appréciation du bulletin : ${bulletin}\nAuto-évaluation de l'élève : ${selfScore}/20 · Note finale : ${safePdfText(result.totalScore, "—")}/20\nAnalyse de l'écart : ${safePdfText(result.selfAssessmentCritique, "Aucune remarque.")}\nAppréciation détaillée : ${appreciation}`, {
+    fill: [241, 245, 249], border: [203, 213, 225], titleColor: [30, 41, 59], textColor: [51, 65, 85], fontSize: 8.8
   });
 
-  doc.save(`dnb-correction-officielle-${(ex.title || "exercice").toLowerCase().replace(/[^a-z0-9]/g, "_")}.pdf`);
+  (ex.questions || []).forEach((question, index) => {
+    const evaluation = (result.questionEvaluations || []).find(item => String(item.questionId) === String(question.id))
+      || result.questionEvaluations?.[index]
+      || {
+        pointsAwarded: question.points || 0,
+        maxPoints: question.points || 0,
+        feedback: "Démarche analysée.",
+        idealSolution: question.rubric || ""
+      };
+
+    const number = question.questionNumber || index + 1;
+    drawPdfWrappedBlock(doc, state, `Question ${number} · Note : ${safePdfText(evaluation.pointsAwarded, "0")} / ${safePdfText(evaluation.maxPoints ?? question.points, "0")} pts`, question.text, {
+      fill: [239, 246, 255], border: [59, 130, 246], titleColor: [30, 58, 138], textColor: [30, 41, 59], fontSize: 8.8
+    });
+
+    const answerText = formatStudentPlainAnswer(ex, question);
+    drawPdfWrappedBlock(doc, state, "Copie de l'élève", answerText, {
+      fill: [236, 253, 245], border: [16, 185, 129], titleColor: [5, 150, 105], textColor: [30, 41, 59], fontSize: 8.8
+    });
+
+    const criteriaLine = Array.isArray(evaluation.criteriaBreakdown) && evaluation.criteriaBreakdown.length > 0
+      ? `\nBarème : ${evaluation.criteriaBreakdown.map(c => `${c.label} (+${c.awarded}/${c.max})`).join(" · ")}`
+      : "";
+    drawPdfWrappedBlock(doc, state, "Correction stylo rouge", `${evaluation.feedback || "Démarche analysée."}${criteriaLine}`, {
+      fill: [254, 242, 242], border: [248, 113, 113], titleColor: [185, 28, 28], textColor: [51, 65, 85], fontSize: 8.8
+    });
+
+    if (evaluation.idealSolution) {
+      drawPdfWrappedBlock(doc, state, "Corrigé type attendu", evaluation.idealSolution, {
+        fill: [239, 246, 255], border: [96, 165, 250], titleColor: [29, 78, 216], textColor: [51, 65, 85], fontSize: 8.8
+      });
+    }
+  });
+
+  addExercicePdfFooters(doc, "Copie corrigée");
+  doc.save(`dnb-correction-officielle-${exercicePdfFileSlug(ex.title)}.pdf`);
   showToast("Copie corrigée par l'IA exportée en PDF ✓");
 };
 
@@ -6323,7 +8418,6 @@ window.loadExercicesFeed = () => {
 
   const list = getStoredExercices();
 
-  // Apply tab filter
   let filtered = list;
   if (window._exerciceFilterTab === "mine") {
     filtered = list.filter(ex => !ex.result);
@@ -6331,22 +8425,19 @@ window.loadExercicesFeed = () => {
     filtered = list.filter(ex => ex.result);
   }
 
-  // Apply subject filter
   if (window._exerciceSubjectFilter !== "all") {
     filtered = filtered.filter(ex => (ex.subject || "").toLowerCase() === window._exerciceSubjectFilter.toLowerCase());
   }
 
-  // Apply search
   const searchInput = document.getElementById("ex-search-input")?.value.toLowerCase().trim();
   if (searchInput) {
-    filtered = filtered.filter(ex => 
+    filtered = filtered.filter(ex =>
       (ex.title || "").toLowerCase().includes(searchInput) ||
       (ex.subject || "").toLowerCase().includes(searchInput) ||
       (ex.topic || "").toLowerCase().includes(searchInput)
     );
   }
 
-  // Apply sort
   if (window._exerciceSortOrder === "score_desc") {
     filtered.sort((a, b) => (b.result?.totalScore || 0) - (a.result?.totalScore || 0));
   } else if (window._exerciceSortOrder === "score_asc") {
@@ -6376,7 +8467,7 @@ window.loadExercicesFeed = () => {
     const scoreHtml = isGraded ? `
       <div style="display:flex; align-items:center; gap:8px;">
         <span style="font-size:22px; font-weight:900; color:var(--primary);">${ex.result.totalScore}/20</span>
-        <span class="ex-badge-soft">${esc(ex.result.mention || "Noté")}</span>
+        <span class="ex-badge-soft">${escapeHtmlText(ex.result.mention || "Noté")}</span>
       </div>
     ` : `
       <span class="type-tag" style="background:rgba(255,149,0,.14); color:#b25e00; font-weight:700;">En cours d'épreuve</span>
@@ -6387,28 +8478,29 @@ window.loadExercicesFeed = () => {
         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
           <div>
             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:6px;">
-              <span class="type-tag" style="background:var(--primary-l); color:var(--primary-f); font-weight:700;">${esc(ex.subject)}</span>
-              <span class="type-tag" style="background:var(--file-bg); color:var(--ink);">${esc(ex.level || "Standard")}</span>
+              <span class="type-tag" style="background:var(--primary-l); color:var(--primary-f); font-weight:700;">${escapeHtmlText(ex.subject)}</span>
+              <span class="type-tag" style="background:var(--file-bg); color:var(--ink);">${escapeHtmlText(ex.level || "Standard")}</span>
+              <span class="type-tag" style="background:rgba(88,86,214,.1); color:#5856d6;">${getExerciseTypeLabel(ex.exerciseType)}</span>
               <span class="type-tag" style="background:rgba(52,199,89,.12); color:#248a3d;">${ex.mode === "papier" ? "📝 Papier" : "💻 Clavier"}</span>
               ${ex.durationMinutes ? `<span class="type-tag" style="background:var(--hl); color:var(--ink);">⏱️ ${ex.durationMinutes} min</span>` : ""}
             </div>
-            <h3 style="margin:0 0 6px 0; font-size:18px;">${esc(ex.title)}</h3>
-            <p class="caption" style="margin:0; font-size:13px; line-height:1.4;">${esc(ex.topic)}</p>
+            <h3 style="margin:0 0 6px 0; font-size:18px;">${escapeHtmlText(ex.title)}</h3>
+            <p class="caption" style="margin:0; font-size:13px; line-height:1.4;">${escapeHtmlText(ex.topic)}</p>
           </div>
           ${scoreHtml}
         </div>
 
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; pt-2; border-top:1px solid var(--hl); padding-top:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; border-top:1px solid var(--hl); padding-top:10px; flex-wrap:wrap; gap:8px;">
           <span class="caption" style="font-size:12px;">
-            ${new Date(ex.createdAt || Date.now()).toLocaleDateString("fr-FR")} · ${ex.questions?.length || 0} question(s)
+            ${new Date(ex.createdAt || Date.now()).toLocaleDateString("fr-FR")} · ${ex.questions?.length || 0} question(s) · ${getGradingToneLabel(ex.result?.gradingToneUsed || ex.gradingTone)}
           </span>
           <div style="display:flex; gap:8px;">
             ${isGraded ? `
-              <button class="btn-pill btn-sm" onclick="openPastExerciceResult('${ex.id}')">📊 Voir la correction &amp; la note</button>
+              <button class="btn-pill btn-sm" onclick="openPastExerciceResult('${esc(ex.id)}')">📊 Voir la copie corrigée</button>
             ` : `
-              <button class="btn-pill btn-sm" onclick="openPastExerciceSession('${ex.id}')">🚀 Continuer l'épreuve</button>
+              <button class="btn-pill btn-sm" onclick="openPastExerciceSession('${esc(ex.id)}')">🚀 Continuer l'épreuve</button>
             `}
-            <button class="btn-ghost btn-sm del" onclick="deleteExerciceFromHistory('${ex.id}')" title="Supprimer cet entraînement">🗑️</button>
+            <button class="btn-ghost btn-sm del" onclick="deleteExerciceFromHistory('${esc(ex.id)}')" title="Supprimer cet entraînement">🗑️</button>
           </div>
         </div>
       </div>
@@ -6450,11 +8542,14 @@ window.setExercicesFilter = (tab) => {
   loadExercicesFeed();
 };
 
-window.handleExerciceSearch = (e) => {
+window.handleExerciceSearch = () => {
   loadExercicesFeed();
 };
 
 window.openExerciceFilterModal = () => {
+  if (typeof window.syncExerciseSubjectSelects === "function") {
+    window.syncExerciseSubjectSelects();
+  }
   openModal("m-ex-filter");
 };
 
@@ -6467,4 +8562,5 @@ window.applyExerciceModalFilter = () => {
   loadExercicesFeed();
   showToast("Filtres appliqués ✓");
 };
+
 
