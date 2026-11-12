@@ -7975,7 +7975,29 @@ function normalizeExerciseGrading(result, exercise, gradingTone) {
   };
 }
 
-// Submit for Server-Side Gemini AI Grading
+// Consignes de correction utilisées par le relais Cloudflare / Groq.
+function getExerciseGradingToneInstructions(tone) {
+  switch (tone) {
+    case "strict":
+      return `POSTURE DE CORRECTION : SÉVÈRE (aucun cadeau).
+- Applique le barème de manière stricte et exigeante.
+- Pénalise systématiquement tout oubli d'unité, toute notation mathématique/scientifique imprécise, toute affirmation non justifiée, toute faute de méthode ou d'orthographe technique.
+- Un résultat juste sans démonstration lorsque celle-ci est attendue ne vaut au maximum que la moitié des points.`;
+    case "kind":
+      return `POSTURE DE CORRECTION : BIENVEILLANT ET CONSTRUCTIF (gentiment mais sans plus).
+- Reste honnête sur la note (ne donne JAMAIS de points pour une réponse fausse ou hors-sujet), mais valorise pleinement les bonnes intuitions et la logique de raisonnement même si la formulation est maladroite.
+- Tolère les petites maladresses rédactionnelles mineures tant que l'idée juste est clairement exprimée.
+- Adopte un ton chaleureux, encourageant et rassurant dans les retours.`;
+    case "bac":
+    default:
+      return `POSTURE DE CORRECTION : JURY D'EXAMEN OFFICIEL (BAC / BREVET).
+- Sois parfaitement impartial, équilibré et fidèle aux consignes officielles de l'Éducation Nationale.
+- Valorise la démarche et les étapes intermédiaires cohérentes (même si une erreur de calcul survient en cours de route, n'applique la pénalité qu'une fois).
+- Exige la rigueur attendue à l'examen officiel.`;
+  }
+}
+
+// Submit for AI grading through the same Cloudflare Groq relay as exercise generation.
 window.submitExerciceForGrading = async () => {
   if (!window._currentExercice) return;
 
@@ -7994,26 +8016,104 @@ window.submitExerciceForGrading = async () => {
     const { textAnswers, structuredAnswers } = collectAllStudentAnswers();
     const paperPhotos = (window._exPaperPhotos || []).slice(0, 3);
 
-    const resp = await fetch("/api/gemini/grade-exercise", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        exercise,
-        mode,
-        textAnswers,
-        structuredAnswers,
-        paperPhotos,
-        selfAssessment: window._currentSelfEval,
-        gradingTone
-      })
-    });
-
-    const payload = await resp.json().catch(() => ({}));
-    if (!resp.ok) {
-      throw new Error(payload.error || `Erreur serveur (${resp.status})`);
+    if (!exercise.questions || !Array.isArray(exercise.questions) || exercise.questions.length === 0) {
+      throw new Error("Le sujet de l'exercice ne contient aucune question à corriger.");
     }
 
-    const gradingResult = normalizeExerciseGrading(payload, exercise, gradingTone);
+    const effectiveTone = gradingTone || exercise.gradingTone || "bac";
+    const toneDirective = getExerciseGradingToneInstructions(effectiveTone);
+    const promptText = `Tu es un professeur français chargé de corriger la copie d'un élève façon « stylo rouge sur copie d'examen ».
+
+${toneDirective}
+
+=== SUJET D'ORIGINE ===
+Matière : ${exercise.subject || "Non précisée"}
+Thème : ${exercise.topic || "Non précisé"}
+Niveau : ${exercise.level || "Non précisé"}
+Consignes : ${exercise.instructions || "Standard"}
+Barème total : 20 points
+Questions :
+${JSON.stringify(exercise.questions, null, 2)}
+
+=== AUTO-ÉVALUATION DE L'ÉLÈVE ===
+Note estimée par l'élève : ${window._currentSelfEval?.estimatedScore ?? "Non spécifiée"}/20
+Confiance : ${window._currentSelfEval?.confidenceStars ?? "3"}/5
+Commentaire : "${window._currentSelfEval?.reflections || "Aucun commentaire"}"
+
+=== COPIE DE L'ÉLÈVE ===
+Mode de réponse : ${mode === "papier" ? "Copie papier manuscrite photographiée (lis attentivement toutes les images jointes)" : "Réponses saisies au clavier et interactions"}
+Réponses textuelles saisies :
+${JSON.stringify(textAnswers || [], null, 2)}
+Réponses interactives (QCM / Reliage) :
+${JSON.stringify(structuredAnswers || {}, null, 2)}
+Nombre de photos jointes : ${paperPhotos.length}
+
+=== DIRECTIVES DE CORRECTION & ANNOTATIONS STYLO ROUGE ===
+1. Évalue chaque question séparément en respectant son barème exact : maxPoints = question.points. N'invente pas de réponse lorsque l'élève n'a rien fourni.
+2. Pour chaque question :
+   - Décompose la note dans "criteriaBreakdown" (ex. [{"label":"Méthode & justification","awarded":1.5,"max":2},{"label":"Résultat & unités","awarded":1,"max":1}]). La somme des "awarded" doit égaler "pointsAwarded" et la somme des "max" doit égaler "maxPoints".
+   - Fournis "annotations" : des segments de la réponse réelle de l'élève (ou du texte effectivement lu sur sa copie papier), avec un statut parmi "correct", "error", "imprecise" et "neutral". Utilise "correct" pour le juste, "error" pour une erreur, "imprecise" pour une formulation vague ou une unité manquante et "neutral" pour une liaison. Ajoute un commentaire court et précis pour les erreurs et imprécisions. Si l'élève n'a rien répondu, utilise un seul segment {"text":"(Aucune réponse rédigée)","status":"error","comment":"Question non traitée"}.
+   - Rédige "feedback" (commentaire constructif façon stylo rouge) et "idealSolution" (rédaction modèle complète, avec formules LaTeX $...$ si pertinent).
+3. Calcule "totalScore" comme la somme exacte des "pointsAwarded" de toutes les questions. La note est sur 20.
+4. Compare avec l'auto-évaluation de l'élève dans "selfAssessmentCritique".
+5. Rédige "bulletinComment" (2 phrases maximum, façon bulletin scolaire officiel) et "generalAppreciation" (appréciation plus détaillée).
+6. Pour une copie photographiée, examine les images jointes dans l'ordre des pages. Ne prétends jamais lire un passage illisible ; signale-le dans le feedback et n'invente aucun contenu.
+
+Réponds STRICTEMENT avec un objet JSON valide, sans Markdown ni texte avant/après, avec cette structure :
+{
+  "totalScore": 14.5,
+  "maxScore": 20,
+  "mention": "Bien",
+  "gradingToneUsed": "${effectiveTone}",
+  "bulletinComment": "Travail sérieux et méthodique, des bases solides à consolider sur la rédaction finale.",
+  "generalAppreciation": "Appréciation globale détaillée du professeur...",
+  "selfAssessmentCritique": "Analyse de l'écart entre la note estimée et la note réelle...",
+  "strengths": ["Point fort 1", "Point fort 2"],
+  "improvements": ["Axe de progrès 1", "Axe de progrès 2"],
+  "questionEvaluations": [
+    {
+      "questionId": 1,
+      "pointsAwarded": 3.5,
+      "maxPoints": 4,
+      "status": "partial",
+      "criteriaBreakdown": [
+        {"label":"Démarche / Raisonnement","awarded":2,"max":2},
+        {"label":"Calcul & Unités","awarded":1.5,"max":2}
+      ],
+      "annotations": [
+        {"text":"On applique le théorème de Pythagore dans le triangle ABC rectangle en A.","status":"correct","comment":"Hypothèse bien posée"},
+        {"text":"Donc BC = 12.","status":"imprecise","comment":"Unité (cm) oubliée"}
+      ],
+      "feedback": "Bon raisonnement d'ensemble, pense à toujours indiquer l'unité.",
+      "idealSolution": "Rédaction modèle complète avec LaTeX $...$"
+    }
+  ]
+}
+
+Chaque question du sujet doit apparaître exactement une fois dans questionEvaluations, avec son questionId d'origine.`;
+
+    // Les photos sont envoyées comme images vision au format OpenAI/Groq.
+    // readFileAsBase64 renvoie normalement déjà une data URL (data:image/...;base64,...).
+    const imageParts = paperPhotos.map(photo => {
+      const rawImage = String(photo?.base64 || "").trim();
+      if (!rawImage) return null;
+      const imageUrl = /^data:image\//i.test(rawImage)
+        ? rawImage
+        : `data:${photo.mimeType || "image/jpeg"};base64,${rawImage.replace(/^data:[^,]*,/, "")}`;
+      return { type: "image_url", image_url: { url: imageUrl } };
+    }).filter(Boolean);
+
+    const userContent = [
+      { type: "text", text: promptText },
+      ...imageParts
+    ];
+    const gradingPayload = await callGroqAPI(
+      "Tu es un professeur correcteur officiel français. Corrige avec minutie et impartialité. Respecte strictement le barème et renvoie uniquement le JSON demandé.",
+      userContent,
+      { maxCompletionTokens: 8192, temperature: 0.2 }
+    );
+
+    const gradingResult = normalizeExerciseGrading(gradingPayload, exercise, effectiveTone);
 
     exercise.result = gradingResult;
     exercise.gradingTone = gradingTone;
