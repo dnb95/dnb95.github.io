@@ -5342,6 +5342,9 @@ async function callGroqAPI(systemPrompt, userPrompt, options = {}) {
     }
 
     if (!response.ok) {
+      if (response.status === 405) {
+        throw new Error("Le relais Cloudflare a refusé la requête POST (HTTP 405). Vérifie que le Worker groqrelay est bien déployé avec cloudflare-groqrelay-onesignal.js et que GROQ_API_URL pointe vers son URL workers.dev.");
+      }
       const message = data?.error?.message || data?.error || data?.message || `Erreur HTTP ${response.status}`;
       throw new Error(typeof message === "string" ? message : JSON.stringify(message));
     }
@@ -7065,8 +7068,8 @@ function normalizeGeneratedExercise(data, params) {
   if (!data || typeof data !== "object" || !Array.isArray(data.questions)) {
     throw new Error("La réponse générée ne contient pas de liste de questions exploitable.");
   }
-  if (data.questions.length < 1 || data.questions.length > 6) {
-    throw new Error("Le sujet doit contenir entre 1 et 6 questions.");
+  if (data.questions.length < 3 || data.questions.length > 6) {
+    throw new Error("Le sujet doit contenir entre 3 et 6 questions.");
   }
 
   let questions = data.questions.map((question, index) => {
@@ -7136,7 +7139,36 @@ function normalizeGeneratedExercise(data, params) {
   };
 }
 
-// Generate Exercise with Server-Side Gemini AI
+// Instructions de génération des différents formats proposés dans le formulaire.
+function getGeneratedExerciseFormatInstructions(exerciseType, mode) {
+  const isPaper = mode === "papier";
+  switch (exerciseType) {
+    case "matching":
+      return `FORMAT DEMANDÉ : exercice centré sur le RELIAGE / ASSOCIATION DE NOTIONS.
+- Inclus au moins 2 questions de type "matching" avec 4 ou 5 notions à gauche et leurs définitions, résultats ou formules mélangés à droite.
+- Complète avec 1 à 2 questions de type "open" pour justifier ou appliquer les notions.
+${isPaper ? "- Le reliage sera recopié sur une feuille : numérote clairement les éléments et les propositions." : "- Les éléments doivent être assez courts pour être reliés facilement sur l'interface."}`;
+    case "graph":
+      return `FORMAT DEMANDÉ : exercice centré sur l'ANALYSE DE GRAPHIQUES ET DE SCHÉMAS SVG.
+- Inclus au moins 2 questions de type "graph", chacune avec un champ "svgDiagram" contenant un vrai graphique ou schéma SVG lisible, précis et pertinent.
+- Ajoute 1 à 2 questions de type "open" liées à l'interprétation ou aux calculs à partir des visuels.
+- Chaque graphique doit utiliser viewBox="0 0 600 340" et comporter 3 à 5 "keyPoints" avec coordonnées exactes, label et détail factuel sans révéler la réponse finale.`;
+    case "qcm_open":
+      return `FORMAT DEMANDÉ : QCM RAISONNÉS ET QUESTIONS OUVERTES.
+- Inclus 2 à 3 questions de type "qcm" avec 4 choix plausibles, un seul bon choix indiqué dans "correctOptionIndex" et "requiresJustification": true.
+- Inclus 1 à 2 questions de type "open" pour développer ou justifier.`;
+    case "questions":
+      return `FORMAT DEMANDÉ : QUESTIONS CLASSIQUES RÉDIGÉES ET PROGRESSIVES.
+- Utilise exclusivement le type "open" : calculs, démonstrations, définitions, analyse de documents ou rédaction selon la matière.`;
+    case "mix":
+    default:
+      return `FORMAT DEMANDÉ : MIX PÉDAGOGIQUE VARIÉ.
+- Inclus obligatoirement au moins 1 question de type "open", au moins 1 question de type "matching" avec 4 paires, et au moins 1 question de type "graph" avec un véritable schéma ou graphique SVG pertinent pour la matière.
+- Tu peux ajouter 1 question de type "qcm" si cela apporte une réelle variété pédagogique.`;
+  }
+}
+
+// Generate Exercise with the Cloudflare Groq relay (compatible with GitHub Pages).
 window.handleGenerateAIExercice = async () => {
   const subjSelect = document.getElementById("ex-create-subject");
   let subject = subjSelect ? subjSelect.value : "";
@@ -7163,20 +7195,24 @@ window.handleGenerateAIExercice = async () => {
     try {
       const parsed = JSON.parse(linkedItemRaw);
       linkedContext = `Titre du document aimé : ${parsed.title} (${parsed.subject})\nRésumé : ${parsed.summary}`;
-    } catch (_) {}
+    } catch (_) {
+      // Un élément lié mal formé ne doit pas bloquer la création de l'exercice.
+    }
   }
 
   const durationMinutes = window._exTimerActive ? window._exDuration : 0;
   const mode = window._exMode || "clavier";
   const exerciseType = window._exFormat || "mix";
   const gradingTone = window._exGradingTone || "bac";
-
   const loadingDiv = document.getElementById("ex-create-loading");
   const actionsDiv = document.getElementById("ex-create-actions");
+
   if (loadingDiv) loadingDiv.style.display = "block";
   if (actionsDiv) actionsDiv.style.display = "none";
 
   try {
+    // Les PDF sont analysés localement : le relais ne reçoit que le texte extrait
+    // et jusqu'à trois images JPEG des premières pages utiles.
     const pdfContext = await extractExercisePDFContext(window._exUploadedPDFs || []);
     const parameters = {
       subject,
@@ -7190,27 +7226,126 @@ window.handleGenerateAIExercice = async () => {
       gradingTone
     };
 
-    const resp = await fetch("/api/gemini/generate-exercise", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...parameters,
-        pdfExtractedText: pdfContext.text,
-        pdfImages: pdfContext.imageParts
-      })
+    const gradingToneLabel = {
+      strict: "Sévère & Impitoyable",
+      bac: "Comme au Bac / Brevet (Officiel)",
+      kind: "Bienveillant (sans excès)"
+    }[gradingTone] || "Comme au Bac / Brevet (Officiel)";
+    const formatInstructions = getGeneratedExerciseFormatInstructions(exerciseType, mode);
+
+    const promptText = `Tu es un professeur spécialisé expérimenté de l'Éducation nationale française.
+Crée un sujet d'exercice complet, authentique, rigoureux et progressif à partir des paramètres suivants.
+
+PARAMÈTRES :
+- Matière : ${subject}
+- Chapitre / thème : ${topic}
+- Niveau : ${level}
+- Durée : ${durationMinutes ? `${durationMinutes} minutes` : "Non chronométré"}
+- Mode de réponse : ${mode === "papier" ? "Copie papier manuscrite avec téléversement de photos" : "Clavier numérique et interface interactive"}
+- Format demandé : ${exerciseType}
+- Style de correction prévu : ${gradingToneLabel}
+- Consignes supplémentaires : ${details || "Aucune"}
+${linkedContext ? `- Document ou cours aimé par l'élève :\n${linkedContext}\n` : ""}
+${pdfContext.text ? `CONTENU DES DOCUMENTS PDF FOURNIS (source prioritaire) :\n${pdfContext.text.slice(0, 26000)}\n` : ""}
+
+${formatInstructions}
+
+CONSIGNES IMPÉRATIVES DE QUALITÉ :
+1. Génère entre 3 et 6 questions progressives, variées et adaptées à la matière, au thème et au niveau.
+2. Le total des points doit être exactement égal à 20 : la somme numérique de questions[].points doit faire 20.
+3. Chaque question doit avoir un énoncé complet, autonome et sans ambiguïté, un barème précis dans "rubric", un indice méthodologique facultatif dans "hint" et une synthèse de la solution dans "expectedAnswerSnippet".
+4. N'inclus jamais la réponse attendue dans le texte visible de la question.
+5. Formate les expressions mathématiques, fractions, puissances, racines, vecteurs, formules chimiques et équations en LaTeX avec $...$ ou $$...$$.
+6. Pour chaque question de type "graph", fournis "svgDiagram" avec un SVG complet (viewBox="0 0 600 340", xmlns="http://www.w3.org/2000/svg"), propre et lisible. Aucun script, aucun gestionnaire d'événement et aucun contenu externe dans le SVG. Ajoute 3 à 5 "keyPoints" avec x, y, label et detail factuel ; ne révèle pas la solution dans detail.
+7. Pour chaque question de type "matching", fournis 4 paires : "leftItems" et "rightItems" (ce dernier tableau dans un ordre mélangé), puis "correctPairs" avec les correspondances exactes.
+8. Pour chaque question de type "qcm", fournis exactement 4 options, "correctOptionIndex" entre 0 et 3 et "requiresJustification" (booléen).
+9. Utilise les PDF comme source prioritaire. N'invente aucune information qui contredirait les documents. Les pages envoyées en image servent à lire les schémas, graphiques et pages numérisées.
+10. Les consignes doivent être adaptées à la matière : calculs et unités en sciences, rédaction et citations en français, analyse de documents en histoire-géographie, etc.
+
+RENVOIE UNIQUEMENT UN OBJET JSON VALIDE, sans Markdown, avec cette structure :
+{
+  "title": "Titre du devoir / entraînement",
+  "subject": "${subject}",
+  "topic": "${topic}",
+  "level": "${level}",
+  "durationMinutes": ${Number(durationMinutes) || 0},
+  "mode": "${mode}",
+  "exerciseType": "${exerciseType}",
+  "gradingTone": "${gradingTone}",
+  "instructions": "Consignes générales pour l'élève",
+  "totalPoints": 20,
+  "questions": [
+    {
+      "id": 1,
+      "questionNumber": 1,
+      "type": "open | qcm | matching | graph",
+      "title": "Sous-titre de la question",
+      "text": "Énoncé complet avec LaTeX si pertinent",
+      "points": 4,
+      "hint": "Indice méthodologique facultatif",
+      "rubric": "Critères précis d'attribution des points",
+      "expectedAnswerSnippet": "Synthèse de la réponse attendue",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correctOptionIndex": 0,
+      "requiresJustification": true,
+      "leftItems": [{"id":"L1","text":"Élément 1"}],
+      "rightItems": [{"id":"R1","text":"Correspondance mélangée"}],
+      "correctPairs": {"L1":"R1"},
+      "svgDiagram": {
+        "title": "Titre du graphique",
+        "xAxisLabel": "Axe X",
+        "yAxisLabel": "Axe Y",
+        "viewBox": "0 0 600 340",
+        "svgMarkup": "<svg viewBox=\"0 0 600 340\" xmlns=\"http://www.w3.org/2000/svg\">...</svg>",
+        "keyPoints": [{"id":"P1","x":180,"y":140,"label":"Point A","detail":"Lecture factuelle du graphique"}]
+      }
+    }
+  ]
+}
+N'inclus les propriétés options/correctOptionIndex que pour type="qcm", leftItems/rightItems/correctPairs que pour type="matching", et svgDiagram que pour type="graph".`;
+
+    const userContent = [
+      { type: "text", text: promptText },
+      ...(pdfContext.imageParts || []).map(part => {
+        // Compatibilité avec les deux formats d'images utilisés par les anciennes versions.
+        if (part?.type === "image_url" && part.image_url?.url) return part;
+        const imageUrl = String(part?.base64 || "");
+        return imageUrl ? { type: "image_url", image_url: { url: imageUrl } } : null;
+      }).filter(Boolean)
+    ];
+
+    const systemPrompt = "Tu es un professeur spécialisé rigoureux de l'Éducation nationale française. Génère un sujet pédagogique exact, complet et exploitable par l'interface. Respecte strictement le JSON, les formats de questions demandés et le barème total de 20 points.";
+    let generated = await callGroqAPI(systemPrompt, userContent, {
+      maxCompletionTokens: 8192,
+      temperature: 0.35
     });
 
-    const payload = await resp.json().catch(() => ({}));
-    if (!resp.ok) {
-      throw new Error(payload.error || `Erreur serveur (${resp.status})`);
+    let data;
+    try {
+      data = normalizeGeneratedExercise(generated, parameters);
+    } catch (validationError) {
+      // Seconde passe : on demande au modèle de réparer le JSON sans perdre le fond.
+      const repairPrompt = `Répare le sujet JSON ci-dessous sans en changer inutilement le contenu.
+Corrige précisément cette erreur : ${validationError.message}
+Le sujet doit contenir entre 3 et 6 questions valides, respecter le format demandé (${exerciseType}), contenir les champs nécessaires aux QCM/reliages/graphiques utilisés et totaliser exactement 20 points.
+Réponds uniquement avec un objet JSON valide.
+
+Sujet à réparer :
+${JSON.stringify(generated)}`;
+      generated = await callGroqAPI(systemPrompt, repairPrompt, {
+        maxCompletionTokens: 8192,
+        temperature: 0.15
+      });
+      data = normalizeGeneratedExercise(generated, parameters);
     }
 
-    const data = normalizeGeneratedExercise(payload, parameters);
     data.id = "ex_" + Date.now();
     data.createdAt = Date.now();
     data.author = currentUser ? currentUser.username : "Élève";
     data.mode = mode;
     data.durationMinutes = durationMinutes;
+    data.exerciseType = exerciseType;
+    data.gradingTone = gradingTone;
 
     saveExerciceToHistory(data);
     closeModal("m-create-exercice");
