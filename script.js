@@ -20,7 +20,8 @@ const db   = getFirestore(app);
 window.emailjs.init("2VkygefcXxbSOlhFX");
 
 const GROQ_API_URL = "https://groqrelay.greninja71144.workers.dev";
-const GROQ_MODEL   = "openai/gpt-oss-120b"; 
+const GROQ_MODEL   = "qwen/qwen3.8-27b"; // Modèle actif, JSON et vision pris en charge par Groq.
+
 
 
 const LOGIN_MAX_ATTEMPTS = 5;
@@ -757,7 +758,7 @@ function handleHashChange() {
   const target = decodeURIComponent(hash.substring(1)).toLowerCase().trim();
   const internalTargets = new Set([
     'accueil', 'classement', 'cours', 'fichesrev', 'quiz', 'creerquiz',
-    'messages', 'depot', 'pub-profil', 'profil', 'setting', 'admin', 'statistiques'
+    'messages', 'depot', 'pub-profil', 'profil', 'setting', 'admin', 'statistiques', 'exercices'
   ]);
 
   if (target === 'matieres') {
@@ -819,6 +820,7 @@ function showInternalView(target) {
 
   if (target === 'messages') loadDMChats();
   if (target === 'quiz') loadQuizFeed();
+  if (target === 'exercices') loadExercicesFeed();
   if (target === 'setting') { loadAIQuizHistory(); loadAnimationsSetting(); }
   if (target === 'cours') loadCoursFeed();
   if (target === 'fichesrev') loadFRFeed();
@@ -2159,9 +2161,15 @@ window.getPostHTML = (p, context) => {
     const lowerU = u.toLowerCase();
     const t = (f.type || "").toLowerCase();
     const yt = getYouTubeEmbed(u);
-    const isPDF = t === "application/pdf" || lowerU.endsWith(".pdf");
+    const nonImageExt = /\.(xlsx?|csv|docx?|pptx?|odt|ods|odp|pdf|zip|rar|7z|tar|gz|txt|json|py|js|html|css|mp4|webm|mp3|wav|ogg)(\?.*)?$/i;
+    const isExplicitNonImg = nonImageExt.test(lowerU) || nonImageExt.test((f.name || "").toLowerCase());
+    const isPDF = t === "application/pdf" || lowerU.endsWith(".pdf") || (f.name || "").toLowerCase().endsWith(".pdf");
     const isVideo = !isPDF && (t === "video/mp4" || lowerU.endsWith(".mp4"));
-    const isImg = !isPDF && !isVideo && (t.startsWith("image/") || lowerU.match(/\.(jpeg|jpg|gif|png|webp)$/i) || lowerU.includes("res.cloudinary.com"));
+    const isImg = !isPDF && !isVideo && !isExplicitNonImg && (
+      t.startsWith("image/") ||
+      Boolean(lowerU.match(/\.(jpeg|jpg|gif|png|webp|svg|bmp|ico|avif)(\?.*)?$/i)) ||
+      (lowerU.includes("res.cloudinary.com") && !lowerU.includes("/raw/") && !lowerU.includes("/files/") && Boolean(lowerU.match(/\.(jpeg|jpg|gif|png|webp|svg|bmp|ico|avif)(\?.*)?$/i)))
+    );
     if (yt) youtube = { url: u, embedUrl: yt, name: f.name || "YouTube", type: "video/youtube" };
     else if (isImg) images.push({ ...f, kind: "image", _order: index });
     else if (isVideo) videos.push({ ...f, kind: "video", _order: index });
@@ -2206,11 +2214,20 @@ window.getPostHTML = (p, context) => {
   if (docs.length > 0) {
     fileChips = docs.map(d => {
       const cleanName = d.name || p.title || "Document";
-      const isPDF = d.type === "application/pdf" || (d.url || "").toLowerCase().endsWith(".pdf");
+      const lower = ((d.url || "") + " " + cleanName).toLowerCase();
+      const isPDF = d.type === "application/pdf" || lower.includes(".pdf");
+      const isExcel = lower.includes(".xlsx") || lower.includes(".xls") || lower.includes(".csv");
+      const isWord = lower.includes(".docx") || lower.includes(".doc") || lower.includes(".odt");
+      const isZip = lower.includes(".zip") || lower.includes(".rar") || lower.includes(".7z");
+      let icon = "🔗";
+      if (isExcel) icon = "📊";
+      else if (isPDF) icon = "📄";
+      else if (isWord) icon = "📝";
+      else if (isZip) icon = "📦";
       return `
       <div class="file-chip mt-1">
         <div class="file-chip-info" title="${esc(cleanName)}">
-          <span style="font-size:22px">${isPDF ? "📄" : "🔗"}</span>
+          <span style="font-size:22px">${icon}</span>
           <span>${cleanName}</span>
         </div>
         <a href="${d.url}" target="_blank" rel="noopener" class="btn-download">📥 Consulter</a>
@@ -3615,10 +3632,19 @@ window.openChat = async (chatId, partnerUname) => {
       
       let attachHtml = "";
       if (m.fileUrl) {
-         if (m.fileUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i) || m.fileUrl.includes("res.cloudinary.com/")) {
+         const nonImg = /\.(xlsx?|csv|docx?|pptx?|odt|ods|odp|pdf|zip|rar|7z|tar|gz|txt|json|py|js|html|css)(\?.*)?$/i;
+         const isImage = !nonImg.test(m.fileUrl) && (
+           Boolean(m.fileUrl.match(/\.(jpeg|jpg|gif|png|webp|svg|bmp|ico|avif)(\?.*)?$/i)) ||
+           (m.fileUrl.includes("res.cloudinary.com/") && !m.fileUrl.includes("/raw/") && !m.fileUrl.includes("/files/") && Boolean(m.fileUrl.match(/\.(jpeg|jpg|gif|png|webp|svg|bmp|ico|avif)(\?.*)?$/i)))
+         );
+         if (isImage) {
            attachHtml = `<div style="margin-bottom:6px;"><a href="${m.fileUrl}" target="_blank"><img src="${m.fileUrl}" style="max-width:100%;border-radius:8px;max-height:200px;object-fit:cover;"></a></div>`;
          } else {
-           attachHtml = `<div style="margin-bottom:6px;"><a href="${m.fileUrl}" target="_blank" style="color:inherit;text-decoration:underline;">📄 Pièce jointe</a></div>`;
+           let icon = "📄";
+           if (m.fileUrl.match(/\.(xlsx?|csv)/i)) icon = "📊";
+           else if (m.fileUrl.match(/\.(docx?|odt)/i)) icon = "📝";
+           else if (m.fileUrl.match(/\.(zip|rar|7z)/i)) icon = "📦";
+           attachHtml = `<div style="margin-bottom:6px;"><a href="${m.fileUrl}" target="_blank" style="color:inherit;text-decoration:underline;">${icon} Pièce jointe</a></div>`;
          }
       }
       
@@ -3721,54 +3747,94 @@ window.handleSendDM = async (e) => {
   btn.disabled = false;
 };
 
-async function callGroqAPI(systemPrompt, userPrompt) {
-  const conversationHistory = [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: userPrompt }
-  ];
+function parseGroqJSON(content) {
+  if (content && typeof content === "object" && !Array.isArray(content)) return content;
+  const raw = String(content || "").trim();
+  const withoutFences = raw
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
 
+  try {
+    return JSON.parse(withoutFences);
+  } catch (_) {
+    const start = withoutFences.indexOf("{");
+    const end = withoutFences.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      return JSON.parse(withoutFences.slice(start, end + 1));
+    }
+    throw new Error("La réponse de l'IA ne contient pas de JSON valide.");
+  }
+}
+
+async function callGroqAPI(systemPrompt, userPrompt, options = {}) {
   const payload = {
-    model: GROQ_MODEL,
-    messages: conversationHistory,
-    temperature: 0.6,
-    max_tokens: 3000,
+    model: options.model || GROQ_MODEL,
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ],
+    temperature: options.temperature ?? 0.35,
+    max_completion_tokens: options.maxCompletionTokens || 8192,
     response_format: { type: "json_object" }
   };
 
-  console.log("📤 Envoi à Groq via Worker :", payload);
-
   try {
+    // Ne pas journaliser le contenu des copies ni les images des élèves.
+    console.info("📤 Requête IA via le relais Groq :", {
+      endpoint: GROQ_API_URL,
+      model: payload.model,
+      messageCount: payload.messages.length,
+      maxCompletionTokens: payload.max_completion_tokens
+    });
+
     const response = await fetch(GROQ_API_URL, {
       method: "POST",
+      mode: "cors",
+      cache: "no-store",
       headers: {
-        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Content-Type": "application/json"
       },
       body: JSON.stringify(payload),
     });
 
+    // Lire d'abord le corps en texte permet d'identifier proprement une page
+    // HTML (Worker absent, mauvaise URL, page 404) au lieu d'afficher un
+    // SyntaxError JSON cryptique commençant par "<html>".
+    const responseText = await response.text();
+    const contentType = response.headers.get("content-type") || "";
+    let data = null;
+
+    try {
+      data = responseText ? JSON.parse(responseText) : {};
+    } catch (_) {
+      const looksLikeHtml = /(?:text\/html|application\/xhtml\+xml)/i.test(contentType) || /^\s*<(?:!doctype\s+html|html|head|body)\b/i.test(responseText);
+      if (looksLikeHtml) {
+        if (response.status === 404) {
+          throw new Error(`Le relais IA Groq est introuvable (HTTP 404). Le Worker Cloudflare n'est probablement pas déployé à l'adresse ${GROQ_API_URL}. Déploie le fichier cloudflare-groqrelay-onesignal.js avec la configuration wrangler.toml fournie, puis actualise le site.`);
+        }
+        throw new Error(`Le relais IA a renvoyé une page HTML au lieu de JSON (HTTP ${response.status}, ${contentType || "type inconnu"}). L'adresse ${GROQ_API_URL} ne répond pas comme un Worker Groq. Vérifie le déploiement Cloudflare et la version publiée du Worker.`);
+      }
+      throw new Error(`Réponse invalide du relais IA (HTTP ${response.status}, ${contentType || "type inconnu"}). Le serveur n'a pas renvoyé de JSON valide.`);
+    }
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("❌ Réponse Worker :", response.status, errorText);
-      throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
+      const message = data?.error?.message || data?.error || data?.message || `Erreur HTTP ${response.status}`;
+      throw new Error(typeof message === "string" ? message : JSON.stringify(message));
     }
 
-    const data = await response.json();
-    console.log("✅ Réponse Groq reçue :", data);
-
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      throw new Error("Réponse Groq invalide : pas de choix");
+    const content = data?.choices?.[0]?.message?.content;
+    if (!content) {
+      const detail = data?.error?.message || data?.message;
+      throw new Error(detail ? String(detail) : "Le relais IA répond correctement, mais le service Groq n'a renvoyé aucun contenu. Vérifie la clé GROQ_API_KEY et le modèle configuré dans Cloudflare.");
     }
-
-    const text = data.choices[0].message.content;
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    } else {
-      throw new Error("La réponse de l'IA ne contient pas de JSON valide.");
-    }
+    return parseGroqJSON(content);
   } catch (e) {
     console.error("❌ Erreur callGroqAPI :", e);
-    showToast("Erreur avec l'IA : " + e.message);
+    if (e instanceof TypeError && /fetch|network|failed/i.test(e.message)) {
+      throw new Error("Impossible de joindre le relais IA Groq. Vérifie que le Worker Cloudflare est déployé et que son adresse correspond à GROQ_API_URL.");
+    }
     throw e;
   }
 }
@@ -4907,3 +4973,1498 @@ function esc(s) {
 } 
 
 window.esc = esc;
+
+/* ========================================================
+   MODULE EXERCICES IA & CORRECTION PROFESSEUR SPÉCIALISÉ
+   ======================================================== */
+
+window._exUploadedPDFs = [];
+window._exPaperPhotos = [];
+window._exDuration = 60;
+window._exTimerActive = true;
+window._exTimerInterval = null;
+window._exRemainingSeconds = 0;
+window._exTotalSeconds = 0;
+window._exTimerPaused = false;
+window._exMode = "clavier";
+window._currentExercice = null;
+window._currentExerciceAnswers = [];
+window._currentSelfEval = { confidenceStars: 4, estimatedScore: 14, reflections: "" };
+window._exerciceFilterTab = "all";
+window._exerciceSubjectFilter = "all";
+window._exerciceSortOrder = "newest";
+
+// Audio Bell Chime generator via Web Audio API (exam end sound)
+function playExamBellChime() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+
+    // Dual-harmonic chime 1 (High tone)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = "sine";
+    osc1.frequency.setValueAtTime(880, now);
+    osc1.frequency.exponentialRampToValueAtTime(440, now + 1.2);
+    gain1.gain.setValueAtTime(0.4, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(now);
+    osc1.stop(now + 1.2);
+
+    // Dual-harmonic chime 2 (Warm bell fundamental)
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = "sine";
+    osc2.frequency.setValueAtTime(1174.66, now + 0.28);
+    osc2.frequency.exponentialRampToValueAtTime(587.33, now + 1.6);
+    gain2.gain.setValueAtTime(0.5, now + 0.28);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 1.6);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(now + 0.28);
+    osc2.stop(now + 1.6);
+
+    // Final resonant bell chime 3
+    const osc3 = ctx.createOscillator();
+    const gain3 = ctx.createGain();
+    osc3.type = "triangle";
+    osc3.frequency.setValueAtTime(1318.51, now + 0.6);
+    osc3.frequency.exponentialRampToValueAtTime(659.25, now + 2.0);
+    gain3.gain.setValueAtTime(0.35, now + 0.6);
+    gain3.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
+    osc3.connect(gain3);
+    gain3.connect(ctx.destination);
+    osc3.start(now + 0.6);
+    osc3.stop(now + 2.0);
+  } catch (e) {
+    console.warn("Audio Context non disponible :", e);
+  }
+}
+
+// Storage helpers
+function getStoredExercices() {
+  try {
+    const raw = localStorage.getItem("dnb_exercices_history");
+    return raw ? JSON.parse(raw) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function saveExerciceToHistory(ex) {
+  try {
+    const list = getStoredExercices();
+    const idx = list.findIndex(item => item.id === ex.id);
+    if (idx >= 0) {
+      list[idx] = ex;
+    } else {
+      list.unshift(ex);
+    }
+    localStorage.setItem("dnb_exercices_history", JSON.stringify(list));
+  } catch (e) {
+    console.warn("Impossible de sauvegarder l'exercice en local :", e);
+  }
+}
+
+// Open creation modal
+window.openCreateExerciceModal = () => {
+  window._exUploadedPDFs = [];
+  const listDiv = document.getElementById("ex-pdf-list");
+  if (listDiv) listDiv.innerHTML = "";
+  
+  // Reset fields
+  const subjSelect = document.getElementById("ex-create-subject");
+  if (subjSelect) subjSelect.value = "Mathématiques";
+  const otherWrap = document.getElementById("ex-create-subject-other-wrap");
+  if (otherWrap) otherWrap.style.display = "none";
+  const otherInput = document.getElementById("ex-create-subject-other");
+  if (otherInput) otherInput.value = "";
+  const topicInput = document.getElementById("ex-create-topic");
+  if (topicInput) topicInput.value = "";
+  const detailsInput = document.getElementById("ex-create-details");
+  if (detailsInput) detailsInput.value = "";
+  
+  // Mode Clavier default
+  selectExerciceMode("clavier");
+
+  // Timer default 60 min
+  setExerciceDuration(60);
+  const timerToggle = document.getElementById("ex-enable-timer");
+  if (timerToggle) timerToggle.checked = true;
+  toggleExerciceTimerFields({ target: { checked: true } });
+
+  // Populate liked courses/quizzes dropdown
+  populateLikedItemsDropdown();
+
+  openModal("m-create-exercice");
+};
+
+function populateLikedItemsDropdown() {
+  const sel = document.getElementById("ex-create-linked-item");
+  if (!sel) return;
+  sel.innerHTML = `<option value="">-- Aucun lien (exercice autonome) --</option>`;
+
+  const myUsername = currentUser ? currentUser.username : "";
+  const allLiked = [];
+
+  // Find liked courses/posts from window._liveCoursData / window._liveFRData
+  const postsPool = [...(window._liveCoursData || []), ...(window._liveFRData || [])];
+  postsPool.forEach(p => {
+    if (p.likes && Array.isArray(p.likes) && (p.likes.includes(myUsername) || !myUsername)) {
+      allLiked.push({
+        type: "cours",
+        id: p.id,
+        title: p.title || "Cours sans titre",
+        subject: p.subject || p.matiere || "Général",
+        author: p.author || "Communauté",
+        summary: (p.desc || p.body || p.title || "").slice(0, 150)
+      });
+    }
+  });
+
+  // Find liked quizzes from window._liveQuizzesData
+  const quizPool = [...(window._liveQuizzesData || []), ...(window._liveAIQuizzesData || [])];
+  quizPool.forEach(q => {
+    if (q.likes && Array.isArray(q.likes) && (q.likes.includes(myUsername) || !myUsername)) {
+      allLiked.push({
+        type: "quiz",
+        id: q.id,
+        title: q.title || "Quiz",
+        subject: q.subject || q.matiere || "Général",
+        author: q.author || "Communauté",
+        summary: `Quiz de ${q.questions?.length || 0} questions`
+      });
+    }
+  });
+
+  if (allLiked.length > 0) {
+    const optGroup = document.createElement("optgroup");
+    optGroup.label = "❤️ Tes cours, fiches et quiz aimés";
+    allLiked.forEach(item => {
+      const opt = document.createElement("option");
+      opt.value = JSON.stringify({ title: item.title, subject: item.subject, summary: item.summary });
+      opt.textContent = `[${item.subject}] ${item.title} (par @${item.author})`;
+      optGroup.appendChild(opt);
+    });
+    sel.appendChild(optGroup);
+  } else {
+    const opt = document.createElement("option");
+    opt.disabled = true;
+    opt.textContent = "(Aucun cours ou quiz aimé pour le moment)";
+    sel.appendChild(opt);
+  }
+}
+
+// Subject Change
+window.handleExerciceSubjectChange = (e) => {
+  const isOther = e.target.value === "autre";
+  const wrap = document.getElementById("ex-create-subject-other-wrap");
+  if (wrap) wrap.style.display = isOther ? "block" : "none";
+};
+
+// PDF Upload for Course context
+window.handleExercicePDFUpload = async (e) => {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+
+  for (const f of files) {
+    if (!f.name.toLowerCase().endsWith(".pdf")) {
+      showToast("Seuls les fichiers PDF sont acceptés ici.");
+      continue;
+    }
+    if (f.size > 20 * 1024 * 1024) {
+      showToast(`Le fichier ${f.name} dépasse 20 Mo.`);
+      continue;
+    }
+
+    try {
+      const base64 = await readFileAsBase64(f);
+      window._exUploadedPDFs.push({
+        name: f.name,
+        size: (f.size / (1024 * 1024)).toFixed(2) + " Mo",
+        mimeType: "application/pdf",
+        base64: base64
+      });
+    } catch (err) {
+      showToast("Erreur de lecture de " + f.name);
+    }
+  }
+
+  e.target.value = "";
+  renderExercicePDFList();
+};
+
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Extraction locale du texte PDF : les fichiers ne sont plus envoyés à une
+// route Gemini qui n'existe pas sur GitHub Pages.
+async function extractExercisePDFContext(pdfFiles = []) {
+  if (!pdfFiles.length) return { text: "", imageParts: [] };
+  if (!window.pdfjsLib) {
+    throw new Error("Le lecteur PDF n'a pas pu être chargé. Actualise la page puis réessaie.");
+  }
+
+  const pdfjs = window.pdfjsLib;
+  pdfjs.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+  const textSections = [];
+  const imageParts = [];
+  let remainingText = 28000;
+
+  for (const pdf of pdfFiles) {
+    const dataUrl = String(pdf.base64 || "");
+    const base64 = dataUrl.includes(",") ? dataUrl.slice(dataUrl.indexOf(",") + 1) : dataUrl;
+    if (!base64) continue;
+
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+    const pdfDocument = await pdfjs.getDocument({ data: bytes }).promise;
+    const pagesText = [];
+
+    for (let pageNumber = 1; pageNumber <= Math.min(pdfDocument.numPages, 80) && remainingText > 0; pageNumber++) {
+      const page = await pdfDocument.getPage(pageNumber);
+      const content = await page.getTextContent();
+      const pageText = content.items
+        .map(item => typeof item.str === "string" ? item.str : "")
+        .filter(Boolean)
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      if (pageText) {
+        const clipped = pageText.slice(0, remainingText);
+        pagesText.push(`Page ${pageNumber} : ${clipped}`);
+        remainingText -= clipped.length;
+      }
+
+      // Les trois premières pages de documents peuvent aussi être analysées
+      // visuellement (schémas, graphiques ou PDF numérisés).
+      if (imageParts.length < 3) {
+        const baseViewport = page.getViewport({ scale: 1 });
+        const scale = Math.min(1.6, 1600 / Math.max(baseViewport.width, baseViewport.height));
+        const viewport = page.getViewport({ scale });
+        const canvas = window.document.createElement("canvas");
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        const context = canvas.getContext("2d");
+        if (context) {
+          await page.render({ canvasContext: context, viewport }).promise;
+          imageParts.push({
+            type: "image_url",
+            image_url: { url: canvas.toDataURL("image/jpeg", 0.72) }
+          });
+        }
+        canvas.width = 0;
+        canvas.height = 0;
+      }
+    }
+
+    textSections.push(`Document : ${pdf.name || "Cours PDF"} (${pdfDocument.numPages} page(s))\n${pagesText.join("\n") || "Aucun texte sélectionnable détecté ; jusqu’à trois pages ont été transmises en image si possible."}`);
+    if (remainingText <= 0) break;
+  }
+
+  return {
+    text: textSections.join("\n\n").slice(0, 28000),
+    imageParts
+  };
+}
+
+function renderExercicePDFList() {
+  const listDiv = document.getElementById("ex-pdf-list");
+  if (!listDiv) return;
+
+  if (window._exUploadedPDFs.length === 0) {
+    listDiv.innerHTML = "";
+    return;
+  }
+
+  listDiv.innerHTML = window._exUploadedPDFs.map((pdf, idx) => `
+    <div style="display:flex; justify-content:space-between; align-items:center; background:var(--card-bg); border:1px solid var(--hl); padding:8px 12px; border-radius:10px; font-size:13px;">
+      <div style="display:flex; align-items:center; gap:8px; overflow:hidden;">
+        <span style="font-size:16px;">📄</span>
+        <span style="font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(pdf.name)}</span>
+        <span class="caption">(${pdf.size})</span>
+      </div>
+      <button class="btn-ghost btn-sm del" style="padding:2px 8px; font-size:11px;" onclick="removeExercicePDF(${idx})">✕</button>
+    </div>
+  `).join("");
+}
+
+window.removeExercicePDF = (idx) => {
+  window._exUploadedPDFs.splice(idx, 1);
+  renderExercicePDFList();
+};
+
+// Timer selection
+window.setExerciceDuration = (minutes) => {
+  minutes = Math.min(240, Math.max(5, Number(minutes) || 60));
+  window._exDuration = minutes;
+
+  document.querySelectorAll(".ex-timer-btn").forEach(btn => {
+    const bMin = Number(btn.dataset.min);
+    btn.classList.toggle("active", bMin === minutes);
+  });
+
+  const customInput = document.getElementById("ex-custom-duration");
+  if (customInput) customInput.value = minutes;
+};
+
+window.handleCustomDurationInput = (e) => {
+  const val = Number(e.target.value);
+  if (val > 240) {
+    e.target.value = 240;
+    showToast("Le chronomètre est limité à 4 heures maximum (240 min).");
+  }
+  setExerciceDuration(e.target.value);
+};
+
+window.toggleExerciceTimerFields = (e) => {
+  const enabled = e.target.checked;
+  window._exTimerActive = enabled;
+  const cfg = document.getElementById("ex-timer-config");
+  if (cfg) cfg.style.display = enabled ? "flex" : "none";
+};
+
+// Mode selection
+window.selectExerciceMode = (mode) => {
+  window._exMode = mode;
+  const cardClavier = document.getElementById("ex-mode-card-clavier");
+  const cardPapier = document.getElementById("ex-mode-card-papier");
+  if (cardClavier) cardClavier.classList.toggle("active", mode === "clavier");
+  if (cardPapier) cardPapier.classList.toggle("active", mode === "papier");
+};
+
+// Vérifie et homogénéise la réponse structurée de l'IA avant de l'enregistrer.
+function normalizeGeneratedExercise(data, params) {
+  if (!data || typeof data !== "object" || !Array.isArray(data.questions)) {
+    throw new Error("La réponse générée ne contient pas de liste de questions exploitable.");
+  }
+  if (data.questions.length < 3 || data.questions.length > 6) {
+    throw new Error("Le sujet doit contenir entre 3 et 6 questions.");
+  }
+
+  const questions = data.questions.map((question, index) => {
+    const points = Number(question?.points);
+    if (!String(question?.text || "").trim() || !Number.isFinite(points) || points <= 0) {
+      throw new Error(`La question ${index + 1} est incomplète ou son barème est invalide.`);
+    }
+    return {
+      ...question,
+      id: index + 1,
+      questionNumber: index + 1,
+      title: String(question.title || `Question ${index + 1}`),
+      text: String(question.text).trim(),
+      points: Number(points.toFixed(2)),
+      hint: String(question.hint || ""),
+      rubric: String(question.rubric || "Critères d'évaluation à préciser."),
+      expectedAnswerSnippet: String(question.expectedAnswerSnippet || "")
+    };
+  });
+
+  const total = Number(questions.reduce((sum, question) => sum + question.points, 0).toFixed(2));
+  if (total !== 20) {
+    throw new Error(`Le barème généré totalise ${total}/20 au lieu de 20/20.`);
+  }
+
+  return {
+    ...data,
+    title: String(data.title || `Entraînement — ${params.topic}`),
+    subject: params.subject,
+    topic: params.topic,
+    level: params.level,
+    instructions: String(data.instructions || "Répondez à chaque question en justifiant soigneusement votre démarche."),
+    totalPoints: 20,
+    questions
+  };
+}
+
+// Generate Exercise with AI
+window.handleGenerateAIExercice = async () => {
+  const subjSelect = document.getElementById("ex-create-subject");
+  let subject = subjSelect ? subjSelect.value : "Mathématiques";
+  if (subject === "autre") {
+    const otherVal = document.getElementById("ex-create-subject-other")?.value.trim();
+    if (!otherVal) {
+      showToast("Veuillez préciser le nom de votre matière personnalisée.");
+      return;
+    }
+    subject = otherVal;
+  }
+
+  const topic = document.getElementById("ex-create-topic")?.value.trim();
+  if (!topic) {
+    showToast("Veuillez renseigner le chapitre ou thème de l'exercice.");
+    return;
+  }
+
+  const level = document.getElementById("ex-create-level")?.value || "Contrôle continu standard";
+  const details = document.getElementById("ex-create-details")?.value.trim() || "";
+  const linkedItemRaw = document.getElementById("ex-create-linked-item")?.value || "";
+  let linkedContext = "";
+  if (linkedItemRaw) {
+    try {
+      const parsed = JSON.parse(linkedItemRaw);
+      linkedContext = `Titre du document aimé : ${parsed.title} (${parsed.subject})\nRésumé : ${parsed.summary}`;
+    } catch (_) {}
+  }
+
+  const durationMinutes = window._exTimerActive ? window._exDuration : 0;
+  const mode = window._exMode;
+  const loadingDiv = document.getElementById("ex-create-loading");
+  const actionsDiv = document.getElementById("ex-create-actions");
+  if (loadingDiv) loadingDiv.style.display = "block";
+  if (actionsDiv) actionsDiv.style.display = "none";
+
+  try {
+    const pdfContext = await extractExercisePDFContext(window._exUploadedPDFs || []);
+    const parameters = { subject, topic, level, details, linkedContext, durationMinutes, mode };
+    const promptText = `Crée un sujet d'exercice complet, authentique et rigoureux pour un élève.
+
+PARAMÈTRES :
+${JSON.stringify(parameters, null, 2)}
+
+${pdfContext.text ? `CONTENU DES DOCUMENTS FOURNIS :\n${pdfContext.text}\n` : ""}
+
+CONSIGNES IMPÉRATIVES :
+1. Génère de 3 à 6 questions progressives, variées et adaptées à la matière, au thème et au niveau demandés.
+2. Le total des points doit être EXACTEMENT 20. La somme numérique de questions[].points doit donc être égale à 20, sans approximation.
+3. Chaque question doit contenir un énoncé complet, clair, autonome et sans ambiguïté.
+4. Chaque question doit contenir un barème détaillé dans rubric, une indication méthodologique dans hint (chaîne vide si inutile) et une synthèse de la réponse attendue dans expectedAnswerSnippet.
+5. Utilise les documents fournis comme source prioritaire, sans inventer de contenu qui les contredirait. Les extraits textuels peuvent couvrir plusieurs pages ; les images jointes montrent jusqu’à trois pages au total, en privilégiant le début des documents.
+6. Les consignes doivent être adaptées à la matière : calculs et unités en sciences, rédaction et citations en français, analyse de documents en histoire-géographie, etc.
+7. N'inclus pas les réponses attendues dans le texte visible des questions.
+
+RENVOIE UNIQUEMENT UN OBJET JSON VALIDE, sans Markdown, avec cette structure :
+{
+  "title": "Titre du contrôle",
+  "subject": "Matière",
+  "topic": "Thème",
+  "level": "Niveau",
+  "durationMinutes": 60,
+  "mode": "clavier",
+  "instructions": "Consignes générales pour l'élève",
+  "totalPoints": 20,
+  "questions": [
+    {
+      "id": 1,
+      "questionNumber": 1,
+      "title": "Thème de la question",
+      "text": "Énoncé complet",
+      "points": 5,
+      "hint": "Indice facultatif",
+      "rubric": "Critères et répartition précise des points",
+      "expectedAnswerSnippet": "Synthèse de la solution attendue"
+    }
+  ]
+}`;
+
+    const userContent = [
+      { type: "text", text: promptText },
+      ...pdfContext.imageParts
+    ];
+    const systemPrompt = "Tu es un professeur expérimenté de l'Éducation nationale française. Produis un sujet pédagogique rigoureux, parfaitement adapté au niveau demandé. Respecte strictement le JSON et le barème total de 20 points.";
+
+    let data = await callGroqAPI(systemPrompt, userContent, {
+      maxCompletionTokens: 8192,
+      temperature: 0.35
+    });
+
+    try {
+      data = normalizeGeneratedExercise(data, parameters);
+    } catch (validationError) {
+      // Une seconde passe corrige les petits écarts de format ou de barème.
+      const repairPrompt = `Corrige le JSON d'exercice ci-dessous. Conserve le fond des questions, mais assure-toi qu'il y a entre 3 et 6 questions, que chaque question possède text et points, et que la somme des points est EXACTEMENT 20. Réponds uniquement avec le JSON corrigé.\n\nErreur détectée : ${validationError.message}\n\nJSON à corriger :\n${JSON.stringify(data)}`;
+      data = await callGroqAPI(systemPrompt, repairPrompt, {
+        maxCompletionTokens: 8192,
+        temperature: 0.15
+      });
+      data = normalizeGeneratedExercise(data, parameters);
+    }
+
+    data.id = "ex_" + Date.now();
+    data.createdAt = Date.now();
+    data.author = currentUser ? currentUser.username : "Élève";
+    data.mode = mode;
+    data.durationMinutes = durationMinutes;
+
+    saveExerciceToHistory(data);
+    closeModal("m-create-exercice");
+    showToast("Exercice d'entraînement prêt ✓");
+    window.startExerciceSession(data);
+  } catch (err) {
+    console.error("Erreur génération exercice :", err);
+    showToast("Erreur lors de la génération : " + (err?.message || "réessaie dans quelques instants."));
+  } finally {
+    if (loadingDiv) loadingDiv.style.display = "none";
+    if (actionsDiv) actionsDiv.style.display = "flex";
+  }
+};
+
+// Start exercise session
+window.startExerciceSession = (exercice) => {
+  window._currentExercice = exercice;
+  window._currentExerciceAnswers = [];
+  window._exPaperPhotos = [];
+
+  // Populate header
+  document.getElementById("ex-take-title").innerText = exercice.title || "Entraînement";
+  document.getElementById("ex-take-subject-badge").innerText = exercice.subject;
+  document.getElementById("ex-take-level-badge").innerText = exercice.level || "Standard";
+  
+  const modeBadge = document.getElementById("ex-take-mode-badge");
+  if (modeBadge) {
+    modeBadge.innerText = exercice.mode === "papier" ? "📝 Copie Papier" : "💻 Clavier Numérique";
+    modeBadge.style.background = exercice.mode === "papier" ? "rgba(255,149,0,.14)" : "rgba(52,199,89,.12)";
+    modeBadge.style.color = exercice.mode === "papier" ? "#b25e00" : "#248a3d";
+  }
+
+  document.getElementById("ex-take-instructions").innerText = exercice.instructions || "Répondez aux questions avec clarté et précision méthodologique.";
+
+  // Render questions
+  const container = document.getElementById("ex-take-content");
+  container.innerHTML = "";
+
+  if (exercice.mode === "papier") {
+    // Instruction banner for paper mode
+    const paperBanner = document.createElement("div");
+    paperBanner.style.cssText = "background:rgba(88,86,214,.08); border:1px solid rgba(88,86,214,.25); border-radius:16px; padding:18px; margin-bottom:12px;";
+    paperBanner.innerHTML = `
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+        <span style="font-size:24px;">📝</span>
+        <h3 style="margin:0; font-size:16px; color:#5856d6;">Mode Rédaction Manuscrite sur Feuille Papier</h3>
+      </div>
+      <p class="caption" style="margin:0 0 12px 0; line-height:1.5;">
+        Munissez-vous de vos feuilles de brouillon ou copies et de vos stylos. Traitez les questions ci-dessous en numérotant bien chaque réponse. Une fois terminé, prenez votre travail en photo et téléversez les pages ci-dessous pour la correction de l'IA.
+      </p>
+      <div class="ex-photo-upload-area" onclick="document.getElementById('ex-paper-photo-input').click()">
+        <input type="file" id="ex-paper-photo-input" accept="image/jpeg,image/png,image/webp" multiple capture="environment" style="display:none;" onchange="handleExercicePaperPhotos(event)">
+        <div style="font-size:28px; margin-bottom:6px;">📸</div>
+        <div style="font-weight:700; font-size:14px; color:var(--ink);">Ajouter / Prendre en photo ma copie manuscrite</div>
+        <div class="caption">JPG, PNG ou WEBP — jusqu’à 3 photos par copie</div>
+      </div>
+      <div class="ex-photo-preview-grid" id="ex-photo-preview-grid"></div>
+    `;
+    container.appendChild(paperBanner);
+  }
+
+  // Render question cards
+  (exercice.questions || []).forEach((q, idx) => {
+    const qBox = document.createElement("div");
+    qBox.className = "ex-question-box";
+    qBox.id = `ex-q-box-${q.id || idx}`;
+
+    const hintHtml = q.hint ? `
+      <div style="margin-top:10px;">
+        <button type="button" class="btn-ghost btn-sm" style="font-size:12px; padding:3px 10px;" onclick="toggleExerciceHint(${idx})">💡 Voir l'indice</button>
+        <div class="ex-hint-content" id="ex-hint-${idx}" style="display:none;">${esc(q.hint)}</div>
+      </div>
+    ` : "";
+
+    const answerArea = exercice.mode === "clavier" ? `
+      <div style="margin-top:14px;">
+        <label style="font-size:13px; font-weight:700; color:var(--ink); margin-bottom:6px; display:block;">Ta réponse rédigée :</label>
+        <textarea class="ex-q-textarea" id="ex-answer-q-${q.id || idx}" data-qid="${q.id || idx}" placeholder="Rédige ta réponse complète avec démarches et justifications..." oninput="handleAnswerInput(${q.id || idx})"></textarea>
+      </div>
+    ` : `
+      <div style="margin-top:10px; font-size:12px; color:var(--ink-m); font-style:italic;">
+        ✍️ À rédiger sur votre copie papier (n°${q.questionNumber || idx + 1}).
+      </div>
+    `;
+
+    qBox.innerHTML = `
+      <div class="ex-q-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-weight:800; font-size:16px; color:var(--primary);">Question ${q.questionNumber || idx + 1}</span>
+          ${q.title ? `<span style="font-size:14px; font-weight:600; color:var(--ink);">${esc(q.title)}</span>` : ""}
+        </div>
+        <span class="ex-q-points">${q.points || 0} pt${(q.points || 0) > 1 ? "s" : ""}</span>
+      </div>
+      <div style="font-size:15px; line-height:1.6; color:var(--ink); white-space:pre-wrap;">${esc(q.text)}</div>
+      ${hintHtml}
+      ${answerArea}
+    `;
+
+    container.appendChild(qBox);
+  });
+
+  // Start timer if applicable
+  initExerciceTimer(exercice.durationMinutes);
+
+  openModal("m-take-exercice");
+};
+
+window.toggleExerciceHint = (idx) => {
+  const el = document.getElementById(`ex-hint-${idx}`);
+  if (el) el.style.display = el.style.display === "none" ? "block" : "none";
+};
+
+window.handleAnswerInput = (qid) => {
+  const ta = document.getElementById(`ex-answer-q-${qid}`);
+  if (!ta) return;
+  const existing = window._currentExerciceAnswers.find(a => a.questionId === qid);
+  if (existing) {
+    existing.answerText = ta.value;
+  } else {
+    window._currentExerciceAnswers.push({ questionId: qid, answerText: ta.value });
+  }
+};
+
+// Timer Logic
+function initExerciceTimer(minutes) {
+  if (window._exTimerInterval) {
+    clearInterval(window._exTimerInterval);
+    window._exTimerInterval = null;
+  }
+
+  const timerBar = document.getElementById("ex-take-timer-bar");
+  const alertEl = document.getElementById("ex-timer-alert");
+  if (alertEl) alertEl.style.display = "none";
+
+  if (!minutes || minutes <= 0) {
+    if (timerBar) timerBar.style.display = "none";
+    return;
+  }
+
+  if (timerBar) timerBar.style.display = "block";
+  window._exTotalSeconds = minutes * 60;
+  window._exRemainingSeconds = minutes * 60;
+  window._exTimerPaused = false;
+
+  updateTimerDisplay();
+
+  window._exTimerInterval = setInterval(() => {
+    if (window._exTimerPaused) return;
+
+    window._exRemainingSeconds--;
+    updateTimerDisplay();
+
+    if (window._exRemainingSeconds <= 0) {
+      clearInterval(window._exTimerInterval);
+      window._exTimerInterval = null;
+      window._exRemainingSeconds = 0;
+      updateTimerDisplay();
+
+      // Ring chime sound
+      playExamBellChime();
+
+      if (alertEl) alertEl.style.display = "block";
+      showToast("⏰ Le temps imparti de l'exercice est écoulé !");
+    }
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const display = document.getElementById("ex-timer-display");
+  const fill = document.getElementById("ex-timer-progress-fill");
+  if (!display || !fill) return;
+
+  const s = Math.max(0, window._exRemainingSeconds);
+  const hours = Math.floor(s / 3600);
+  const mins = Math.floor((s % 3600) / 60);
+  const secs = s % 60;
+
+  display.innerText = `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+
+  const pct = window._exTotalSeconds > 0 ? (s / window._exTotalSeconds) * 100 : 0;
+  fill.style.width = `${pct}%`;
+
+  if (s <= 300) {
+    fill.classList.add("warning");
+    display.style.color = "var(--danger)";
+  } else {
+    fill.classList.remove("warning");
+    display.style.color = "var(--primary)";
+  }
+}
+
+window.toggleExerciceTimerPause = () => {
+  window._exTimerPaused = !window._exTimerPaused;
+  const btn = document.getElementById("btn-timer-pause");
+  const status = document.getElementById("ex-timer-status");
+  if (btn) btn.innerText = window._exTimerPaused ? "▶️ Reprendre" : "⏸️ Pause";
+  if (status) status.innerText = window._exTimerPaused ? "En pause" : "Chronomètre actif";
+};
+
+// Paper Mode Photos
+window.handleExercicePaperPhotos = async (e) => {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+
+  for (const f of files) {
+    if (window._exPaperPhotos.length >= 3) {
+      showToast("La correction IA accepte jusqu'à 3 photos par copie.");
+      break;
+    }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(f.type)) {
+      showToast("Format photo non pris en charge : utilise JPG, PNG ou WEBP.");
+      continue;
+    }
+    try {
+      const base64 = await readFileAsBase64(f);
+      window._exPaperPhotos.push({
+        name: f.name,
+        mimeType: f.type,
+        base64: base64
+      });
+    } catch (_) {
+      showToast("Erreur de chargement d'une photo.");
+    }
+  }
+
+  e.target.value = "";
+  renderPaperPhotosGrid();
+  showToast(`${window._exPaperPhotos.length} photo(s) de copie enregistrée(s) ✓`);
+};
+
+function renderPaperPhotosGrid() {
+  const grid = document.getElementById("ex-photo-preview-grid");
+  if (!grid) return;
+
+  grid.innerHTML = window._exPaperPhotos.map((p, idx) => `
+    <div class="ex-photo-thumb-card">
+      <img src="${p.base64}" alt="Page ${idx + 1}">
+      <button type="button" class="ex-photo-thumb-del" onclick="removeExercicePhoto(${idx})">✕</button>
+      <div style="position:absolute; bottom:4px; left:4px; font-size:10px; background:rgba(0,0,0,0.7); color:#fff; padding:2px 6px; border-radius:4px;">Page ${idx + 1}</div>
+    </div>
+  `).join("");
+}
+
+window.removeExercicePhoto = (idx) => {
+  window._exPaperPhotos.splice(idx, 1);
+  renderPaperPhotosGrid();
+};
+
+window.confirmExitExercice = () => {
+  if (confirm("Voulez-vous vraiment quitter cette session d'exercice ? Vos réponses actuelles sont conservées localement.")) {
+    if (window._exTimerInterval) {
+      clearInterval(window._exTimerInterval);
+      window._exTimerInterval = null;
+    }
+    closeModal("m-take-exercice");
+  }
+};
+
+// Self-Evaluation Modal
+window.openSelfEvaluationModal = () => {
+  if (!window._currentExercice) return;
+
+  // Verify answers provided
+  if (window._currentExercice.mode === "papier") {
+    if (window._exPaperPhotos.length === 0) {
+      if (!confirm("Vous n'avez pas encore téléversé de photo de votre copie papier. Voulez-vous quand même continuer pour la correction ?")) {
+        return;
+      }
+    }
+  } else {
+    // Collect textarea answers
+    window._currentExerciceAnswers = [];
+    (window._currentExercice.questions || []).forEach(q => {
+      const ta = document.getElementById(`ex-answer-q-${q.id}`);
+      if (ta) {
+        window._currentExerciceAnswers.push({
+          questionId: q.id,
+          answerText: ta.value.trim()
+        });
+      }
+    });
+
+    const hasAnyAnswer = window._currentExerciceAnswers.some(a => a.answerText.length > 0);
+    if (!hasAnyAnswer) {
+      if (!confirm("Vous n'avez saisi aucune réponse aux questions. Voulez-vous quand même lancer la correction du professeur ?")) {
+        return;
+      }
+    }
+  }
+
+  // Reset self evaluation defaults
+  setSelfEvalStars(4);
+  const rangeInput = document.getElementById("self-eval-score-range");
+  if (rangeInput) rangeInput.value = 14;
+  handleSelfEvalScoreChange({ target: { value: 14 } });
+  const refText = document.getElementById("self-eval-reflections");
+  if (refText) refText.value = "";
+
+  openModal("m-self-evaluation");
+};
+
+window.setSelfEvalStars = (val) => {
+  window._currentSelfEval.confidenceStars = Number(val);
+  const stars = document.querySelectorAll("#self-eval-stars .ex-star");
+  stars.forEach(st => {
+    const sVal = Number(st.dataset.val);
+    st.classList.toggle("active", sVal <= val);
+  });
+
+  const textEl = document.getElementById("self-eval-confidence-text");
+  const labels = [
+    "",
+    "Très peu confiant (1/5) — Gros doutes sur l'épreuve",
+    "Peu confiant (2/5) — Plusieurs blocages",
+    "Moyennement confiant (3/5) — Travail correct mais hésitant",
+    "Assez confiant (4/5) — Bon ressenti général",
+    "Très confiant (5/5) — Démarche maîtrisée et complète"
+  ];
+  if (textEl) textEl.innerText = labels[val] || `${val}/5`;
+};
+
+window.handleSelfEvalScoreChange = (e) => {
+  const score = Number(e.target.value);
+  window._currentSelfEval.estimatedScore = score;
+  const disp = document.getElementById("self-eval-score-display");
+  if (disp) disp.innerText = `${score} / 20`;
+};
+
+function normalizeExerciseGrading(result, exercise) {
+  if (!result || typeof result !== "object") {
+    throw new Error("La correction générée est vide ou invalide.");
+  }
+
+  const sourceEvaluations = Array.isArray(result.questionEvaluations) ? result.questionEvaluations : [];
+  const questionEvaluations = (exercise.questions || []).map((question, index) => {
+    const evaluation = sourceEvaluations.find(item => item && String(item.questionId) === String(question.id)) || sourceEvaluations[index] || {};
+    const maxPoints = Number(question.points) || 0;
+    const rawPoints = Number(evaluation.pointsAwarded);
+    const pointsAwarded = Number(Math.min(maxPoints, Math.max(0, Number.isFinite(rawPoints) ? rawPoints : 0)).toFixed(2));
+    return {
+      questionId: question.id,
+      pointsAwarded,
+      maxPoints,
+      status: pointsAwarded >= maxPoints ? "correct" : pointsAwarded > 0 ? "partial" : "incorrect",
+      feedback: String(evaluation.feedback || "La réponse n'a pas pu être évaluée en détail."),
+      idealSolution: String(evaluation.idealSolution || question.expectedAnswerSnippet || question.rubric || "")
+    };
+  });
+
+  const totalScore = Number(questionEvaluations.reduce((sum, item) => sum + item.pointsAwarded, 0).toFixed(2));
+  return {
+    ...result,
+    totalScore,
+    maxScore: 20,
+    questionEvaluations,
+    strengths: Array.isArray(result.strengths) ? result.strengths : [],
+    improvements: Array.isArray(result.improvements) ? result.improvements : []
+  };
+}
+
+// Submit for AI Grading
+window.submitExerciceForGrading = async () => {
+  if (!window._currentExercice) return;
+
+  const reflections = document.getElementById("self-eval-reflections")?.value.trim() || "";
+  window._currentSelfEval.reflections = reflections;
+
+  const loadingDiv = document.getElementById("ex-grade-loading");
+  const actionsDiv = document.getElementById("self-eval-actions");
+  if (loadingDiv) loadingDiv.style.display = "block";
+  if (actionsDiv) actionsDiv.style.display = "none";
+
+  try {
+    const exercise = window._currentExercice;
+    const mode = exercise.mode || window._exMode;
+    const paperPhotos = (window._exPaperPhotos || []).slice(0, 3);
+    const gradingPrompt = `Tu es un professeur correcteur français neutre, précis et exigeant mais constructif.
+
+SUJET D'ORIGINE :
+${JSON.stringify({
+  title: exercise.title,
+  subject: exercise.subject,
+  topic: exercise.topic,
+  level: exercise.level,
+  instructions: exercise.instructions,
+  totalPoints: 20,
+  questions: exercise.questions
+}, null, 2)}
+
+MODE DE RÉPONSE : ${mode === "papier" ? "Copie manuscrite photographiée. Analyse attentivement les images jointes et associe les réponses à chaque numéro de question." : "Réponses saisies au clavier."}
+
+RÉPONSES SAISIES :
+${JSON.stringify(window._currentExerciceAnswers || [], null, 2)}
+
+AUTO-ÉVALUATION :
+${JSON.stringify(window._currentSelfEval || {}, null, 2)}
+
+PHOTOS : ${paperPhotos.length} image(s) jointe(s), dans la limite de trois images par analyse. En mode papier, fonde la correction sur les pages visibles et signale toute partie illisible.
+
+DIRECTIVES DE NOTATION :
+1. Évalue chaque question séparément, en respectant strictement son barème.
+2. Ne donne aucun point pour un résultat non justifié lorsque la justification est demandée ; valorise les démarches correctes.
+3. Calcule la note finale comme la somme exacte des points attribués, sur 20.
+4. Fournis un retour concret, une solution idéale et une appréciation globale utile pour progresser.
+5. N'invente jamais une réponse de l'élève. En cas d'absence ou d'illisibilité, indique-le et attribue les points en conséquence.
+
+Réponds exclusivement avec un JSON valide de cette forme :
+{
+  "totalScore": 13.5,
+  "maxScore": 20,
+  "mention": "Assez bien",
+  "generalAppreciation": "Appréciation générale argumentée",
+  "selfAssessmentCritique": "Analyse de l'auto-évaluation",
+  "strengths": ["Point fort"],
+  "improvements": ["Axe de progrès"],
+  "questionEvaluations": [
+    {
+      "questionId": 1,
+      "pointsAwarded": 3,
+      "maxPoints": 4,
+      "status": "partial",
+      "feedback": "Analyse précise de la réponse",
+      "idealSolution": "Solution détaillée attendue"
+    }
+  ]
+}`;
+
+    const userContent = [
+      { type: "text", text: gradingPrompt },
+      ...paperPhotos.map(photo => ({
+        type: "image_url",
+        image_url: { url: photo.base64 }
+      }))
+    ];
+    const gradingResultRaw = await callGroqAPI(
+      "Tu es un professeur correcteur spécialisé. Évalue les réponses avec impartialité et renvoie uniquement le JSON demandé.",
+      userContent,
+      { maxCompletionTokens: 8192, temperature: 0.2 }
+    );
+    const gradingResult = normalizeExerciseGrading(gradingResultRaw, exercise);
+
+    exercise.result = gradingResult;
+    exercise.studentAnswers = window._currentExerciceAnswers;
+    exercise.paperPhotosCount = paperPhotos.length;
+    exercise.selfAssessment = window._currentSelfEval;
+    exercise.gradedAt = Date.now();
+
+    saveExerciceToHistory(exercise);
+
+    if (window._exTimerInterval) {
+      clearInterval(window._exTimerInterval);
+      window._exTimerInterval = null;
+    }
+
+    closeModal("m-self-evaluation");
+    closeModal("m-take-exercice");
+    displayExerciceResults(exercise);
+    loadExercicesFeed();
+    showToast("Copie corrigée par le professeur IA ✓");
+  } catch (err) {
+    console.error("Erreur grading :", err);
+    showToast("Erreur lors de la correction : " + (err?.message || "réessaie dans quelques instants."));
+  } finally {
+    if (loadingDiv) loadingDiv.style.display = "none";
+    if (actionsDiv) actionsDiv.style.display = "flex";
+  }
+};
+
+function displayExerciceResults(ex) {
+  const res = ex.result;
+  if (!res) return;
+
+  document.getElementById("ex-result-title").innerText = ex.title;
+  document.getElementById("ex-result-meta").innerText = `${ex.subject} · ${ex.level || "Standard"} · ${new Date(ex.gradedAt || Date.now()).toLocaleDateString("fr-FR")}`;
+
+  // Big score & mention
+  const scoreEl = document.getElementById("ex-result-score");
+  if (scoreEl) scoreEl.innerHTML = `${res.totalScore}<span style="font-size:24px; color:var(--ink-m);">/20</span>`;
+  
+  const mentionEl = document.getElementById("ex-result-mention");
+  if (mentionEl) mentionEl.innerText = res.mention || (res.totalScore >= 16 ? "Très bien" : res.totalScore >= 14 ? "Bien" : res.totalScore >= 12 ? "Assez bien" : res.totalScore >= 10 ? "Passable" : "Insuffisant");
+
+  // Comparison with self-evaluation
+  const selfScoreEl = document.getElementById("ex-result-self-score");
+  const gapEl = document.getElementById("ex-result-gap");
+  const selfCommentEl = document.getElementById("ex-result-self-comment");
+
+  const selfScore = ex.selfAssessment?.estimatedScore ?? res.totalScore;
+  const gap = Number((res.totalScore - selfScore).toFixed(1));
+  if (selfScoreEl) selfScoreEl.innerText = `${selfScore}/20`;
+  if (gapEl) {
+    gapEl.innerText = `${gap > 0 ? "+" : ""}${gap} pt${Math.abs(gap) > 1 ? "s" : ""}`;
+    gapEl.style.color = gap >= 0 ? "#248a3d" : "#c93400";
+  }
+  if (selfCommentEl) {
+    selfCommentEl.innerText = res.selfAssessmentCritique || (gap > 0 ? "Tu as fait preuve d'une modestie appréciable, ton travail est meilleur que prévu !" : gap < 0 ? "Attention à ne pas sous-estimer la sévérité du barème officiel et l'exigence de rédaction." : "Estimation parfaite de ta copie !");
+  }
+
+  // Professor Appreciation
+  const appEl = document.getElementById("ex-result-appreciation");
+  if (appEl) appEl.innerText = `« ${res.generalAppreciation || "Copie corrigée avec rigueur."} »`;
+
+  // Strengths & Improvements
+  const strList = document.getElementById("ex-result-strengths");
+  if (strList) {
+    strList.innerHTML = (res.strengths || ["Rigueur des démarches", "Bonne compréhension globale"]).map(s => `<li>${esc(s)}</li>`).join("");
+  }
+  const impList = document.getElementById("ex-result-improvements");
+  if (impList) {
+    impList.innerHTML = (res.improvements || ["Préciser les unités et justifications", "Approfondir la conclusion"]).map(s => `<li>${esc(s)}</li>`).join("");
+  }
+
+  // Detailed Questions corrections
+  const qContainer = document.getElementById("ex-result-questions-container");
+  if (qContainer) {
+    qContainer.innerHTML = (ex.questions || []).map((q, idx) => {
+      const qEval = (res.questionEvaluations || []).find(e => e.questionId === q.id) || res.questionEvaluations?.[idx] || {
+        pointsAwarded: q.points || 0,
+        maxPoints: q.points || 0,
+        status: "correct",
+        feedback: "Bonne réponse.",
+        idealSolution: q.rubric || "Réponse attendue."
+      };
+
+      const ptsAwarded = qEval.pointsAwarded ?? 0;
+      const maxPts = qEval.maxPoints ?? q.points ?? 0;
+      const statusClass = qEval.status === "correct" || ptsAwarded === maxPts ? "correct" : ptsAwarded > 0 ? "partial" : "incorrect";
+      const statusBadgeText = statusClass === "correct" ? "✓ Validé" : statusClass === "partial" ? "⚠ Partiel" : "✕ Erreur";
+
+      const studentAnsObj = (ex.studentAnswers || []).find(a => a.questionId === q.id);
+      const studentAnsText = studentAnsObj ? studentAnsObj.answerText : (ex.mode === "papier" ? `[Réponse sur copie papier téléversée - ${ex.paperPhotosCount || 1} photo(s)]` : "Pas de réponse fournie");
+
+      return `
+        <div class="ex-res-q-box ${statusClass}">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="font-weight:700; font-size:15px; color:var(--ink);">
+              Question ${q.questionNumber || idx + 1} ${q.title ? `— ${esc(q.title)}` : ""}
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="type-tag" style="font-weight:700;">${ptsAwarded} / ${maxPts} pts</span>
+              <span class="ex-badge-soft" style="font-size:11px;">${statusBadgeText}</span>
+            </div>
+          </div>
+
+          <div style="font-size:14px; color:var(--ink-m); margin-bottom:12px; line-height:1.5;">
+            <strong>Énoncé :</strong> ${esc(q.text)}
+          </div>
+
+          <!-- Student's answer -->
+          <div style="background:var(--file-bg); border-left:3px solid var(--primary); padding:10px 14px; border-radius:0 8px 8px 0; margin-bottom:12px;">
+            <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--primary); margin-bottom:4px;">Ta réponse :</div>
+            <div style="font-size:13px; color:var(--ink); white-space:pre-wrap;">${esc(studentAnsText)}</div>
+          </div>
+
+          <!-- Professor's feedback -->
+          <div style="background:rgba(0,0,0,0.03); border-radius:10px; padding:12px; margin-bottom:10px;">
+            <div style="font-size:12px; font-weight:700; color:var(--ink); margin-bottom:4px;">👨‍🏫 Analyse et annotation du professeur :</div>
+            <div style="font-size:13px; line-height:1.5; color:var(--ink);">${esc(qEval.feedback || "Démarche examinée.")}</div>
+          </div>
+
+          <!-- Ideal Solution -->
+          <div style="background:rgba(52,199,89,0.06); border:1px solid rgba(52,199,89,0.25); border-radius:10px; padding:12px;">
+            <div style="font-size:12px; font-weight:700; color:#248a3d; margin-bottom:4px;">✨ Solution modèle attendue :</div>
+            <div style="font-size:13px; line-height:1.5; color:var(--ink); white-space:pre-wrap;">${esc(qEval.idealSolution || q.expectedAnswerSnippet || "Se référer aux formules du cours.")}</div>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  openModal("m-exercice-result");
+}
+
+// PDF EXPORT (Uncorrected & Graded)
+window.exportExerciceUncorrectedPDF = () => {
+  const ex = window._currentExercice;
+  if (!ex) return;
+  if (!window.jspdf?.jsPDF) {
+    showToast("Module PDF indisponible.");
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+
+  let y = 20;
+
+  // Header Banner
+  doc.setFillColor(15, 23, 42); // Slate 900
+  doc.rect(14, y, 182, 22, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.text("DnB Reviz — Sujet d'Entraînement & Copie", 20, y + 10);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Matière : ${ex.subject}  |  Niveau : ${ex.level || "Standard"}  |  Barème : 20 points`, 20, y + 17);
+
+  y += 30;
+
+  // Meta info box
+  doc.setTextColor(30, 41, 59);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text(`Titre : ${ex.title || "Exercice"}`, 14, y);
+  y += 6;
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Élève : ${currentUser ? currentUser.username : "Élève"}  ·  Généré le : ${new Date(ex.createdAt || Date.now()).toLocaleDateString("fr-FR")}`, 14, y);
+  y += 6;
+  if (ex.instructions) {
+    const instLines = doc.splitTextToSize(`Consignes : ${ex.instructions}`, 180);
+    doc.text(instLines, 14, y);
+    y += instLines.length * 5 + 4;
+  }
+
+  y += 4;
+
+  // Questions and User Answers
+  (ex.questions || []).forEach((q, idx) => {
+    if (y > 240) {
+      doc.addPage();
+      y = 20;
+    }
+
+    // Question Box (Navy header with color differentiator)
+    doc.setFillColor(241, 245, 249); // light slate background
+    doc.setDrawColor(37, 99, 235); // Blue border
+    doc.setLineWidth(0.5);
+    
+    const qText = `Question ${q.questionNumber || idx + 1} (${q.points} points) : ${q.text}`;
+    const qLines = doc.splitTextToSize(qText, 172);
+    const boxH = Math.max(16, qLines.length * 5 + 8);
+
+    doc.roundedRect(14, y, 182, boxH, 2, 2, "FD");
+    doc.setTextColor(30, 58, 138); // Dark blue for question
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text(qLines, 18, y + 7);
+
+    y += boxH + 6;
+
+    // Student Answer Box (Emerald/Indigo border differentiating clearly)
+    const ansObj = (window._currentExerciceAnswers || []).find(a => a.questionId === q.id);
+    const ansText = ansObj ? ansObj.answerText : (ex.mode === "papier" ? `[Réponse rédigée sur copie papier manuscrite — ${window._exPaperPhotos.length} photo(s) téléversée(s)]` : "(Aucune réponse saisie)");
+
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(16, 185, 129); // Emerald border for student answer
+    doc.setLineWidth(0.4);
+
+    const aLines = doc.splitTextToSize(`Réponse de l'élève :\n${ansText}`, 172);
+    const aBoxH = Math.max(16, aLines.length * 5 + 8);
+
+    if (y + aBoxH > 275) {
+      doc.addPage();
+      y = 20;
+    }
+
+    doc.roundedRect(14, y, 182, aBoxH, 2, 2, "FD");
+    doc.setTextColor(5, 150, 105);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text("Réponse de l'élève :", 18, y + 6);
+
+    doc.setTextColor(30, 41, 59);
+    doc.setFont("helvetica", "normal");
+    const actualAnsLines = doc.splitTextToSize(ansText, 172);
+    doc.text(actualAnsLines, 18, y + 12);
+
+    y += aBoxH + 10;
+  });
+
+  doc.save(`dnb-copie-${(ex.title || "exercice").toLowerCase().replace(/[^a-z0-9]/g, "_")}.pdf`);
+  showToast("Copie d'entraînement (non corrigée) exportée en PDF ✓");
+};
+
+window.exportExerciceGradedPDF = () => {
+  const ex = window._currentExercice;
+  if (!ex || !ex.result) {
+    showToast("Aucune correction disponible pour l'export.");
+    return;
+  }
+  if (!window.jspdf?.jsPDF) {
+    showToast("Module PDF indisponible.");
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const res = ex.result;
+
+  let y = 18;
+
+  // Header Banner with Score
+  doc.setFillColor(15, 23, 42);
+  doc.rect(14, y, 182, 30, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.text("DnB Reviz — Rapport de Correction Officielle", 20, y + 9);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Sujet : ${ex.title || "Exercice"}  ·  Matière : ${ex.subject}  ·  Niveau : ${ex.level || "Standard"}`, 20, y + 16);
+
+  // Big Score badge on the right
+  doc.setFillColor(37, 99, 235);
+  doc.roundedRect(148, y + 4, 42, 22, 3, 3, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text(`${res.totalScore} / 20`, 154, y + 14);
+  doc.setFontSize(8);
+  doc.text(`Mention : ${res.mention || "Bien"}`, 154, y + 21);
+
+  y += 38;
+
+  // Comparison & Appreciation Card
+  doc.setFillColor(241, 245, 249);
+  doc.setDrawColor(203, 213, 225);
+  doc.roundedRect(14, y, 182, 32, 2, 2, "FD");
+
+  doc.setTextColor(30, 41, 59);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  const selfScore = ex.selfAssessment?.estimatedScore ?? "—";
+  doc.text(`Auto-évaluation élève : ${selfScore}/20   |   Note finale attribuée : ${res.totalScore}/20`, 18, y + 7);
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Commentaire lucidité : ${res.selfAssessmentCritique || "Bonne auto-évaluation."}`, 18, y + 13);
+
+  const appText = `Appréciation générale : « ${res.generalAppreciation || "Travail sérieux."} »`;
+  const appLines = doc.splitTextToSize(appText, 172);
+  doc.text(appLines, 18, y + 19);
+
+  y += 38;
+
+  // Questions breakdown
+  (ex.questions || []).forEach((q, idx) => {
+    const qEval = (res.questionEvaluations || []).find(e => e.questionId === q.id) || res.questionEvaluations?.[idx] || {
+      pointsAwarded: q.points || 0,
+      maxPoints: q.points || 0,
+      feedback: "Bonne démarche.",
+      idealSolution: q.rubric || ""
+    };
+
+    if (y > 230) {
+      doc.addPage();
+      y = 20;
+    }
+
+    // Question Header Box
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(59, 130, 246);
+    doc.setLineWidth(0.4);
+
+    const qTitle = `Question ${q.questionNumber || idx + 1} — Note : ${qEval.pointsAwarded ?? 0} / ${qEval.maxPoints ?? q.points ?? 0} pts`;
+    doc.roundedRect(14, y, 182, 10, 2, 2, "FD");
+    doc.setTextColor(30, 58, 138);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text(qTitle, 18, y + 7);
+
+    y += 14;
+
+    // Enoncé text
+    doc.setTextColor(71, 85, 105);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    const qLines = doc.splitTextToSize(`Énoncé : ${q.text}`, 176);
+    doc.text(qLines, 16, y);
+    y += qLines.length * 4.5 + 4;
+
+    // Student answer
+    const ansObj = (ex.studentAnswers || []).find(a => a.questionId === q.id);
+    const ansText = ansObj ? ansObj.answerText : (ex.mode === "papier" ? `[Copie papier manuscrite téléversée]` : "(Aucune réponse)");
+    doc.setTextColor(16, 185, 129);
+    doc.setFont("helvetica", "bold");
+    doc.text("Copie de l'élève :", 16, y);
+    y += 4.5;
+    doc.setTextColor(30, 41, 59);
+    doc.setFont("helvetica", "normal");
+    const ansLines = doc.splitTextToSize(ansText, 176);
+    doc.text(ansLines, 16, y);
+    y += ansLines.length * 4.5 + 4;
+
+    // Professor correction & feedback
+    doc.setTextColor(220, 38, 38);
+    doc.setFont("helvetica", "bold");
+    doc.text("Correction du Professeur :", 16, y);
+    y += 4.5;
+    doc.setTextColor(30, 41, 59);
+    doc.setFont("helvetica", "normal");
+    const fbLines = doc.splitTextToSize(qEval.feedback || "Démarche analysée.", 176);
+    doc.text(fbLines, 16, y);
+    y += fbLines.length * 4.5 + 4;
+
+    // Ideal solution
+    if (qEval.idealSolution) {
+      doc.setTextColor(37, 99, 235);
+      doc.setFont("helvetica", "bold");
+      doc.text("Solution modèle attendue :", 16, y);
+      y += 4.5;
+      doc.setTextColor(71, 85, 105);
+      doc.setFont("helvetica", "normal");
+      const idLines = doc.splitTextToSize(qEval.idealSolution, 176);
+      doc.text(idLines, 16, y);
+      y += idLines.length * 4.5 + 4;
+    }
+
+    y += 6;
+  });
+
+  doc.save(`dnb-correction-officielle-${(ex.title || "exercice").toLowerCase().replace(/[^a-z0-9]/g, "_")}.pdf`);
+  showToast("Copie corrigée par l'IA exportée en PDF ✓");
+};
+
+// Feed rendering
+window.loadExercicesFeed = () => {
+  const container = document.getElementById("exercices-feed");
+  if (!container) return;
+
+  const list = getStoredExercices();
+
+  // Apply tab filter
+  let filtered = list;
+  if (window._exerciceFilterTab === "mine") {
+    filtered = list.filter(ex => !ex.result);
+  } else if (window._exerciceFilterTab === "graded") {
+    filtered = list.filter(ex => ex.result);
+  }
+
+  // Apply subject filter
+  if (window._exerciceSubjectFilter !== "all") {
+    filtered = filtered.filter(ex => (ex.subject || "").toLowerCase() === window._exerciceSubjectFilter.toLowerCase());
+  }
+
+  // Apply search
+  const searchInput = document.getElementById("ex-search-input")?.value.toLowerCase().trim();
+  if (searchInput) {
+    filtered = filtered.filter(ex => 
+      (ex.title || "").toLowerCase().includes(searchInput) ||
+      (ex.subject || "").toLowerCase().includes(searchInput) ||
+      (ex.topic || "").toLowerCase().includes(searchInput)
+    );
+  }
+
+  // Apply sort
+  if (window._exerciceSortOrder === "score_desc") {
+    filtered.sort((a, b) => (b.result?.totalScore || 0) - (a.result?.totalScore || 0));
+  } else if (window._exerciceSortOrder === "score_asc") {
+    filtered.sort((a, b) => (a.result?.totalScore || 0) - (b.result?.totalScore || 0));
+  } else if (window._exerciceSortOrder === "oldest") {
+    filtered.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  } else {
+    filtered.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  }
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding:48px 20px; background:var(--card-bg); border-radius:20px; border:1px solid var(--hl);">
+        <div style="font-size:42px; margin-bottom:12px;">✍️</div>
+        <h3 style="margin:0 0 8px 0;">Aucun exercice trouvé</h3>
+        <p class="caption" style="max-width:400px; margin:0 auto 20px auto;">
+          ${searchInput ? "Aucun sujet ne correspond à votre recherche." : "Vous n'avez pas encore généré d'exercice d'entraînement. Cliquez ci-dessous pour lancer votre première session avec l'IA !"}
+        </p>
+        <button class="btn-pill" onclick="openCreateExerciceModal()">✨ Créer un exercice avec l'IA</button>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = filtered.map(ex => {
+    const isGraded = Boolean(ex.result);
+    const scoreHtml = isGraded ? `
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:22px; font-weight:900; color:var(--primary);">${ex.result.totalScore}/20</span>
+        <span class="ex-badge-soft">${esc(ex.result.mention || "Noté")}</span>
+      </div>
+    ` : `
+      <span class="type-tag" style="background:rgba(255,149,0,.14); color:#b25e00; font-weight:700;">En cours d'épreuve</span>
+    `;
+
+    return `
+      <div class="ex-feed-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+          <div>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:6px;">
+              <span class="type-tag" style="background:var(--primary-l); color:var(--primary-f); font-weight:700;">${esc(ex.subject)}</span>
+              <span class="type-tag" style="background:var(--file-bg); color:var(--ink);">${esc(ex.level || "Standard")}</span>
+              <span class="type-tag" style="background:rgba(52,199,89,.12); color:#248a3d;">${ex.mode === "papier" ? "📝 Papier" : "💻 Clavier"}</span>
+              ${ex.durationMinutes ? `<span class="type-tag" style="background:var(--hl); color:var(--ink);">⏱️ ${ex.durationMinutes} min</span>` : ""}
+            </div>
+            <h3 style="margin:0 0 6px 0; font-size:18px;">${esc(ex.title)}</h3>
+            <p class="caption" style="margin:0; font-size:13px; line-height:1.4;">${esc(ex.topic)}</p>
+          </div>
+          ${scoreHtml}
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; pt-2; border-top:1px solid var(--hl); padding-top:10px;">
+          <span class="caption" style="font-size:12px;">
+            ${new Date(ex.createdAt || Date.now()).toLocaleDateString("fr-FR")} · ${ex.questions?.length || 0} question(s)
+          </span>
+          <div style="display:flex; gap:8px;">
+            ${isGraded ? `
+              <button class="btn-pill btn-sm" onclick="openPastExerciceResult('${ex.id}')">📊 Voir la correction &amp; la note</button>
+            ` : `
+              <button class="btn-pill btn-sm" onclick="openPastExerciceSession('${ex.id}')">🚀 Continuer l'épreuve</button>
+            `}
+            <button class="btn-ghost btn-sm del" onclick="deleteExerciceFromHistory('${ex.id}')" title="Supprimer cet entraînement">🗑️</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+};
+
+window.openPastExerciceSession = (id) => {
+  const list = getStoredExercices();
+  const found = list.find(ex => ex.id === id);
+  if (found) {
+    window.startExerciceSession(found);
+  }
+};
+
+window.openPastExerciceResult = (id) => {
+  const list = getStoredExercices();
+  const found = list.find(ex => ex.id === id);
+  if (found && found.result) {
+    window._currentExercice = found;
+    displayExerciceResults(found);
+  }
+};
+
+window.deleteExerciceFromHistory = (id) => {
+  if (confirm("Supprimer définitivement cet exercice et sa correction ?")) {
+    const list = getStoredExercices().filter(ex => ex.id !== id);
+    localStorage.setItem("dnb_exercices_history", JSON.stringify(list));
+    loadExercicesFeed();
+    showToast("Exercice supprimé ✓");
+  }
+};
+
+window.setExercicesFilter = (tab) => {
+  window._exerciceFilterTab = tab;
+  document.querySelectorAll(".ex-tab-filter").forEach(btn => {
+    btn.classList.toggle("active", btn.id === `filter-ex-${tab}`);
+  });
+  loadExercicesFeed();
+};
+
+window.handleExerciceSearch = (e) => {
+  loadExercicesFeed();
+};
+
+window.openExerciceFilterModal = () => {
+  openModal("m-ex-filter");
+};
+
+window.applyExerciceModalFilter = () => {
+  const subj = document.getElementById("ex-filter-modal-subject")?.value || "all";
+  const sort = document.getElementById("ex-filter-modal-sort")?.value || "newest";
+  window._exerciceSubjectFilter = subj;
+  window._exerciceSortOrder = sort;
+  closeModal("m-ex-filter");
+  loadExercicesFeed();
+  showToast("Filtres appliqués ✓");
+};
+

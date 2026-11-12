@@ -1,0 +1,26 @@
+Correction du module de génération des exercices — DnB Reviz
+
+Modifications conservées
+- La génération d'exercices et la correction des copies utilisent le relais Cloudflare Groq.
+- Le barème est vérifié : entre 3 et 6 questions, pour un total strict de 20 points.
+- Les PDF sont lus localement : extraction de texte et analyse visuelle de trois pages maximum.
+- La correction des copies peut exploiter jusqu'à trois photos.
+
+Correction supplémentaire du 12 novembre 2026
+- Le client ne parse plus directement response.json() : il inspecte le corps et le type MIME, puis distingue une réponse JSON d'une page HTML.
+- Le message d'erreur explique maintenant si le Worker est absent (404), mal configuré ou s'il renvoie une page HTML.
+- Le Worker fournit / et /health pour vérifier son déploiement en JSON et l'existence du secret GROQ_API_KEY.
+- Les erreurs et réponses inattendues du fournisseur Groq restent au format JSON.
+- L'import de script.js est versionné dans index.html pour éviter de conserver l'ancien script en cache.
+
+Fichiers modifiés dans cette version
+- script.js
+- index.html
+- cloudflare-groqrelay-onesignal.js
+- wrangler.toml (nouveau)
+- DEPLOIEMENT-RELAIS-CLOUDFLARE.txt (nouveau)
+
+Action de publication requise
+Le Worker Cloudflare n'est pas publié automatiquement par GitHub Pages. Il faut le
+publier séparément et ajouter le secret GROQ_API_KEY. Les étapes détaillées se
+trouvent dans DEPLOIEMENT-RELAIS-CLOUDFLARE.txt.
