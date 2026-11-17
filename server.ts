@@ -445,8 +445,8 @@ function toDosTimeDate(date: Date): { dosTime: number; dosDate: number } {
   return { dosTime, dosDate };
 }
 
-const ARCHIVE_EXCLUDED_DIRS = new Set(['node_modules', 'dist', '.git', '.aistudio', '.next', '.cache']);
-const ARCHIVE_EXCLUDED_FILES = new Set(['.env', '.DS_Store', 'Thumbs.db']);
+const ARCHIVE_EXCLUDED_DIRS = new Set(['node_modules', 'dist', '.git', '.aistudio', '.next', '.cache', 'aistudio']);
+const ARCHIVE_EXCLUDED_FILES = new Set(['.env', '.DS_Store', 'Thumbs.db', 'dnb95-reviz-modifie.zip']);
 
 async function collectProjectFiles(rootDir: string, currentDir = rootDir): Promise<{ relPath: string; absPath: string; mtime: Date }[]> {
   const entries = await fs.readdir(currentDir, { withFileTypes: true });

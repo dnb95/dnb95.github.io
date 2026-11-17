@@ -1,8 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+import { getAuth, signInAnonymously, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import {
   getFirestore, collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc,
-  doc, query, where, onSnapshot, orderBy, setDoc, limit
+  doc, query, where, onSnapshot, orderBy, setDoc, limit, serverTimestamp, arrayUnion
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 const FB = {
@@ -57,8 +57,10 @@ window._pinnedUnsub  = null;
 
 window._quizUnsub    = null;
 window._aiQuizUnsub  = null;
+window._exUnsub      = null;
 window._liveQuizzesData = [];
 window._liveAIQuizzesData = [];
+window._liveSharedExercicesData = [];
 
 window._pubFeedUnsub = null;
 window._dmChatsUnsub = null;
@@ -145,6 +147,10 @@ function isStrongPassword(password) {
 
 function isProfessorUser(user = currentUser) {
   return !!user && user.role === "professeur";
+}
+
+function hasProfessorAccess(user = currentUser) {
+  return isProfessorUser(user) || (!!user && Array.isArray(user.subRoles) && user.subRoles.includes("professeur"));
 }
 
 function analyticsSafeText(value, fallback = "") {
@@ -646,14 +652,303 @@ window.updateUnreadDots = (count) => {
 const UNLOCKABLE_THEMES = [
   { id: "light", name: "Clair Classique", desc: "Épuré et lumineux", minMinutes: 0, swatches: ["#f5f5f7", "#ffffff", "#9b8fe4"], swatchBg: "linear-gradient(135deg,#f5f5f7,#ffffff)", lightText: false },
   { id: "dark", name: "Sombre Standard", desc: "Confort visuel quotidien", minMinutes: 0, swatches: ["#111113", "#1c1c1e", "#9b8fe4"], swatchBg: "linear-gradient(135deg,#111113,#242429)", lightText: true },
-  { id: "paper", name: "Clair Papier", desc: "Teinte cahier chaud anti-fatigue", minMinutes: 15, swatches: ["#f6f1e6", "#fffdf8", "#3b5bdb"], swatchBg: "linear-gradient(135deg,#f6f1e6,#efe3c8)", lightText: false },
-  { id: "oled", name: "Sombre OLED", desc: "Noir pur économe sur mobile", minMinutes: 30, swatches: ["#000000", "#0a0a0d", "#7c8aff"], swatchBg: "linear-gradient(135deg,#000000,#111119)", lightText: true },
-  { id: "aurora", name: "Aurore Snap+", desc: "Dégradé néon rose & lavande façon Snap+", minMinutes: 45, swatches: ["#24143e", "#ff4f9a", "#fde047"], swatchBg: "linear-gradient(135deg,#3b155f 0%,#ff4f9a 60%,#a855f7 100%)", lightText: true },
-  { id: "galaxy", name: "Galaxy Nébuleuse", desc: "Ciel étoilé & nébuleuse cosmique", minMinutes: 60, swatches: ["#070924", "#a855f7", "#38bdf8"], swatchBg: "radial-gradient(circle at 22% 28%,#fff 1px,transparent 2px),radial-gradient(circle at 75% 60%,#bae6fd 1.2px,transparent 2px),linear-gradient(135deg,#050616 0%,#31105f 55%,#0c3866 100%)", lightText: true },
-  { id: "cyber", name: "Néon Cyber+", desc: "Cyan électrique & reflets magenta", minMinutes: 90, swatches: ["#050914", "#00e5ff", "#ff2e93"], swatchBg: "linear-gradient(135deg,#040a18 0%,#0b2848 52%,#5c0c3c 100%)", lightText: true },
-  { id: "sunset", name: "Sunset Doré+", desc: "Ambiance chaleureuse mangue & rose", minMinutes: 120, swatches: ["#1c0b18", "#ff7b54", "#ffd166"], swatchBg: "linear-gradient(135deg,#2d1024 0%,#b83358 52%,#ff7b54 100%)", lightText: true },
-  { id: "custom", name: "Studio Perso+", desc: "Crée tes couleurs, ton FX & ton nom", minMinutes: 180, swatches: ["#0f172a", "#1e293b", "#6366f1"], swatchBg: "linear-gradient(135deg,#0f172a 0%,#312e81 60%,#6366f1 100%)", lightText: true }
+  { id: "paper", name: "Clair Papier", desc: "Teinte cahier chaud anti-fatigue", minMinutes: 0, swatches: ["#f6f1e6", "#fffdf8", "#3b5bdb"], swatchBg: "linear-gradient(135deg,#f6f1e6,#efe3c8)", lightText: false },
+  { id: "oled", name: "Sombre OLED", desc: "Noir pur économe sur mobile", minMinutes: 0, swatches: ["#000000", "#0a0a0d", "#7c8aff"], swatchBg: "linear-gradient(135deg,#000000,#111119)", lightText: true },
+  { id: "aurora", name: "Aurore Snap+", desc: "Dégradé néon rose & lavande façon Snap+", minMinutes: 0, swatches: ["#24143e", "#ff4f9a", "#fde047"], swatchBg: "linear-gradient(135deg,#3b155f 0%,#ff4f9a 60%,#a855f7 100%)", lightText: true },
+  { id: "galaxy", name: "Galaxy Nébuleuse", desc: "Ciel étoilé & nébuleuse cosmique", minMinutes: 0, swatches: ["#070924", "#a855f7", "#38bdf8"], swatchBg: "radial-gradient(circle at 22% 28%,#fff 1px,transparent 2px),radial-gradient(circle at 75% 60%,#bae6fd 1.2px,transparent 2px),linear-gradient(135deg,#050616 0%,#31105f 55%,#0c3866 100%)", lightText: true },
+  { id: "cyber", name: "Néon Cyber+", desc: "Cyan électrique & reflets magenta", minMinutes: 0, swatches: ["#050914", "#00e5ff", "#ff2e93"], swatchBg: "linear-gradient(135deg,#040a18 0%,#0b2848 52%,#5c0c3c 100%)", lightText: true },
+  { id: "sunset", name: "Sunset Doré+", desc: "Ambiance chaleureuse mangue & rose", minMinutes: 0, swatches: ["#1c0b18", "#ff7b54", "#ffd166"], swatchBg: "linear-gradient(135deg,#2d1024 0%,#b83358 52%,#ff7b54 100%)", lightText: true },
+  { id: "custom", name: "Studio Perso+", desc: "Crée tes couleurs, ton FX & ton nom", minMinutes: 0, swatches: ["#0f172a", "#1e293b", "#6366f1"], swatchBg: "linear-gradient(135deg,#0f172a 0%,#312e81 60%,#6366f1 100%)", lightText: true }
 ];
+
+const THEME_LOGO_PALETTES = {
+  light: { bg1: "#9b8fe4", bg2: "#6f5ed8", accent: "#f3e5ab", ink: "#ffffff", themeColor: "#f5f5f7" },
+  dark: { bg1: "#2d2846", bg2: "#9b8fe4", accent: "#f3e5ab", ink: "#ffffff", themeColor: "#111113" },
+  paper: { bg1: "#3b5bdb", bg2: "#2b4bc8", accent: "#f5d061", ink: "#fffdf8", themeColor: "#f6f1e6" },
+  oled: { bg1: "#090a14", bg2: "#7c8aff", accent: "#f3e5ab", ink: "#f8fafc", themeColor: "#000000" },
+  aurora: { bg1: "#3b155f", bg2: "#ff4f9a", accent: "#fde047", ink: "#fdf8ff", themeColor: "#180d2c" },
+  galaxy: { bg1: "#0c1440", bg2: "#a855f7", accent: "#38bdf8", ink: "#f3f4ff", themeColor: "#050614" },
+  cyber: { bg1: "#071a33", bg2: "#00e5ff", accent: "#ff2e93", ink: "#ecfeff", themeColor: "#050914" },
+  sunset: { bg1: "#3b152a", bg2: "#ff7b54", accent: "#ffd166", ink: "#fff6f0", themeColor: "#1c0b18" }
+};
+
+let _logoUidCounter = 0;
+function getActiveThemePalette(themeId) {
+  if (themeId === "custom") {
+    const cfg = getCustomThemeConfig();
+    return {
+      bg1: cfg.bg || "#0f172a",
+      bg2: cfg.primary || "#6366f1",
+      accent: mixHexColors(cfg.primary || "#6366f1", "#ffffff", 0.35),
+      ink: cfg.ink || "#f8fafc",
+      themeColor: cfg.bg || "#0f172a"
+    };
+  }
+  return THEME_LOGO_PALETTES[themeId] || THEME_LOGO_PALETTES.light;
+}
+
+function buildDnbLogoSvg(palette) {
+  const uid = `dnbg_${++_logoUidCounter}`;
+  return `<svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+      <linearGradient id="${uid}_bg" x1="12" y1="8" x2="108" y2="112" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${palette.bg1}"/>
+        <stop offset="100%" stop-color="${palette.bg2}"/>
+      </linearGradient>
+    </defs>
+    <rect x="6" y="6" width="108" height="108" rx="28" fill="url(#${uid}_bg)"/>
+    <rect x="10" y="10" width="100" height="100" rx="24" stroke="rgba(255,255,255,0.22)" stroke-width="2"/>
+    <path d="M29 36C29 32.6863 31.6863 30 35 30H53C57.4183 30 61 33.5817 61 38V86C56.8 83.2 51.8 81.8 46.5 81.8H35C31.6863 81.8 29 79.1137 29 75.8V36Z" fill="${palette.ink}" fill-opacity="0.96"/>
+    <path d="M91 36C91 32.6863 88.3137 30 85 30H67C62.5817 30 59 33.5817 59 38V86C63.2 83.2 68.2 81.8 73.5 81.8H85C88.3137 81.8 91 79.1137 91 75.8V36Z" fill="${palette.ink}" fill-opacity="0.82"/>
+    <path d="M51 58L58 65L74 47" stroke="${palette.bg2}" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M84 22L86.4 27.6L92 30L86.4 32.4L84 38L81.6 32.4L76 30L81.6 27.6L84 22Z" fill="${palette.accent}"/>
+  </svg>`;
+}
+
+function renderDnbLogoPngDataUrl(palette, size) {
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    const s = size / 120;
+    ctx.scale(s, s);
+
+    const grad = ctx.createLinearGradient(12, 8, 108, 112);
+    grad.addColorStop(0, palette.bg1);
+    grad.addColorStop(1, palette.bg2);
+
+    ctx.beginPath();
+    ctx.roundRect(6, 6, 108, 108, 28);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(255,255,255,0.24)";
+    ctx.beginPath();
+    ctx.roundRect(10, 10, 100, 100, 24);
+    ctx.stroke();
+
+    ctx.fillStyle = palette.ink;
+    ctx.globalAlpha = 0.96;
+    ctx.beginPath();
+    ctx.roundRect(29, 30, 31, 52, [6, 8, 2, 6]);
+    ctx.fill();
+
+    ctx.globalAlpha = 0.82;
+    ctx.beginPath();
+    ctx.roundRect(60, 30, 31, 52, [8, 6, 6, 2]);
+    ctx.fill();
+
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = palette.bg2;
+    ctx.lineWidth = 7;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(49, 58);
+    ctx.lineTo(57, 66);
+    ctx.lineTo(75, 47);
+    ctx.stroke();
+
+    ctx.fillStyle = palette.accent;
+    ctx.beginPath();
+    ctx.arc(84, 30, 6.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    return canvas.toDataURL("image/png");
+  } catch (_) {
+    return null;
+  }
+}
+
+const ORIGINAL_DNB_LOGO_URL = "https://upload.wikimedia.org/wikipedia/commons/4/48/DnB_website.png";
+const ORIGINAL_DNB_CHROME_URL = "https://i.ibb.co/tPpXJLTz/Dn-BChrome.png";
+
+const WEBAPP_ICON_PRESETS = [
+  { id: "original", name: "Logo DnB Original", desc: "Icône officielle DnB Reviz", type: "url", url: ORIGINAL_DNB_LOGO_URL },
+  { id: "chrome", name: "Icône Mobile PWA", desc: "Icône ronde écran d'accueil", type: "url", url: ORIGINAL_DNB_CHROME_URL },
+  { id: "theme", name: "Adapté au thème actif", desc: "Couleurs du thème actuel", type: "theme" },
+  { id: "aurora", name: "Aurore Snap+", desc: "Néon rose & lavande", type: "palette", paletteKey: "aurora" },
+  { id: "galaxy", name: "Galaxy Nébuleuse", desc: "Cosmique violet & cyan", type: "palette", paletteKey: "galaxy" },
+  { id: "cyber", name: "Néon Cyber+", desc: "Cyan électrique & magenta", type: "palette", paletteKey: "cyber" },
+  { id: "sunset", name: "Sunset Doré", desc: "Mangue & or chaleureux", type: "palette", paletteKey: "sunset" }
+];
+
+function getWebAppIconMode() {
+  return localStorage.getItem("dnb_webapp_icon_mode") || "original";
+}
+
+function getCustomWebAppIconDataUrl() {
+  return localStorage.getItem("dnb_webapp_custom_icon") || "";
+}
+
+function resolveWebAppIconUrl(mode, themeId, size = 192) {
+  const m = mode || getWebAppIconMode();
+  if (m === "custom") {
+    const customUrl = getCustomWebAppIconDataUrl();
+    if (customUrl) return customUrl;
+  }
+  const preset = WEBAPP_ICON_PRESETS.find(p => p.id === m) || WEBAPP_ICON_PRESETS[0];
+  if (preset.type === "url") return preset.url;
+  if (preset.type === "theme") {
+    return renderDnbLogoPngDataUrl(getActiveThemePalette(themeId), size) || ORIGINAL_DNB_LOGO_URL;
+  }
+  if (preset.type === "palette") {
+    const pal = THEME_LOGO_PALETTES[preset.paletteKey] || getActiveThemePalette(themeId);
+    return renderDnbLogoPngDataUrl(pal, size) || ORIGINAL_DNB_LOGO_URL;
+  }
+  return ORIGINAL_DNB_LOGO_URL;
+}
+
+let _dynamicManifestBlobUrl = null;
+function renderDynamicAppLogos(themeId) {
+  const activeTheme = themeId || document.documentElement.getAttribute("data-theme") || "light";
+  const palette = getActiveThemePalette(activeTheme);
+  const iconMode = getWebAppIconMode();
+
+  const icon64 = resolveWebAppIconUrl(iconMode, activeTheme, 64);
+  const icon180 = resolveWebAppIconUrl(iconMode, activeTheme, 180);
+  const icon192 = resolveWebAppIconUrl(iconMode, activeTheme, 192);
+  const icon512 = resolveWebAppIconUrl(iconMode, activeTheme, 512);
+
+  try {
+    const favicon = document.getElementById("dynamic-favicon") || document.querySelector('link[rel="icon"]');
+    if (favicon && icon64) favicon.href = icon64;
+
+    const appleIcon = document.getElementById("dynamic-apple-icon") || document.querySelector('link[rel="apple-touch-icon"]');
+    if (appleIcon && icon180) appleIcon.href = icon180;
+
+    const previewImg = document.getElementById("webapp-icon-live-preview");
+    if (previewImg && icon180) previewImg.src = icon180;
+
+    const activeNameEl = document.getElementById("webapp-icon-active-name");
+    const activeDescEl = document.getElementById("webapp-icon-active-desc");
+    if (activeNameEl && activeDescEl) {
+      if (iconMode === "custom" && getCustomWebAppIconDataUrl()) {
+        activeNameEl.textContent = "Image personnalisée";
+        activeDescEl.textContent = "Ta propre icône importée pour l'écran d'accueil mobile.";
+      } else {
+        const preset = WEBAPP_ICON_PRESETS.find(p => p.id === iconMode) || WEBAPP_ICON_PRESETS[0];
+        activeNameEl.textContent = preset.name;
+        activeDescEl.textContent = preset.desc;
+      }
+    }
+
+    const themeMeta = document.getElementById("dynamic-theme-color");
+    if (themeMeta) themeMeta.setAttribute("content", palette.themeColor || palette.bg1);
+
+    const appleStatus = document.getElementById("dynamic-apple-status");
+    if (appleStatus) {
+      const isLightBg = activeTheme === "light" || activeTheme === "paper";
+      appleStatus.setAttribute("content", isLightBg ? "default" : "black-translucent");
+    }
+
+    const manifestEl = document.getElementById("dynamic-manifest") || document.querySelector('link[rel="manifest"]');
+    if (manifestEl && (icon192 || icon512)) {
+      const origin = window.location.origin;
+      const manifestData = {
+        name: "DnB Reviz",
+        short_name: "DnB Reviz",
+        start_url: `${origin}/`,
+        scope: `${origin}/`,
+        display: "standalone",
+        background_color: palette.themeColor || palette.bg1,
+        theme_color: palette.themeColor || palette.bg2,
+        icons: [
+          ...(icon192 ? [{ src: icon192, sizes: "192x192", type: "image/png", purpose: "any maskable" }] : []),
+          ...(icon512 ? [{ src: icon512, sizes: "512x512", type: "image/png", purpose: "any maskable" }] : [])
+        ]
+      };
+      const blob = new Blob([JSON.stringify(manifestData)], { type: "application/manifest+json" });
+      if (_dynamicManifestBlobUrl) URL.revokeObjectURL(_dynamicManifestBlobUrl);
+      _dynamicManifestBlobUrl = URL.createObjectURL(blob);
+      manifestEl.href = _dynamicManifestBlobUrl;
+    }
+  } catch (_) {}
+}
+
+window.selectWebAppIconMode = (mode) => {
+  if (mode === "custom" && !getCustomWebAppIconDataUrl()) {
+    document.getElementById("webapp-icon-file")?.click();
+    return;
+  }
+  localStorage.setItem("dnb_webapp_icon_mode", mode);
+  const activeTheme = document.documentElement.getAttribute("data-theme") || "light";
+  renderDynamicAppLogos(activeTheme);
+  if (typeof window.renderWebAppIconSettings === "function") window.renderWebAppIconSettings();
+  showToast("📱 Logo de l'application web mis à jour ✓");
+};
+
+window.handleCustomWebAppIconUpload = (event) => {
+  const file = event?.target?.files?.[0];
+  if (!file) return;
+  if (!file.type.startsWith("image/")) {
+    showToast("Sélectionne une image (PNG, JPG, WebP) !");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const size = 256;
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        const minSide = Math.min(img.naturalWidth || size, img.naturalHeight || size);
+        const sx = ((img.naturalWidth || size) - minSide) / 2;
+        const sy = ((img.naturalHeight || size) - minSide) / 2;
+        ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+        const pngData = canvas.toDataURL("image/png");
+        localStorage.setItem("dnb_webapp_custom_icon", pngData);
+        localStorage.setItem("dnb_webapp_icon_mode", "custom");
+        const activeTheme = document.documentElement.getAttribute("data-theme") || "light";
+        renderDynamicAppLogos(activeTheme);
+        if (typeof window.renderWebAppIconSettings === "function") window.renderWebAppIconSettings();
+        showToast("📱 Image perso appliquée comme icône d'application ✓");
+      } catch (_) {
+        showToast("Erreur lors du traitement de l'image.");
+      }
+    };
+    img.src = String(reader.result || "");
+  };
+  reader.readAsDataURL(file);
+  event.target.value = "";
+};
+
+window.renderWebAppIconSettings = () => {
+  const grid = document.getElementById("settings-webapp-icon-grid");
+  if (!grid) return;
+  const activeTheme = document.documentElement.getAttribute("data-theme") || "light";
+  const currentMode = getWebAppIconMode();
+  const customUrl = getCustomWebAppIconDataUrl();
+
+  const items = [
+    ...WEBAPP_ICON_PRESETS.map(p => ({
+      id: p.id,
+      name: p.name,
+      desc: p.desc,
+      thumb: resolveWebAppIconUrl(p.id, activeTheme, 96)
+    })),
+    ...(customUrl ? [{ id: "custom", name: "Image perso", desc: "Ta photo importée", thumb: customUrl }] : [])
+  ];
+
+  grid.innerHTML = items.map(item => `
+    <button type="button" class="webapp-icon-card${currentMode === item.id ? " active" : ""}" onclick="selectWebAppIconMode('${item.id}')">
+      <img class="webapp-icon-thumb" src="${esc(item.thumb)}" alt="${esc(item.name)}">
+      <div class="webapp-icon-card-meta">
+        <div class="webapp-icon-card-title">${esc(item.name)}</div>
+        <div class="webapp-icon-card-sub">${esc(item.desc)}</div>
+      </div>
+    </button>
+  `).join("");
+
+  renderDynamicAppLogos(activeTheme);
+};
 
 const UNLOCKABLE_BADGES = [
   { id: "studious_15", icon: "📖", label: "Assidu", desc: "15 min de révision", check: (studyMin) => studyMin >= 15 },
@@ -747,24 +1042,17 @@ function applyCustomThemeVariables(cfg) {
 }
 
 function isThemeUnlocked(themeId) {
-  const def = UNLOCKABLE_THEMES.find(t => t.id === themeId);
-  if (!def) return false;
-  if (def.minMinutes === 0) return true;
-  const studyMin = Math.floor((window.getTotalStudyMs ? window.getTotalStudyMs() : 0) / 60000);
-  return studyMin >= def.minMinutes;
+  return UNLOCKABLE_THEMES.some(t => t.id === themeId);
 }
 
 window.checkNewlyUnlockedThemesAndBadges = (prevMs, nextMs) => {
   const prevMin = Math.floor((Number(prevMs) || 0) / 60000);
   const nextMin = Math.floor((Number(nextMs) || 0) / 60000);
+  if (typeof window.refreshCookieClickerLinks === "function") {
+    window.refreshCookieClickerLinks();
+  }
   if (nextMin <= prevMin) return;
   let unlockedAnything = false;
-  UNLOCKABLE_THEMES.forEach(t => {
-    if (t.minMinutes > 0 && prevMin < t.minMinutes && nextMin >= t.minMinutes) {
-      unlockedAnything = true;
-      showToast(`🎨 Nouveau thème débloqué : ${t.name} !`);
-    }
-  });
   UNLOCKABLE_BADGES.forEach(b => {
     if (b.desc.includes("min") || b.desc.includes("heure")) {
       const wasUnlocked = b.check(prevMin, 0);
@@ -789,8 +1077,11 @@ function loadTheme() {
     document.documentElement.removeAttribute("data-custom-fx");
   }
   document.documentElement.setAttribute("data-theme", themeId);
+  renderDynamicAppLogos(themeId);
   const t = document.getElementById("tog-dark");
   if (t) t.checked = themeId === "dark";
+  const ccSel = document.getElementById("cc-theme-quick-select");
+  if (ccSel) ccSel.value = themeId;
 }
 loadTheme();
 
@@ -800,11 +1091,7 @@ window.applyTheme = (dark) => {
 };
 
 window.applyThemeById = async (themeId) => {
-  if (!isThemeUnlocked(themeId)) {
-    const def = UNLOCKABLE_THEMES.find(t => t.id === themeId);
-    showToast(`🔒 Débloque ce thème après ${def?.minMinutes || 0} min de révision !`);
-    return;
-  }
+  if (!isThemeUnlocked(themeId)) return;
   if (themeId === "custom") {
     applyCustomThemeVariables(getCustomThemeConfig());
   } else {
@@ -812,6 +1099,14 @@ window.applyThemeById = async (themeId) => {
   }
   document.documentElement.setAttribute("data-theme", themeId);
   localStorage.setItem("dnb_theme", themeId);
+  renderDynamicAppLogos(themeId);
+  const tog = document.getElementById("tog-dark");
+  if (tog) tog.checked = themeId === "dark";
+  const ccSel = document.getElementById("cc-theme-quick-select");
+  if (ccSel) ccSel.value = themeId;
+  if (typeof window.refreshCookieClickerThemeSync === "function") {
+    window.refreshCookieClickerThemeSync();
+  }
   if (currentUser?.id) {
     currentUser.selectedTheme = themeId;
     saveSessionLocally(currentUser);
@@ -825,6 +1120,7 @@ window.previewTheme = (themeId) => {
   if (themeId === "custom") applyCustomThemeVariables(getCustomThemeConfig());
   else document.documentElement.removeAttribute("data-custom-fx");
   document.documentElement.setAttribute("data-theme", themeId);
+  renderDynamicAppLogos(themeId);
   showToast("👀 Aperçu du thème pendant 5 secondes…");
   clearTimeout(window._themePreviewTimeout);
   window._themePreviewTimeout = setTimeout(() => {
@@ -832,14 +1128,11 @@ window.previewTheme = (themeId) => {
     if (saved === "custom") applyCustomThemeVariables(getCustomThemeConfig());
     else document.documentElement.removeAttribute("data-custom-fx");
     document.documentElement.setAttribute("data-theme", saved);
+    renderDynamicAppLogos(saved);
   }, 5000);
 };
 
 window.saveCustomThemeConfig = () => {
-  if (!isThemeUnlocked("custom")) {
-    showToast("🔒 Studio Perso+ se débloque à 3h de révision !");
-    return;
-  }
   const cfg = {
     name: document.getElementById("custom-theme-name")?.value.trim() || "Studio Perso+",
     primary: document.getElementById("custom-color-primary")?.value || "#6366f1",
@@ -864,6 +1157,9 @@ window.resetCustomThemeDefaults = () => {
   if (document.getElementById("custom-color-ink")) document.getElementById("custom-color-ink").value = cfg.ink;
   if (document.getElementById("custom-theme-fx")) document.getElementById("custom-theme-fx").value = cfg.fx || "neon";
   applyCustomThemeVariables(cfg);
+  if ((document.documentElement.getAttribute("data-theme") || "light") === "custom") {
+    renderDynamicAppLogos("custom");
+  }
   showToast("Couleurs réinitialisées ✓");
 };
 
@@ -907,16 +1203,15 @@ window.updateSettingsStudyCountersUI = () => {
   const timeEl = document.getElementById("settings-total-study-time");
   if (timeEl) timeEl.textContent = formatStudyDurationHuman(totalMs);
 
-  const nextLocked = UNLOCKABLE_THEMES.find(t => studyMin < t.minMinutes);
+  const nextBadge = UNLOCKABLE_BADGES.find(b => (b.desc.includes("min") || b.desc.includes("heure")) && !b.check(studyMin, 0));
   const nextEl = document.getElementById("settings-next-unlock");
   const fillEl = document.getElementById("settings-study-progress");
   if (nextEl && fillEl) {
-    if (nextLocked) {
-      const rem = nextLocked.minMinutes - studyMin;
-      nextEl.textContent = `Prochain : ${nextLocked.name} dans ${rem} min`;
-      fillEl.style.width = `${Math.min(100, Math.round((studyMin / nextLocked.minMinutes) * 100))}%`;
+    if (nextBadge) {
+      nextEl.textContent = `Tous les thèmes & icônes libres ✓ · Prochain badge : ${nextBadge.icon} ${nextBadge.label}`;
+      fillEl.style.width = `${Math.min(100, Math.round((studyMin / 180) * 100))}%`;
     } else {
-      nextEl.textContent = "Tous les thèmes débloqués ✓";
+      nextEl.textContent = "Tous les thèmes, logos et badges débloqués ✓";
       fillEl.style.width = "100%";
     }
   }
@@ -934,18 +1229,17 @@ window.renderThemesAndRewardsSettings = () => {
   if (grid) {
     const customCfg = getCustomThemeConfig();
     grid.innerHTML = UNLOCKABLE_THEMES.map(t => {
-      const unlocked = studyMin >= t.minMinutes;
       const isActive = activeTheme === t.id;
       const displayTitle = t.id === "custom" && customCfg.name ? customCfg.name : t.name;
       const dots = (t.id === "custom" ? [customCfg.bg, customCfg.card, customCfg.primary] : t.swatches)
         .map(c => `<span style="background:${c}"></span>`).join("");
-      const reqText = t.minMinutes === 0 ? "Disponible dès le début" : unlocked ? `Débloqué (${t.minMinutes >= 60 ? `${t.minMinutes / 60}h` : `${t.minMinutes} min`})` : `Déblocable à ${t.minMinutes >= 60 ? `${t.minMinutes / 60}h` : `${t.minMinutes} min`}`;
+      const reqText = "Disponible immédiatement (aucun temps requis)";
       const barBg = t.id === "custom"
         ? `linear-gradient(135deg, ${customCfg.bg}, ${customCfg.primary})`
         : (t.swatchBg || t.swatches[0]);
       const barColor = t.lightText ? "#ffffff" : "#1d1d1f";
       return `
-        <div class="theme-unlock-card${isActive ? " active" : ""}${unlocked ? "" : " locked"}">
+        <div class="theme-unlock-card${isActive ? " active" : ""}">
           <div class="theme-swatch-bar" style="background:${barBg};color:${barColor};">
             <span>${esc(displayTitle)}</span>
             <div class="theme-swatch-dots">${dots}</div>
@@ -955,10 +1249,7 @@ window.renderThemesAndRewardsSettings = () => {
             <div class="theme-unlock-req">${reqText}</div>
           </div>
           <div class="theme-unlock-actions">
-            ${unlocked
-              ? `<button type="button" class="${isActive ? "btn-pill" : "btn-ghost"} btn-sm" onclick="applyThemeById('${t.id}')">${isActive ? "Actif ✓" : "Activer"}</button>`
-              : `<button type="button" class="btn-ghost btn-sm" onclick="previewTheme('${t.id}')">Aperçu 5s</button>`
-            }
+            <button type="button" class="${isActive ? "btn-pill" : "btn-ghost"} btn-sm" onclick="applyThemeById('${t.id}')">${isActive ? "Actif ✓" : "Activer"}</button>
           </div>
         </div>
       `;
@@ -967,23 +1258,20 @@ window.renderThemesAndRewardsSettings = () => {
 
   const customPanel = document.getElementById("settings-custom-theme-panel");
   if (customPanel) {
-    const unlockedCustom = isThemeUnlocked("custom");
-    customPanel.classList.toggle("hidden", !unlockedCustom);
-    if (unlockedCustom) {
-      const cfg = getCustomThemeConfig();
-      const nameInput = document.getElementById("custom-theme-name");
-      if (nameInput && !nameInput.value) nameInput.value = cfg.name || "Studio Perso+";
-      const p = document.getElementById("custom-color-primary");
-      const b = document.getElementById("custom-color-bg");
-      const c = document.getElementById("custom-color-card");
-      const k = document.getElementById("custom-color-ink");
-      const fx = document.getElementById("custom-theme-fx");
-      if (p) p.value = cfg.primary;
-      if (b) b.value = cfg.bg;
-      if (c) c.value = cfg.card;
-      if (k) k.value = cfg.ink;
-      if (fx) fx.value = cfg.fx || "neon";
-    }
+    customPanel.classList.remove("hidden");
+    const cfg = getCustomThemeConfig();
+    const nameInput = document.getElementById("custom-theme-name");
+    if (nameInput && !nameInput.value) nameInput.value = cfg.name || "Studio Perso+";
+    const p = document.getElementById("custom-color-primary");
+    const b = document.getElementById("custom-color-bg");
+    const c = document.getElementById("custom-color-card");
+    const k = document.getElementById("custom-color-ink");
+    const fx = document.getElementById("custom-theme-fx");
+    if (p) p.value = cfg.primary;
+    if (b) b.value = cfg.bg;
+    if (c) c.value = cfg.card;
+    if (k) k.value = cfg.ink;
+    if (fx) fx.value = cfg.fx || "neon";
   }
 
   const badgesGrid = document.getElementById("settings-badges-grid");
@@ -1002,6 +1290,10 @@ window.renderThemesAndRewardsSettings = () => {
         </button>
       `;
     }).join("");
+  }
+
+  if (typeof window.renderWebAppIconSettings === "function") {
+    window.renderWebAppIconSettings();
   }
 };
 
@@ -1053,20 +1345,28 @@ onSnapshot(collection(db, "users"), snap => {
     document.getElementById("drop-name").innerHTML = (currentUser.displayName || currentUser.username) + myBadge;
     document.getElementById("drawer-name").innerHTML = (currentUser.displayName || currentUser.username) + myBadge;
   }
+  if (typeof window.refreshCookieClickerLinks === "function" && !document.getElementById("cc-easter-modal")?.classList.contains("hidden")) {
+    window.refreshCookieClickerLinks();
+  }
 });
 
 window.addEventListener("hashchange", handleHashChange);
 
 window.addEventListener("DOMContentLoaded", () => {
   setTimeout(handleHashChange, 50);
+  loadTheme();
+  const trig = document.getElementById("dnb-cookie-easter-trigger");
   if (!localStorage.getItem('dnb_cookie_consent')) {
     document.getElementById('cookie-banner').style.display = 'flex';
+    if (trig) trig.classList.add('shifted');
   }
 });
 
 window.handleCookies = (accept) => {
   localStorage.setItem('dnb_cookie_consent', accept ? 'true' : 'false');
   document.getElementById('cookie-banner').style.display = 'none';
+  const trig = document.getElementById("dnb-cookie-easter-trigger");
+  if (trig) trig.classList.remove('shifted');
   if (accept) {
      console.log("Google Analytics activé");
   }
@@ -1843,11 +2143,23 @@ function handleHashChange() {
   const target = decodeURIComponent(hash.substring(1)).toLowerCase().trim();
   const internalTargets = new Set([
     'accueil', 'classement', 'cours', 'fichesrev', 'quiz', 'creerquiz',
-    'messages', 'depot', 'pub-profil', 'profil', 'setting', 'admin', 'statistiques', 'exercices'
+    'messages', 'depot', 'publier', 'pub-profil', 'profil', 'setting', 'admin', 'statistiques', 'dashboard', 'exercices'
   ]);
 
   if (target === 'matieres') {
     showInternalView('accueil');
+    return;
+  }
+
+  if (target === 'depot') {
+    showInternalView('publier');
+    if (typeof window.switchPublishMode === 'function') window.switchPublishMode('post');
+    return;
+  }
+
+  if (target === 'creerquiz') {
+    showInternalView('publier');
+    if (typeof window.switchPublishMode === 'function') window.switchPublishMode('quiz');
     return;
   }
 
@@ -1862,6 +2174,8 @@ function handleHashChange() {
 
 function showInternalView(target) {
   if (target === 'matieres') target = 'accueil';
+  if (target === 'depot') target = 'publier';
+  if (target === 'creerquiz') target = 'publier';
   if (target !== 'pub-profil') {
     window._currentViewedUser = null;
     window._pubFeedKey = null;
@@ -1885,6 +2199,11 @@ function showInternalView(target) {
   }
   if (target === 'statistiques' && !isAdminUser(currentUser)) {
     showToast("Accès non autorisé.");
+    window.location.hash = "#accueil";
+    return;
+  }
+  if (target === 'dashboard' && !hasProfessorAccess(currentUser) && !isAdminUser(currentUser)) {
+    showToast("Accès réservé aux professeurs et administrateurs.");
     window.location.hash = "#accueil";
     return;
   }
@@ -1914,6 +2233,7 @@ function showInternalView(target) {
   if (target === 'messages') loadDMChats();
   if (target === 'quiz') loadQuizFeed();
   if (target === 'exercices') loadExercicesFeed();
+  if (target === 'dashboard' && typeof window.loadTeacherDashboard === "function") window.loadTeacherDashboard();
   if (target === 'setting') {
     loadAIQuizHistory();
     loadAnimationsSetting();
@@ -1930,8 +2250,13 @@ function showInternalView(target) {
     updateStreakRankingUI();
     renderStreakRanking();
   }
-  if (target === 'depot') {
-  setTimeout(initCharCounters, 100);}
+  if (target === 'publier') {
+    setTimeout(() => {
+      initCharCounters();
+      if (typeof handlePostTypeChange === 'function') handlePostTypeChange();
+      if (typeof updatePublishLivePreview === 'function') updatePublishLivePreview();
+    }, 60);
+  }
   if (target === 'statistiques') loadStatisticsDashboard();
 }
 
@@ -2903,20 +3228,35 @@ function hydrateSession(u, options = {}) {
     document.getElementById("setting-email").value = u.email || "";
   }
 
-  const canDepot = u.role === "professeur" || u.role === "admin" || u.role === "HS" || (u.subRoles && (u.subRoles.includes("volontaire") || u.subRoles.includes("admin")));
+  const canDepot = u.role === "professeur" || u.role === "admin" || u.role === "HS" || (u.subRoles && (u.subRoles.includes("volontaire") || u.subRoles.includes("admin") || u.subRoles.includes("professeur")));
+  const canViewDashboard = hasProfessorAccess(u) || isAdmin;
 
-  document.getElementById("tab-admin").classList.toggle("hidden", !isAdmin);
-  document.getElementById("tab-statistiques").classList.toggle("hidden", !isAdmin);
-  document.getElementById("tab-depot").classList.toggle("hidden", !canDepot);
-  document.getElementById("tab-creer-quiz").classList.toggle("hidden", !canDepot);
+  document.getElementById("tab-admin")?.classList.toggle("hidden", !isAdmin);
+  document.getElementById("tab-statistiques")?.classList.toggle("hidden", !isAdmin);
+  document.getElementById("tab-dashboard")?.classList.toggle("hidden", !canViewDashboard);
+  document.getElementById("tab-publier")?.classList.toggle("hidden", !canDepot);
+  document.getElementById("tab-depot")?.classList.toggle("hidden", !canDepot);
+  document.getElementById("tab-creer-quiz")?.classList.toggle("hidden", !canDepot);
   
   document.querySelectorAll(".admin-only").forEach(el => el.classList.toggle("hidden", !isAdmin));
+  document.querySelectorAll(".prof-or-admin-only").forEach(el => el.classList.toggle("hidden", !canViewDashboard));
+  if (canViewDashboard && typeof window.populateAuthorCourseLinkSelects === "function") {
+    window.populateAuthorCourseLinkSelects();
+  }
+  const postTypeSel = document.getElementById("post-type");
+  if (postTypeSel && !isAdmin && postTypeSel.value === "annonce") {
+    postTypeSel.value = "cours";
+  }
 
+  const drawerPublier = document.getElementById("drawer-publier");
+  const drawerDashboard = document.getElementById("drawer-dashboard");
   const drawerDepot = document.getElementById("drawer-depot");
   const drawerAdmin = document.getElementById("drawer-admin");
   const drawerStats = document.getElementById("drawer-statistiques");
   const drawerCreerQuiz = document.getElementById("drawer-creer-quiz");
   
+  if (drawerPublier) drawerPublier.classList.toggle("hidden", !canDepot);
+  if (drawerDashboard) drawerDashboard.classList.toggle("hidden", !canViewDashboard);
   if (drawerDepot) drawerDepot.classList.toggle("hidden", !canDepot);
   if (drawerCreerQuiz) drawerCreerQuiz.classList.toggle("hidden", !canDepot);
   if (drawerAdmin) drawerAdmin.classList.toggle("hidden", !isAdmin);
@@ -2932,6 +3272,7 @@ function hydrateSession(u, options = {}) {
   });
   loadMatieres();
   syncContrib();
+  if (typeof window.refreshCookieClickerLinks === "function") window.refreshCookieClickerLinks();
   
   if (isAdmin) {
     syncAdminDashboardStats();
@@ -3159,16 +3500,18 @@ async function sendEmailNotif(type, receiverObj, extraParams) {
 }
 
 async function syncContrib() {
+  if (!currentUser?.username) return;
   const q1 = query(collection(db, "posts"), where("authorId", "==", currentUser.username));
   const q2 = query(collection(db, "quizzes"), where("authorId", "==", currentUser.username));
   const q3 = query(collection(db, "ai_quizzes"), where("authorId", "==", currentUser.username));
+  const q4 = query(collection(db, "ai_exercices"), where("authorId", "==", currentUser.username));
   
-  const snap1 = await getDocs(q1);
-  const snap2 = await getDocs(q2);
-  const snap3 = await getDocs(q3);
+  const [snap1, snap2, snap3, snap4] = await Promise.all([
+    getDocs(q1), getDocs(q2), getDocs(q3), getDocs(q4).catch(() => ({ size: 0 }))
+  ]);
   
   const el = document.getElementById("contrib-count"); 
-  if (el) el.innerText = snap1.size + snap2.size + snap3.size;
+  if (el) el.innerText = snap1.size + snap2.size + snap3.size + (snap4?.size || 0);
 }
 
 window.changePassword = async () => {
@@ -3253,12 +3596,14 @@ function loadMatieres() {
     });
     selQuizIA.innerHTML += `<option value="autre">Autre (préciser...)</option>`;
     window.syncExerciseSubjectSelects();
+    if (typeof window.handlePostTypeChange === "function") window.handlePostTypeChange();
+    if (typeof window.updatePublishLivePreview === "function") window.updatePublishLivePreview();
   });
 }
 function sanitizeRichText(html) {
   const parser = new DOMParser();
   const source = parser.parseFromString(String(html || ""), "text/html");
-  const allowed = new Set(["STRONG", "B", "EM", "I", "U", "SPAN", "FONT", "BR"]);
+  const allowed = new Set(["STRONG", "B", "EM", "I", "U", "S", "STRIKE", "UL", "OL", "LI", "P", "DIV", "SPAN", "FONT", "BR"]);
   const normalizeColor = value => {
     const v = String(value || "").trim().toLowerCase();
     if (!v) return "";
@@ -3283,11 +3628,17 @@ function sanitizeRichText(html) {
       }
 
       const spanColor = tag === "SPAN" ? normalizeColor(child.style?.color) : "";
+      const spanBg = tag === "SPAN" ? normalizeColor(child.style?.backgroundColor) : "";
       const fontColor = tag === "FONT" ? normalizeColor(child.getAttribute("color")) : "";
 
       Array.from(child.attributes).forEach(attr => child.removeAttribute(attr.name));
       if (tag === "SPAN") {
         if (spanColor) child.style.color = spanColor;
+        if (spanBg && spanBg !== "transparent") {
+          child.style.backgroundColor = spanBg;
+          child.style.borderRadius = "4px";
+          child.style.padding = "0 3px";
+        }
       } else if (tag === "FONT") {
         if (fontColor) child.setAttribute("color", fontColor);
         else {
@@ -3309,7 +3660,7 @@ function richTextPlainLength(editor) {
   return String(editor?.textContent || "").length;
 }
 
-function limitRichText(editor, maxLength = 350) {
+function limitRichText(editor, maxLength = 1200) {
   if (!editor) return;
   let current = richTextPlainLength(editor);
   if (current <= maxLength) return;
@@ -3330,18 +3681,19 @@ function syncRichTextDescription() {
   const hidden = document.getElementById("post-desc");
   const counter = document.getElementById("desc-counter");
   if (!editor || !hidden) return;
-  limitRichText(editor, 350);
+  limitRichText(editor, 1200);
   const cleaned = sanitizeRichText(editor.innerHTML);
   if (cleaned !== editor.innerHTML) editor.innerHTML = cleaned;
   hidden.value = cleaned;
   if (counter) counter.textContent = richTextPlainLength(editor);
+  if (typeof window.updatePublishLivePreview === "function") window.updatePublishLivePreview();
 }
 
 function updateRichTextToolbarVisibility() {
   const toolbar = document.getElementById("post-desc-toolbar");
   if (!toolbar) return;
-  const isProfessorOrAdmin = isProfessorUser(currentUser) || currentUser?.role === "admin" || currentUser?.subRoles?.includes("admin");
-  toolbar.classList.toggle("hidden", !isProfessorOrAdmin);
+  const canPublish = !currentUser || currentUser.role === "professeur" || currentUser.role === "admin" || currentUser.role === "HS" || (currentUser.subRoles && (currentUser.subRoles.includes("volontaire") || currentUser.subRoles.includes("admin")));
+  toolbar.classList.toggle("hidden", !canPublish);
 }
 
 window.applyRichTextCommand = (command, value = null) => {
@@ -3352,14 +3704,33 @@ window.applyRichTextCommand = (command, value = null) => {
   syncRichTextDescription();
 };
 
-window.toggleRichTextColorMenu = () => {
-  const palette = document.getElementById("post-desc-color-palette");
-  if (palette) palette.classList.toggle("hidden");
+window.toggleRichTextColorMenu = (which = "text") => {
+  const textPalette = document.getElementById("post-desc-color-palette");
+  const hilitePalette = document.getElementById("post-desc-hilite-palette");
+  if (which === "hilite") {
+    if (textPalette) textPalette.classList.add("hidden");
+    if (hilitePalette) hilitePalette.classList.toggle("hidden");
+  } else {
+    if (hilitePalette) hilitePalette.classList.add("hidden");
+    if (textPalette) textPalette.classList.toggle("hidden");
+  }
 };
 
 window.applyRichTextColor = color => {
   window.applyRichTextCommand("foreColor", color);
   const palette = document.getElementById("post-desc-color-palette");
+  if (palette) palette.classList.add("hidden");
+};
+
+window.applyRichTextHighlight = color => {
+  const editor = document.getElementById("post-desc-editor");
+  if (editor) {
+    editor.focus();
+    const ok = document.execCommand("hiliteColor", false, color);
+    if (!ok) document.execCommand("backColor", false, color);
+    syncRichTextDescription();
+  }
+  const palette = document.getElementById("post-desc-hilite-palette");
   if (palette) palette.classList.add("hidden");
 };
 
@@ -3690,27 +4061,31 @@ window.getPostHTML = (p, context) => {
   }
   let fileChips = "";
   if (docs.length > 0) {
-    fileChips = docs.map(d => {
+    fileChips = `<div class="post-files-stack">` + docs.map(d => {
       const cleanName = d.name || p.title || "Document";
       const lower = ((d.url || "") + " " + cleanName).toLowerCase();
       const isPDF = d.type === "application/pdf" || lower.includes(".pdf");
-      const isExcel = lower.includes(".xlsx") || lower.includes(".xls") || lower.includes(".csv");
+      const isExcel = lower.includes(".xlsx") || lower.includes(".xls") || lower.includes(".csv") || (d.type || "").includes("spreadsheet") || (d.type || "").includes("excel");
       const isWord = lower.includes(".docx") || lower.includes(".doc") || lower.includes(".odt");
       const isZip = lower.includes(".zip") || lower.includes(".rar") || lower.includes(".7z");
       let icon = "🔗";
-      if (isExcel) icon = "📊";
-      else if (isPDF) icon = "📄";
+      let subNote = "";
+      if (isExcel) { icon = "📊"; subNote = "Fichier Excel (sans aperçu)"; }
+      else if (isPDF) { icon = "📄"; subNote = "Document PDF"; }
       else if (isWord) icon = "📝";
       else if (isZip) icon = "📦";
       return `
-      <div class="file-chip mt-1">
+      <div class="file-chip ${isExcel ? 'file-chip-excel' : ''}">
         <div class="file-chip-info" title="${esc(cleanName)}">
           <span style="font-size:22px">${icon}</span>
-          <span>${cleanName}</span>
+          <div style="min-width:0; display:flex; flex-direction:column;">
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHTML(cleanName)}</span>
+            ${subNote ? `<small class="caption" style="font-size:11px;">${subNote}</small>` : ""}
+          </div>
         </div>
         <a href="${d.url}" target="_blank" rel="noopener" class="btn-download">📥 Consulter</a>
       </div>`;
-    }).join("");
+    }).join("") + `</div>`;
   }
 
   let comments = p.comments || [];
@@ -3769,10 +4144,13 @@ window.getPostHTML = (p, context) => {
   });
 
   const dateStr = p.timestamp ? new Date(p.timestamp).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "Date inconnue";
+  const safeDesc = p.description ? sanitizeRichText(p.description) : "";
+  const plainDesc = safeDesc ? safeDesc.replace(/<[^>]+>/g, " ").trim() : "";
+  const needsExpand = plainDesc.length > 170 || (safeDesc.match(/<br|<li|<p/gi) || []).length > 3;
 
   return `
     <div class="post-card">
-      <div style="display:flex;flex-direction:column;gap:14px;flex:1">
+      <div style="display:flex;flex-direction:column;gap:12px;flex:1">
         <div class="post-header">
           <a href="#${p.authorId}" class="post-av">${avContent}</a>
           <div style="flex:1;min-width:0">
@@ -3790,14 +4168,14 @@ window.getPostHTML = (p, context) => {
           </div>
         </div>
         <div>
-          <div>
-  <div class="post-title">${p.title.length > 50 ? p.title.substring(0, 47) + '...' : p.title}</div>
-  ${p.description ? `<div class="post-desc">${sanitizeRichText(p.description)}</div>` : ""}
-</div>
-        ${fileChips}
+          <div class="post-title">${p.title.length > 60 ? p.title.substring(0, 57) + '...' : p.title}</div>
+          ${safeDesc ? `<div class="post-desc">${safeDesc}</div>` : ""}
+          ${needsExpand ? `<button type="button" class="btn-show-more" onclick="togglePostExpand(this)">Lire la suite</button>` : ""}
+        </div>
         ${mediaBox}
+        ${fileChips}
       </div>
-      <div>
+      <div class="post-card-footer">
         <div class="post-date">Publié le ${dateStr}</div>
         <div class="post-actions">
           <button class="like-btn ${hasLiked ? "liked" : ""}" onclick="toggleLike('${pId}')">
@@ -3817,6 +4195,13 @@ window.getPostHTML = (p, context) => {
         </div>
       </div>
     </div>`;
+};
+
+window.togglePostExpand = (btn) => {
+  const desc = btn?.previousElementSibling;
+  if (!desc) return;
+  const expanded = desc.classList.toggle("expanded");
+  btn.textContent = expanded ? "Réduire" : "Lire la suite";
 };
 
 window.getQuizHTML = (q) => {
@@ -3853,18 +4238,20 @@ window.getQuizHTML = (q) => {
         </div>
         ${canDel ? `<button class="btn-danger btn-sm" onclick="${q.isAI ? 'deleteAIQuiz' : 'deleteQuiz'}('${qId}')">Supprimer</button>` : ""}
       </div>
-      <div>
+      <div style="flex:1">
         <div class="post-title">${q.title}</div>
         ${q.description ? `<p class="post-desc">${q.description}</p>` : ""}
         <div class="caption mt-1">${(q.questions || []).length} questions • Créé le ${dateStr} • <strong>Fait par ${q.attemptsCount || 0} personne(s)</strong></div>
       </div>
-      <div class="post-actions" style="margin-top: 8px; border-top: 1px solid var(--hl); padding-top: 12px;">
-        <button class="like-btn ${hasLiked ? 'liked' : ''}" onclick="toggleQuizLike('${qId}', ${q.isAI})">
-          ${hasLiked ? '❤️' : '🤍'} ${likeCount}
-        </button>
-        <button class="like-btn" onclick="openShareModal('${qId}', '${q.isAI ? 'ai_quiz' : 'quiz'}', '${esc(q.title)}')">↗️ Partager</button>
+      <div class="post-card-footer">
+        <div class="post-actions" style="border-top: 1px solid var(--hl); padding-top: 12px;">
+          <button class="like-btn ${hasLiked ? 'liked' : ''}" onclick="toggleQuizLike('${qId}', ${q.isAI})">
+            ${hasLiked ? '❤️' : '🤍'} ${likeCount}
+          </button>
+          <button class="like-btn" onclick="openShareModal('${qId}', '${q.isAI ? 'ai_quiz' : 'quiz'}', '${esc(q.title)}')">↗️ Partager</button>
+        </div>
+        <button class="btn-pill" style="justify-content:center; width:100%;" onclick="checkAndStartQuiz('${qId}', ${q.isAI})">Commencer le quiz</button>
       </div>
-      <button class="btn-pill mt-1" style="justify-content:center; width:100%;" onclick="checkAndStartQuiz('${qId}', ${q.isAI})">Commencer le quiz</button>
     </div>`;
 };
 
@@ -4052,61 +4439,239 @@ window.delAnnonce = async (id) => {
   if (confirm("Supprimer cette annonce ?")) await deleteDoc(doc(db, "annonces", id));
 };
 
+window._uploadedFileMeta = [];
+
+function revokeUploadedFilePreviews() {
+  (window._uploadedFileMeta || []).forEach(m => {
+    if (m?.previewUrl) {
+      try { URL.revokeObjectURL(m.previewUrl); } catch (_) {}
+    }
+  });
+  window._uploadedFileMeta = [];
+}
+
+function renderPublishFilePreviews() {
+  const files = window._uploadedFiles || [];
+  const bar = document.getElementById("file-prev");
+  const listDiv = document.getElementById("file-prev-list");
+  if (!bar) return;
+
+  if (!files.length) {
+    bar.style.display = "none";
+    if (listDiv) listDiv.innerHTML = "";
+    return;
+  }
+
+  bar.style.display = "flex";
+  const countEl = document.getElementById("file-prev-name");
+  if (countEl) countEl.innerText = `${files.length} fichier(s) prêt(s)`;
+  const iconEl = document.getElementById("file-prev-icon");
+  if (iconEl) iconEl.innerText = "📁";
+
+  revokeUploadedFilePreviews();
+  window._uploadedFileMeta = files.map((f, idx) => {
+    const lower = (f.name || "").toLowerCase();
+    const isImage = (f.type || "").startsWith("image/") || /\.(jpg|jpeg|png|gif|webp|avif)$/i.test(lower);
+    const isExcel = /\.(xlsx|xls|csv)$/i.test(lower) || (f.type || "").includes("spreadsheet") || (f.type || "").includes("excel");
+    const isPDF = f.type === "application/pdf" || lower.endsWith(".pdf");
+    const isVideo = (f.type || "").startsWith("video/") || /\.(mp4|webm)$/i.test(lower);
+    const previewUrl = isImage ? URL.createObjectURL(f) : "";
+    return { idx, name: f.name, size: f.size, isImage, isExcel, isPDF, isVideo, previewUrl };
+  });
+
+  if (listDiv) {
+    listDiv.innerHTML = window._uploadedFileMeta.map((m, idx) => {
+      let body = "";
+      if (m.isImage && m.previewUrl) {
+        body = `<img class="publish-file-thumb" src="${m.previewUrl}" alt="${esc(m.name)}">`;
+      } else if (m.isExcel) {
+        body = `<div class="publish-file-noprev"><span class="pf-ico">📊</span><span>Excel · Sans aperçu</span></div>`;
+      } else if (m.isPDF) {
+        body = `<div class="publish-file-noprev"><span class="pf-ico">📄</span><span>Document PDF</span></div>`;
+      } else if (m.isVideo) {
+        body = `<div class="publish-file-noprev"><span class="pf-ico">🎥</span><span>Vidéo (${(m.size / 1024 / 1024).toFixed(1)} Mo)</span></div>`;
+      } else {
+        body = `<div class="publish-file-noprev"><span class="pf-ico">📎</span><span>${(m.size / 1024 / 1024).toFixed(2)} Mo</span></div>`;
+      }
+      return `
+        <div class="publish-file-preview-card">
+          ${body}
+          <div class="publish-file-meta" title="${esc(m.name)}">${escapeHTML(m.name)}</div>
+          <button type="button" class="publish-file-del" onclick="removeSingleUploadedFile(${idx})" title="Retirer">✕</button>
+        </div>`;
+    }).join("");
+  }
+}
+
+window.removeSingleUploadedFile = (idx) => {
+  const next = (window._uploadedFiles || []).filter((_, i) => i !== idx);
+  window._uploadedFiles = next;
+  const inp = document.getElementById("post-file");
+  if (inp && next.length === 0) inp.value = "";
+  renderPublishFilePreviews();
+  updatePublishLivePreview();
+};
+
 window.handleFileSelect = (e) => {
-  const files = Array.from(e.target.files || []); 
+  const files = Array.from(e.target.files || []);
   if (!files.length) return;
-  
+
   if (files.length > 5) {
     showToast("Maximum 5 fichiers autorisés par document.");
     e.target.value = "";
     window._uploadedFiles = [];
-    document.getElementById("file-prev").style.display = "none";
+    renderPublishFilePreviews();
+    updatePublishLivePreview();
     return;
   }
 
   let totalSize = 0;
   files.forEach(f => totalSize += f.size);
   if (totalSize > 25 * 1024 * 1024) {
-    e.target.value = ""; 
-    window._uploadedFiles = []; 
-    document.getElementById("file-prev").style.display = "none"; 
-    openModal("m-filesize"); 
+    e.target.value = "";
+    window._uploadedFiles = [];
+    renderPublishFilePreviews();
+    updatePublishLivePreview();
+    openModal("m-filesize");
     return;
   }
-  
+
   window._uploadedFiles = files;
-  const bar = document.getElementById("file-prev"); 
-  bar.style.display = "flex";
-  
-  document.getElementById("file-prev-name").innerText = `${files.length} fichier(s) sélectionné(s)`;
-  document.getElementById("file-prev-icon").innerText = "📁"; 
-  
-  const listDiv = document.getElementById("file-prev-list");
-  if (listDiv) {
-    listDiv.innerHTML = files.map(f => `<div>• ${f.name} (${(f.size/1024/1024).toFixed(2)} Mo)</div>`).join("");
-  }
+  renderPublishFilePreviews();
+  updatePublishLivePreview();
 };
 
 window.clearFile = () => {
-  window._uploadedFiles = []; 
-  document.getElementById("post-file").value = ""; 
-  document.getElementById("file-prev").style.display = "none";
+  revokeUploadedFilePreviews();
+  window._uploadedFiles = [];
+  const inp = document.getElementById("post-file");
+  if (inp) inp.value = "";
+  renderPublishFilePreviews();
+  updatePublishLivePreview();
+};
+
+window.switchPublishMode = (mode = "post") => {
+  const postPane = document.getElementById("publish-mode-post");
+  const quizPane = document.getElementById("publish-mode-quiz");
+  const btnPost = document.getElementById("pub-mode-btn-post");
+  const btnQuiz = document.getElementById("pub-mode-btn-quiz");
+  const isQuiz = mode === "quiz";
+  if (postPane) postPane.classList.toggle("hidden", isQuiz);
+  if (quizPane) quizPane.classList.toggle("hidden", !isQuiz);
+  if (btnPost) {
+    btnPost.classList.toggle("active", !isQuiz);
+    btnPost.setAttribute("aria-selected", String(!isQuiz));
+  }
+  if (btnQuiz) {
+    btnQuiz.classList.toggle("active", isQuiz);
+    btnQuiz.setAttribute("aria-selected", String(isQuiz));
+  }
+  if (isQuiz) {
+    const qc = document.getElementById("quiz-questions-container");
+    if (qc && qc.children.length === 0 && typeof window.addQuizQuestionField === "function") {
+      window.addQuizQuestionField();
+    }
+    if (typeof window.populateAuthorCourseLinkSelects === "function") {
+      window.populateAuthorCourseLinkSelects();
+    }
+  } else {
+    updatePublishLivePreview();
+  }
+};
+
+window.handlePublishYouTubeInput = () => {
+  const inp = document.getElementById("post-youtube-url");
+  const prev = document.getElementById("post-youtube-preview");
+  if (!inp || !prev) return;
+  const embed = getYouTubeEmbedUrl(inp.value.trim());
+  if (embed) {
+    prev.innerHTML = `<iframe src="${esc(embed)}" title="Aperçu YouTube" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"></iframe>`;
+    prev.classList.remove("hidden");
+  } else {
+    prev.innerHTML = "";
+    prev.classList.add("hidden");
+  }
+  updatePublishLivePreview();
 };
 
 window.handlePostTypeChange = () => {
-  const type = document.getElementById("post-type").value;
+  const typeEl = document.getElementById("post-type");
+  if (!typeEl) return;
+  const type = typeEl.value;
   const matiereGroup = document.getElementById("group-post-matiere");
   const tagsGroup = document.getElementById("group-post-tags");
   const visibilityGroup = document.getElementById("group-post-announcement-visibility");
   if (type === "annonce") {
-    matiereGroup.style.display = "none";
+    if (matiereGroup) matiereGroup.style.display = "none";
     if (tagsGroup) tagsGroup.style.display = "none";
-    if (visibilityGroup) visibilityGroup.style.display = "flex";
+    if (visibilityGroup) {
+      visibilityGroup.classList.remove("hidden");
+      visibilityGroup.style.display = "flex";
+    }
   } else {
-    matiereGroup.style.display = "flex";
+    if (matiereGroup) matiereGroup.style.display = "flex";
     if (tagsGroup) tagsGroup.style.display = type === "cours" ? "flex" : "none";
     if (visibilityGroup) visibilityGroup.style.display = "none";
   }
+  updatePublishLivePreview();
+};
+
+window.updatePublishLivePreview = () => {
+  const box = document.getElementById("publish-live-preview-card");
+  if (!box) return;
+  const title = document.getElementById("post-title")?.value.trim() || "Titre du contenu…";
+  const type = document.getElementById("post-type")?.value || "cours";
+  const matiere = type === "annonce" ? "Annonces" : (document.getElementById("post-matiere")?.value || "Matière");
+  const subjIcon = type === "annonce" ? "📌" : (window.subjectsMap.get(matiere) || "📚");
+  const typeLabels = { cours: "Cours", fiches: "Fiche", revisions: "Révisions", annonce: "Annonce Épinglée" };
+  const rawDesc = document.getElementById("post-desc")?.value || "";
+  const safeDesc = sanitizeRichText(rawDesc);
+  const tags = type === "cours" ? getSelectedTags('input[name="post-tag"]') : [];
+  const ytUrl = document.getElementById("post-youtube-url")?.value.trim() || "";
+  const urlInp = document.getElementById("post-url")?.value.trim() || "";
+  const ytEmbed = getYouTubeEmbedUrl(ytUrl) || getYouTubeEmbedUrl(urlInp);
+
+  const authorName = currentUser?.displayName || currentUser?.username || "Auteur";
+  const authorRole = currentUser?.role || "élève";
+  const roleClass = authorRole === "professeur" ? "professeur" : authorRole === "admin" ? "admin" : authorRole === "HS" ? "hs" : "eleve";
+  const init = authorName.split(" ").map(x => x[0]).join("").substring(0, 2).toUpperCase();
+  const av = currentUser?.avatar ? `<img src="${esc(currentUser.avatar)}" alt="">` : init;
+
+  const metaFiles = window._uploadedFileMeta || [];
+  const firstImg = metaFiles.find(m => m.isImage && m.previewUrl);
+  let mediaPreviewHtml = "";
+  if (ytEmbed) {
+    mediaPreviewHtml = `<div class="post-carousel post-carousel-single" style="height:175px;"><iframe class="carousel-media-content carousel-youtube" src="${esc(ytEmbed)}" title="YouTube" frameborder="0" allowfullscreen></iframe></div>`;
+  } else if (firstImg) {
+    mediaPreviewHtml = `<div class="post-carousel post-carousel-single" style="height:175px;"><img class="carousel-media-content" src="${firstImg.previewUrl}" alt="Aperçu"></div>`;
+  }
+
+  const chips = metaFiles
+    .filter(m => !m.isImage)
+    .map(m => {
+      const ico = m.isExcel ? "📊" : m.isPDF ? "📄" : "📎";
+      return `<div class="file-chip ${m.isExcel ? "file-chip-excel" : ""}"><div class="file-chip-info"><span>${ico}</span><span>${escapeHTML(m.name)}${m.isExcel ? " (sans aperçu)" : ""}</span></div></div>`;
+    }).join("");
+
+  box.innerHTML = `
+    <div class="post-card" style="height:auto;">
+      <div class="post-header">
+        <div class="post-av">${av}</div>
+        <div style="flex:1;min-width:0">
+          <div class="post-author-name">${escapeHTML(authorName)}</div>
+          <div class="post-meta">
+            <span class="rbadge ${roleClass}">${escapeHTML(authorRole)}</span>
+            <span class="type-tag ${type}">${typeLabels[type] || type}</span>
+            <span class="subj-tag">${subjIcon} ${escapeHTML(matiere)}</span>
+            ${renderContentTags(tags)}
+          </div>
+        </div>
+      </div>
+      <div class="post-title">${escapeHTML(title)}</div>
+      ${safeDesc ? `<div class="post-desc expanded" style="max-height:140px;overflow-y:auto;">${safeDesc}</div>` : `<div class="caption">Ta description colorée apparaîtra ici.</div>`}
+      ${mediaPreviewHtml}
+      ${chips ? `<div class="post-files-stack">${chips}</div>` : ""}
+    </div>`;
 };
 
 const getYouTubeEmbedUrl = (url) => {
@@ -4281,7 +4846,8 @@ window.handleCreatePost = async () => {
   syncRichTextDescription();
   const desc = sanitizeRichText(document.getElementById("post-desc").value || "");
   const tags = type === "cours" ? getSelectedTags('input[name="post-tag"]') : [];
-  const urlInput = document.getElementById("post-url").value.trim();
+  const ytInput = document.getElementById("post-youtube-url")?.value.trim() || "";
+  const urlInput = document.getElementById("post-url")?.value.trim() || "";
   
   if (!title) {
     showToast("Titre requis.");
@@ -4289,14 +4855,15 @@ window.handleCreatePost = async () => {
   }
 
   let filesArray = [];
-  if ((window._uploadedFiles && window._uploadedFiles.length > 0) || urlInput) {
-    const btn = document.querySelector('[onclick="handleCreatePost()"]'); 
+  const hasFiles = window._uploadedFiles && window._uploadedFiles.length > 0;
+  if (hasFiles || ytInput || urlInput) {
+    const btn = document.getElementById("btn-submit-publish-post") || document.querySelector('[onclick="handleCreatePost()"]');
     if (btn) { btn.disabled = true; btn.innerText = "Upload des fichiers en cours…"; }
     
     try {
-      const ytUrl = urlInput ? (getYouTubeEmbedUrl(urlInput) ? urlInput : null) : null;
-      if (ytUrl) {
-        filesArray.push({ url: ytUrl, name: "YouTube", type: "video/youtube" });
+      const ytCandidate = ytInput || (urlInput && getYouTubeEmbedUrl(urlInput) ? urlInput : "");
+      if (ytCandidate && getYouTubeEmbedUrl(ytCandidate)) {
+        filesArray.push({ url: ytCandidate, name: "YouTube", type: "video/youtube" });
       }
       for (const file of (window._uploadedFiles || [])) {
         const fileUrl = await uploadToCloudinary(file);
@@ -4306,22 +4873,16 @@ window.handleCreatePost = async () => {
           type: file.type
         });
       }
-      if (urlInput && !ytUrl) {
+      if (urlInput && !getYouTubeEmbedUrl(urlInput)) {
         filesArray.push({ url: urlInput, name: "Lien externe", type: "link" });
       }
     } catch (err) {
       showToast("Erreur lors de l'upload Cloudinary."); 
-      if (btn) { btn.disabled = false; btn.innerText = "Partager avec la classe"; } 
+      if (btn) { btn.disabled = false; btn.innerText = "Publier avec la classe"; } 
       return;
     }
     
-    if (btn) { btn.disabled = false; btn.innerText = "Partager avec la classe"; }
-  } else if (urlInput) {
-    filesArray.push({
-      url: urlInput,
-      name: "Lien externe",
-      type: "link"
-    });
+    if (btn) { btn.disabled = false; btn.innerText = "Publier avec la classe"; }
   }
 
   const firstFile = filesArray[0] || {};
@@ -4331,7 +4892,7 @@ window.handleCreatePost = async () => {
     fileData: firstFile.url || "",
     fileName: firstFile.name || "",
     fileType: firstFile.type || "",
-    url: firstFile.url || urlInput || "",
+    url: firstFile.url || ytInput || urlInput || "",
     authorId: currentUser.username,
     authorDisplayName: currentUser.displayName || currentUser.username,
     authorAvatar: currentUser.avatar || "",
@@ -4351,13 +4912,17 @@ window.handleCreatePost = async () => {
     const postDescEditor = document.getElementById("post-desc-editor");
     if (postDescEditor) postDescEditor.innerHTML = "";
     syncRichTextDescription(); 
-    document.getElementById("post-url").value = "";
+    if (document.getElementById("post-youtube-url")) document.getElementById("post-youtube-url").value = "";
+    const ytPrev = document.getElementById("post-youtube-preview");
+    if (ytPrev) { ytPrev.innerHTML = ""; ytPrev.classList.add("hidden"); }
+    if (document.getElementById("post-url")) document.getElementById("post-url").value = "";
     const announcementVisibilityEl = document.getElementById("post-announcement-visibility");
     if (announcementVisibilityEl) announcementVisibilityEl.value = "tous";
     document.querySelectorAll('input[name="post-tag"]').forEach(el => el.checked = false);
     clearFile(); 
-    syncContrib(); 
-    showToast("Partagé avec la classe ✓");
+    syncContrib();
+    if (typeof window.populateAuthorCourseLinkSelects === "function") window.populateAuthorCourseLinkSelects();
+    showToast("Contenu publié avec la classe ✓");
     
     if (currentUser.followers && currentUser.followers.length > 0) {
        currentUser.followers.forEach(uname => {
@@ -4577,6 +5142,8 @@ window.openSharedItem = async (id, type) => {
     checkAndStartQuiz(id, false);
   } else if (type === 'ai_quiz') {
     checkAndStartQuiz(id, true);
+  } else if (type === 'ai_exercice') {
+    if (typeof window.startSharedExercice === 'function') window.startSharedExercice(id, false);
   } else if (type === 'post') {
     const snap = await getDoc(doc(db, "posts", id));
     if (!snap.exists()) {
@@ -5461,8 +6028,10 @@ window.handleCreateManualQuiz = async () => {
     return; 
   }
 
+  const linkedCourseId = document.getElementById("quiz-create-linked-course")?.value || "";
   const quiz = {
     title, matiere, description: desc, tags,
+    linkedCourseId,
     questions, isAI: false,
     likes: [], 
     authorId: currentUser.username, 
@@ -5478,6 +6047,7 @@ window.handleCreateManualQuiz = async () => {
     await addDoc(collection(db, "quizzes"), quiz);
     document.getElementById("quiz-create-title").value = "";
     document.getElementById("quiz-create-desc").value = "";
+    if (document.getElementById("quiz-create-linked-course")) document.getElementById("quiz-create-linked-course").value = "";
     document.getElementById("quiz-create-tag-bac").checked = false;
     document.getElementById("quiz-questions-container").innerHTML = "";
     quizQuestionCount = 0;
@@ -5628,11 +6198,13 @@ RENVOIE UNIQUEMENT LE JSON.`;
       throw new Error("L'IA a renvoyé un contenu vide ou mal formaté.");
     }
 
+    const linkedCourseId = document.getElementById("quiz-ia-linked-course")?.value || "";
     const newQuiz = {
       title: `[IA] : ${topic}`,
       matiere: matiere,
       description: desc,
       tags,
+      linkedCourseId,
       questions: quizData.questions,
       isAI: true,
       likes: [], 
@@ -5651,6 +6223,7 @@ RENVOIE UNIQUEMENT LE JSON.`;
     closeModal("m-ia-quiz");
     document.getElementById("quiz-ia-topic").value = "";
     document.getElementById("quiz-ia-desc").value = "";
+    if (document.getElementById("quiz-ia-linked-course")) document.getElementById("quiz-ia-linked-course").value = "";
     document.getElementById("quiz-ia-tag-bac").checked = false;
     document.getElementById("quiz-ia-matiere-custom").value = "";
     document.getElementById("quiz-ia-matiere-custom").style.display = "none";
@@ -5716,7 +6289,8 @@ window.reformulateQuizWithAI = async () => {
     if (!newData || !newData.questions) throw new Error("Format Invalide");
     
     window._currentQuizData.questions = newData.questions;
-    window._currentQuizData.isAI = true; 
+    window._currentQuizData.isAI = true;
+    window._currentQuizData._isReformulated = true;
     
     document.getElementById("take-quiz-loading").style.display = "none";
     document.getElementById("take-quiz-content").style.display = "block";
@@ -5731,6 +6305,9 @@ window.reformulateQuizWithAI = async () => {
 };
 
 window.shuffleQuizData = (quizData) => {
+  (quizData.questions || []).forEach((q, idx) => {
+    if (typeof q._origIndex !== "number") q._origIndex = idx;
+  });
   quizData.questions.sort(() => Math.random() - 0.5);
   quizData.questions.forEach(q => {
     const optionsWithIndex = q.options.map((option, index) => ({ option, index }));
@@ -5741,6 +6318,9 @@ window.shuffleQuizData = (quizData) => {
 };
 
 window.startQuiz = (alreadyOpen = false) => {
+  (window._currentQuizData?.questions || []).forEach((q, idx) => {
+    if (typeof q._origIndex !== "number") q._origIndex = idx;
+  });
   window.shuffleQuizData(window._currentQuizData);
   window._currentQuestionIndex = 0;
   window._quizUserAnswers = [];
@@ -5837,16 +6417,43 @@ window.submitQuiz = async () => {
     console.error("Erreur lors de la mise à jour du compteur :", err);
   }
 
-  if (!window._currentQuizData.isAI) {
-    await addDoc(collection(db, "quiz_attempts"), {
-      quizId: window._currentQuizData.id,
-      userId: currentUser.username,
-      userDisplayName: currentUser.displayName || currentUser.username,
-      score: score,
-      maxScore: window._currentQuizData.questions.length,
-      timeTaken: timeTaken,
-      timestamp: Date.now()
-    });
+  if (!window._currentQuizData._isReformulated && currentUser?.username) {
+    const totalQuestions = (window._currentQuizData.questions || []).length;
+    const questionResults = (window._currentQuizData.questions || []).map((q, idx) => {
+      const origIdx = typeof q._origIndex === "number" ? q._origIndex : idx;
+      const userOpt = window._quizUserAnswers[idx];
+      return {
+        questionIndex: origIdx,
+        questionText: String(q.question || `Question ${origIdx + 1}`),
+        userOptionIndex: typeof userOpt === "number" ? userOpt : -1,
+        correctIndex: typeof q.correctIndex === "number" ? q.correctIndex : 0,
+        isCorrect: userOpt === q.correctIndex
+      };
+    }).sort((a, b) => a.questionIndex - b.questionIndex);
+
+    try {
+      await addDoc(collection(db, "quiz_attempts"), {
+        quizId: window._currentQuizData.id,
+        quizTitle: window._currentQuizData.title || "",
+        quizType: window._currentQuizData.isAI ? "ai_quiz" : "quiz",
+        isAI: Boolean(window._currentQuizData.isAI),
+        matiere: window._currentQuizData.matiere || "",
+        authorId: window._currentQuizData.authorId || "",
+        linkedCourseId: window._currentQuizData.linkedCourseId || "",
+        userId: currentUser.username,
+        userDisplayName: currentUser.displayName || currentUser.username,
+        classeId: currentUser.classeId || "",
+        etablissementId: currentUser.etablissementId || "",
+        score: score,
+        maxScore: totalQuestions,
+        percentage: totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0,
+        timeTaken: timeTaken,
+        questionResults,
+        timestamp: Date.now()
+      });
+    } catch (attErr) {
+      console.warn("Erreur sauvegarde tentative quiz :", attErr);
+    }
   }
 };
 
@@ -6488,6 +7095,9 @@ document.addEventListener("click", e => {
 window.openModal = id => {
   document.getElementById(id).classList.add("active");
   if (id === 'm-new-chat') renderContactSearch();
+  if (id === 'm-ia-quiz' && typeof window.populateAuthorCourseLinkSelects === "function") {
+    window.populateAuthorCourseLinkSelects();
+  }
 };
 
 window.closeModal = id => document.getElementById(id).classList.remove("active");
@@ -6735,10 +7345,27 @@ function playExamBellChime() {
   }
 }
 
-// Storage helpers
+// Storage helpers (scoped per DnB Reviz account)
+function getExerciceStorageKey() {
+  const uname = currentUser?.username ? String(currentUser.username).trim() : "guest";
+  return `dnb_exercices_history_${uname}`;
+}
+
 function getStoredExercices() {
+  const key = getExerciceStorageKey();
   try {
-    const raw = localStorage.getItem("dnb_exercices_history");
+    let raw = localStorage.getItem(key);
+    if (!raw && currentUser?.username) {
+      const legacy = localStorage.getItem("dnb_exercices_history");
+      if (legacy) {
+        const parsedLegacy = JSON.parse(legacy);
+        if (Array.isArray(parsedLegacy)) {
+          const mine = parsedLegacy.filter(item => !item.author || item.author === currentUser.username);
+          localStorage.setItem(key, JSON.stringify(mine));
+          return mine;
+        }
+      }
+    }
     return raw ? JSON.parse(raw) : [];
   } catch (_) {
     return [];
@@ -6748,13 +7375,14 @@ function getStoredExercices() {
 function saveExerciceToHistory(ex) {
   try {
     const list = getStoredExercices();
-    const idx = list.findIndex(item => item.id === ex.id);
+    const matchKey = ex.remoteId || ex.id;
+    const idx = list.findIndex(item => item.id === ex.id || (matchKey && (item.remoteId === matchKey || item.id === matchKey)));
     if (idx >= 0) {
       list[idx] = ex;
     } else {
       list.unshift(ex);
     }
-    localStorage.setItem("dnb_exercices_history", JSON.stringify(list));
+    localStorage.setItem(getExerciceStorageKey(), JSON.stringify(list));
   } catch (e) {
     console.warn("Impossible de sauvegarder l'exercice en local :", e);
   }
@@ -6827,6 +7455,9 @@ window.openCreateExerciceModal = () => {
   toggleExerciceTimerFields({ target: { checked: true } });
 
   populateLikedItemsDropdown();
+  if (typeof window.populateAuthorCourseLinkSelects === "function") {
+    window.populateAuthorCourseLinkSelects();
+  }
   openModal("m-create-exercice");
 };
 
@@ -7339,17 +7970,58 @@ ${JSON.stringify(generated)}`;
       data = normalizeGeneratedExercise(generated, parameters);
     }
 
-    data.id = "ex_" + Date.now();
-    data.createdAt = Date.now();
+    const nowTs = Date.now();
+    data.createdAt = nowTs;
+    data.timestamp = nowTs;
     data.author = currentUser ? currentUser.username : "Élève";
+    data.authorId = currentUser ? currentUser.username : "Élève";
     data.mode = mode;
     data.durationMinutes = durationMinutes;
     data.exerciseType = exerciseType;
     data.gradingTone = gradingTone;
 
+    // Publish shared exercise template to Firestore so profs & classmates can see and take it
+    if (currentUser?.username) {
+      try {
+        const exLinkedCourseId = document.getElementById("ex-create-linked-course")?.value || "";
+        const sharedPayload = {
+          title: data.title,
+          subject: data.subject,
+          topic: data.topic || parameters.topic || data.subject,
+          level: data.level || "Standard",
+          instructions: data.instructions || "",
+          questions: Array.isArray(data.questions) ? data.questions : [],
+          mode,
+          durationMinutes: durationMinutes || 0,
+          exerciseType,
+          gradingTone,
+          linkedCourseId: exLinkedCourseId,
+          authorId: currentUser.username,
+          authorDisplayName: currentUser.displayName || currentUser.username,
+          authorAvatar: currentUser.avatar || "",
+          authorRole: currentUser.role || "élève",
+          etablissementId: currentUser.etablissementId || "",
+          classeId: currentUser.classeId || "",
+          likes: [],
+          attemptsCount: 0,
+          timestamp: nowTs,
+          createdAt: nowTs
+        };
+        const ref = await addDoc(collection(db, "ai_exercices"), sharedPayload);
+        data.remoteId = ref.id;
+        data.id = ref.id;
+        syncContrib();
+      } catch (pubErr) {
+        console.warn("Partage Firestore exercice impossible :", pubErr);
+        data.id = "ex_" + nowTs;
+      }
+    } else {
+      data.id = "ex_" + nowTs;
+    }
+
     saveExerciceToHistory(data);
     closeModal("m-create-exercice");
-    showToast("Exercice d'entraînement prêt ✓");
+    showToast("Exercice d'entraînement prêt et partagé ✓");
     window.startExerciceSession(data);
   } catch (err) {
     console.error("Erreur génération exercice :", err);
@@ -8125,6 +8797,53 @@ Chaque question du sujet doit apparaître exactement une fois dans questionEvalu
 
     saveExerciceToHistory(exercise);
 
+    // Increment shared attempt counter in Firestore when completed
+    const targetRemoteId = exercise.remoteId || exercise.id;
+    if (targetRemoteId && !String(targetRemoteId).startsWith("ex_")) {
+      try {
+        const remoteRef = doc(db, "ai_exercices", targetRemoteId);
+        const remoteSnap = await getDoc(remoteRef);
+        let remoteData = {};
+        if (remoteSnap.exists()) {
+          remoteData = remoteSnap.data() || {};
+          const prevAttempts = Number(remoteData.attemptsCount) || 0;
+          await updateDoc(remoteRef, { attemptsCount: prevAttempts + 1 });
+        }
+        if (currentUser?.username) {
+          const questionResults = (exercise.questions || []).map((q, idx) => {
+            const ev = (gradingResult.questionEvaluations || []).find(item => String(item.questionId) === String(q.id))
+              || gradingResult.questionEvaluations?.[idx];
+            const awarded = Number(ev?.pointsAwarded || 0);
+            const maxPts = Number(ev?.maxPoints ?? q.points ?? 1);
+            return {
+              questionIndex: idx,
+              questionText: String(q.text || q.title || `Question ${idx + 1}`),
+              pointsAwarded: awarded,
+              maxPoints: maxPts,
+              isCorrect: maxPts > 0 ? (awarded / maxPts) >= 0.5 : false
+            };
+          });
+          await addDoc(collection(db, "exercice_attempts"), {
+            exerciceId: targetRemoteId,
+            exerciceTitle: exercise.title || remoteData.title || "",
+            subject: exercise.subject || remoteData.subject || "",
+            authorId: remoteData.authorId || exercise.authorId || "",
+            linkedCourseId: remoteData.linkedCourseId || exercise.linkedCourseId || "",
+            userId: currentUser.username,
+            userDisplayName: currentUser.displayName || currentUser.username,
+            classeId: currentUser.classeId || "",
+            etablissementId: currentUser.etablissementId || "",
+            score: Number(gradingResult.totalScore || 0),
+            maxScore: 20,
+            percentage: Math.round((Number(gradingResult.totalScore || 0) / 20) * 100),
+            mention: gradingResult.mention || "",
+            questionResults,
+            timestamp: Date.now()
+          });
+        }
+      } catch (_) {}
+    }
+
     // Award streak shield every 5 passed exercises (>= 10/20)
     if (gradingResult.totalScore >= 10 && currentUser?.id) {
       const nextCount = (Number(currentUser.passedExercisesCount) || 0) + 1;
@@ -8646,18 +9365,60 @@ window.exportExerciceGradedPDF = () => {
   showToast("Copie corrigée par l'IA exportée en PDF ✓");
 };
 
-// Feed rendering
-window.loadExercicesFeed = () => {
+function renderExercicesFeed() {
   const container = document.getElementById("exercices-feed");
   if (!container) return;
 
-  const list = getStoredExercices();
+  const localList = getStoredExercices();
+  const localById = new Map();
+  localList.forEach(item => {
+    if (item?.id) localById.set(item.id, item);
+    if (item?.remoteId) localById.set(item.remoteId, item);
+  });
 
-  let filtered = list;
-  if (window._exerciceFilterTab === "mine") {
-    filtered = list.filter(ex => !ex.result);
+  const remoteRaw = Array.isArray(window._liveSharedExercicesData) ? window._liveSharedExercicesData : [];
+  const visibleRemote = window.filterVisibleContent(remoteRaw, "exercice");
+  const seenRemoteIds = new Set();
+
+  const merged = visibleRemote.map(rem => {
+    seenRemoteIds.add(rem.id);
+    const localCopy = localById.get(rem.id);
+    return {
+      ...rem,
+      remoteId: rem.id,
+      _isShared: true,
+      result: localCopy?.result || null,
+      studentAnswers: localCopy?.studentAnswers || [],
+      structuredAnswers: localCopy?.structuredAnswers || {},
+      _hasLocalDraft: Boolean(localCopy && !localCopy.result)
+    };
+  });
+
+  // Include local-only / legacy offline exercises not found in remote
+  localList.forEach(loc => {
+    const key = loc.remoteId || loc.id;
+    if (!seenRemoteIds.has(key) && (!loc.remoteId || String(loc.id).startsWith("ex_"))) {
+      merged.push({
+        ...loc,
+        authorId: loc.authorId || loc.author || currentUser?.username || "Élève",
+        authorRole: loc.authorRole || (loc.author === currentUser?.username ? (currentUser?.role || "élève") : "élève"),
+        _isShared: false,
+        _hasLocalDraft: Boolean(!loc.result)
+      });
+    }
+  });
+
+  let filtered = merged;
+  if (window._exerciceFilterTab === "profs") {
+    filtered = filtered.filter(ex => {
+      const liveAuthor = window.usersMap.get(ex.authorId);
+      const role = liveAuthor?.role || ex.authorRole;
+      return role === "professeur" || role === "admin";
+    });
+  } else if (window._exerciceFilterTab === "mine") {
+    filtered = filtered.filter(ex => ex._hasLocalDraft && !ex.result);
   } else if (window._exerciceFilterTab === "graded") {
-    filtered = list.filter(ex => ex.result);
+    filtered = filtered.filter(ex => Boolean(ex.result));
   }
 
   if (window._exerciceSubjectFilter !== "all") {
@@ -8669,27 +9430,28 @@ window.loadExercicesFeed = () => {
     filtered = filtered.filter(ex =>
       (ex.title || "").toLowerCase().includes(searchInput) ||
       (ex.subject || "").toLowerCase().includes(searchInput) ||
-      (ex.topic || "").toLowerCase().includes(searchInput)
+      (ex.topic || "").toLowerCase().includes(searchInput) ||
+      (ex.authorDisplayName || ex.authorId || "").toLowerCase().includes(searchInput)
     );
   }
 
   if (window._exerciceSortOrder === "score_desc") {
-    filtered.sort((a, b) => (b.result?.totalScore || 0) - (a.result?.totalScore || 0));
+    filtered.sort((a, b) => (b.result?.totalScore || -1) - (a.result?.totalScore || -1));
   } else if (window._exerciceSortOrder === "score_asc") {
-    filtered.sort((a, b) => (a.result?.totalScore || 0) - (b.result?.totalScore || 0));
+    filtered.sort((a, b) => (a.result?.totalScore ?? 99) - (b.result?.totalScore ?? 99));
   } else if (window._exerciceSortOrder === "oldest") {
-    filtered.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    filtered.sort((a, b) => (a.timestamp || a.createdAt || 0) - (b.timestamp || b.createdAt || 0));
   } else {
-    filtered.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    filtered.sort((a, b) => (b.timestamp || b.createdAt || 0) - (a.timestamp || a.createdAt || 0));
   }
 
   if (filtered.length === 0) {
     container.innerHTML = `
-      <div style="text-align:center; padding:48px 20px; background:var(--card-bg); border-radius:20px; border:1px solid var(--hl);">
+      <div style="grid-column:1/-1; text-align:center; padding:48px 20px; background:var(--card-bg); border-radius:20px; border:1px solid var(--hl);">
         <div style="font-size:42px; margin-bottom:12px;">✍️</div>
         <h3 style="margin:0 0 8px 0;">Aucun exercice trouvé</h3>
-        <p class="caption" style="max-width:400px; margin:0 auto 20px auto;">
-          ${searchInput ? "Aucun sujet ne correspond à votre recherche." : "Vous n'avez pas encore généré d'exercice d'entraînement. Cliquez ci-dessous pour lancer votre première session avec l'IA !"}
+        <p class="caption" style="max-width:440px; margin:0 auto 20px auto;">
+          ${searchInput ? "Aucun sujet ne correspond à votre recherche." : "Aucun exercice disponible dans cette catégorie pour le moment. Créez-en un avec l'IA pour le partager avec votre classe !"}
         </p>
         <button class="btn-pill" onclick="openCreateExerciceModal()">✨ Créer un exercice avec l'IA</button>
       </div>
@@ -8697,55 +9459,188 @@ window.loadExercicesFeed = () => {
     return;
   }
 
+  const isAdmin = currentUser?.role === "admin" || (currentUser?.subRoles && currentUser.subRoles.includes("admin"));
+
   container.innerHTML = filtered.map(ex => {
+    const exId = ex.id;
     const isGraded = Boolean(ex.result);
-    const scoreHtml = isGraded ? `
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span style="font-size:22px; font-weight:900; color:var(--primary);">${ex.result.totalScore}/20</span>
-        <span class="ex-badge-soft">${escapeHtmlText(ex.result.mention || "Noté")}</span>
-      </div>
-    ` : `
-      <span class="type-tag" style="background:rgba(255,149,0,.14); color:#b25e00; font-weight:700;">En cours d'épreuve</span>
-    `;
+    const liveAuthor = window.usersMap.get(ex.authorId) || {};
+    const liveRole = liveAuthor.role || ex.authorRole || "élève";
+    const liveName = liveAuthor.displayName || ex.authorDisplayName || ex.authorId || "Élève";
+    const liveAv = liveAuthor.avatar !== undefined ? liveAuthor.avatar : (ex.authorAvatar || "");
+    const authorBadge = getBadge(liveAuthor);
+    const avContent = liveAv ? `<img src="${esc(liveAv)}" alt="">` : escapeHtmlText(liveName).slice(0, 2).toUpperCase();
+    const roleClass = liveRole === "professeur" ? "professeur" : liveRole === "admin" ? "admin" : liveRole === "HS" ? "hs" : "eleve";
+    const canDel = ex._isShared ? (isAdmin || ex.authorId === currentUser?.username) : true;
+    const hasLiked = (ex.likes || []).includes(currentUser?.username);
+    const likeCount = (ex.likes || []).length;
+    const dateStr = new Date(ex.timestamp || ex.createdAt || Date.now()).toLocaleDateString("fr-FR");
+
+    const scoreHtml = isGraded
+      ? `<div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+           <span style="font-size:19px; font-weight:900; color:var(--primary);">${ex.result.totalScore}/20</span>
+           <span class="ex-badge-soft">${escapeHtmlText(ex.result.mention || "Noté")}</span>
+         </div>`
+      : ex._hasLocalDraft
+        ? `<span class="type-tag" style="background:rgba(255,149,0,.14); color:#b25e00; font-weight:700; flex-shrink:0;">En cours</span>`
+        : `<span class="type-tag" style="background:var(--primary-l); color:var(--primary-f); font-weight:700; flex-shrink:0;">Sujet partagé</span>`;
 
     return `
       <div class="ex-feed-card">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
-          <div>
-            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:6px;">
-              <span class="type-tag" style="background:var(--primary-l); color:var(--primary-f); font-weight:700;">${escapeHtmlText(ex.subject)}</span>
+        <div class="post-header">
+          <a href="#${esc(ex.authorId || '')}" class="post-av">${avContent}</a>
+          <div style="flex:1;min-width:0">
+            <a href="#${esc(ex.authorId || '')}" class="post-author-name">${escapeHtmlText(liveName)}${authorBadge}</a>
+            <div class="post-meta">
+              <span class="rbadge ${roleClass}">${escapeHtmlText(liveRole)}</span>
+              <span class="subj-tag">${window.subjectsMap.get(ex.subject) || "📚"} ${escapeHtmlText(ex.subject)}</span>
               <span class="type-tag" style="background:var(--file-bg); color:var(--ink);">${escapeHtmlText(ex.level || "Standard")}</span>
-              <span class="type-tag" style="background:rgba(88,86,214,.1); color:#5856d6;">${getExerciseTypeLabel(ex.exerciseType)}</span>
-              <span class="type-tag" style="background:rgba(52,199,89,.12); color:#248a3d;">${ex.mode === "papier" ? "📝 Papier" : "💻 Clavier"}</span>
-              ${ex.durationMinutes ? `<span class="type-tag" style="background:var(--hl); color:var(--ink);">⏱️ ${ex.durationMinutes} min</span>` : ""}
             </div>
-            <h3 style="margin:0 0 6px 0; font-size:18px;">${escapeHtmlText(ex.title)}</h3>
-            <p class="caption" style="margin:0; font-size:13px; line-height:1.4;">${escapeHtmlText(ex.topic)}</p>
           </div>
           ${scoreHtml}
         </div>
 
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; border-top:1px solid var(--hl); padding-top:10px; flex-wrap:wrap; gap:8px;">
-          <span class="caption" style="font-size:12px;">
-            ${new Date(ex.createdAt || Date.now()).toLocaleDateString("fr-FR")} · ${ex.questions?.length || 0} question(s) · ${getGradingToneLabel(ex.result?.gradingToneUsed || ex.gradingTone)}
-          </span>
-          <div style="display:flex; gap:8px;">
+        <div style="flex:1; display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <span class="type-tag" style="background:rgba(88,86,214,.1); color:#5856d6;">${getExerciseTypeLabel(ex.exerciseType)}</span>
+            <span class="type-tag" style="background:rgba(52,199,89,.12); color:#248a3d;">${ex.mode === "papier" ? "📝 Papier" : "💻 Clavier"}</span>
+            ${ex.durationMinutes ? `<span class="type-tag" style="background:var(--hl); color:var(--ink);">⏱️ ${ex.durationMinutes} min</span>` : ""}
+          </div>
+          <div class="post-title">${escapeHtmlText(ex.title)}</div>
+          <p class="caption" style="margin:0; font-size:13px; line-height:1.45; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${escapeHtmlText(ex.topic || "")}</p>
+          <div class="caption" style="font-size:12px;">
+            ${dateStr} · ${ex.questions?.length || 0} question(s) · <strong>Fait par ${ex.attemptsCount || 0} personne(s)</strong>
+          </div>
+        </div>
+
+        <div class="post-card-footer">
+          <div class="post-actions" style="border-top: 1px solid var(--hl); padding-top: 10px;">
+            ${ex._isShared ? `
+              <button class="like-btn ${hasLiked ? 'liked' : ''}" onclick="toggleExerciceLike('${esc(exId)}')">
+                ${hasLiked ? '❤️' : '🤍'} ${likeCount}
+              </button>
+              <button class="like-btn" onclick="openShareModal('${esc(exId)}', 'ai_exercice', '${esc(ex.title)}')">↗️ Partager</button>
+            ` : ""}
+            ${canDel ? `<button class="btn-ghost btn-sm del" style="margin-left:auto;" onclick="${ex._isShared ? `deleteSharedExercice('${esc(exId)}')` : `deleteExerciceFromHistory('${esc(exId)}')`}" title="Supprimer">🗑️</button>` : ""}
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
             ${isGraded ? `
-              <button class="btn-pill btn-sm" onclick="openPastExerciceResult('${esc(ex.id)}')">📊 Voir la copie corrigée</button>
+              <button class="btn-pill btn-sm" style="flex:1; justify-content:center;" onclick="openPastExerciceResult('${esc(exId)}')">📊 Voir ma copie</button>
+              <button class="btn-ghost btn-sm" style="flex:1; justify-content:center;" onclick="startSharedExercice('${esc(exId)}', true)">🔄 Refaire</button>
+            ` : ex._hasLocalDraft ? `
+              <button class="btn-pill btn-sm" style="flex:1; justify-content:center;" onclick="openPastExerciceSession('${esc(exId)}')">🚀 Continuer</button>
+              <button class="btn-ghost btn-sm" onclick="startSharedExercice('${esc(exId)}', true)">🔄 Recommencer</button>
             ` : `
-              <button class="btn-pill btn-sm" onclick="openPastExerciceSession('${esc(ex.id)}')">🚀 Continuer l'épreuve</button>
+              <button class="btn-pill btn-sm" style="width:100%; justify-content:center;" onclick="startSharedExercice('${esc(exId)}', true)">🚀 Faire l'exercice</button>
             `}
-            <button class="btn-ghost btn-sm del" onclick="deleteExerciceFromHistory('${esc(ex.id)}')" title="Supprimer cet entraînement">🗑️</button>
           </div>
         </div>
       </div>
     `;
   }).join("");
+}
+
+window.loadExercicesFeed = () => {
+  if (!window._exUnsub) {
+    window._exUnsub = onSnapshot(collection(db, "ai_exercices"), snap => {
+      window._liveSharedExercicesData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderExercicesFeed();
+    }, err => {
+      console.warn("Erreur écoute exercices partagés :", err);
+      renderExercicesFeed();
+    });
+  }
+  renderExercicesFeed();
+};
+
+window.startSharedExercice = async (id, forceFresh = true) => {
+  let source = (window._liveSharedExercicesData || []).find(item => item.id === id);
+  if (!source) {
+    const localList = getStoredExercices();
+    source = localList.find(item => item.id === id || item.remoteId === id);
+  }
+  if (!source && id && !String(id).startsWith("ex_")) {
+    try {
+      const snap = await getDoc(doc(db, "ai_exercices", id));
+      if (snap.exists()) source = { id: snap.id, ...snap.data() };
+    } catch (_) {}
+  }
+  if (!source) {
+    showToast("Cet exercice n'est plus disponible.");
+    return;
+  }
+
+  if (!forceFresh) {
+    const localList = getStoredExercices();
+    const localMatch = localList.find(item => item.id === id || item.remoteId === id);
+    if (localMatch?.result) {
+      window._currentExercice = localMatch;
+      displayExerciceResults(localMatch);
+      return;
+    }
+    if (localMatch) {
+      window.startExerciceSession(localMatch);
+      return;
+    }
+  }
+
+  const freshAttempt = {
+    id: source.id,
+    remoteId: String(source.id || "").startsWith("ex_") ? (source.remoteId || "") : source.id,
+    title: source.title,
+    subject: source.subject,
+    topic: source.topic,
+    level: source.level,
+    instructions: source.instructions,
+    questions: JSON.parse(JSON.stringify(source.questions || [])),
+    mode: source.mode || "clavier",
+    durationMinutes: source.durationMinutes || 0,
+    exerciseType: source.exerciseType || "mix",
+    gradingTone: source.gradingTone || "bac",
+    authorId: source.authorId || source.author || "",
+    authorDisplayName: source.authorDisplayName || "",
+    authorRole: source.authorRole || "élève",
+    createdAt: Date.now(),
+    timestamp: source.timestamp || source.createdAt || Date.now(),
+    studentAnswers: [],
+    structuredAnswers: {},
+    result: null
+  };
+  saveExerciceToHistory(freshAttempt);
+  window.startExerciceSession(freshAttempt);
+};
+
+window.toggleExerciceLike = async (exId) => {
+  if (!currentUser?.username) return;
+  const ref = doc(db, "ai_exercices", exId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  let likes = snap.data().likes || [];
+  if (likes.includes(currentUser.username)) {
+    likes = likes.filter(u => u !== currentUser.username);
+  } else {
+    likes.push(currentUser.username);
+    trackActivityEvent("like");
+  }
+  await updateDoc(ref, { likes });
+};
+
+window.deleteSharedExercice = async (exId) => {
+  if (!confirm("Supprimer ce sujet partagé pour toute la classe ?")) return;
+  try {
+    await deleteDoc(doc(db, "ai_exercices", exId));
+    const list = getStoredExercices().filter(ex => ex.id !== exId && ex.remoteId !== exId);
+    localStorage.setItem(getExerciceStorageKey(), JSON.stringify(list));
+    syncContrib();
+    showToast("Sujet supprimé ✓");
+  } catch (e) {
+    showToast("Impossible de supprimer cet exercice.");
+  }
 };
 
 window.openPastExerciceSession = (id) => {
   const list = getStoredExercices();
-  const found = list.find(ex => ex.id === id);
+  const found = list.find(ex => ex.id === id || ex.remoteId === id);
   if (found) {
     window.startExerciceSession(found);
   }
@@ -8753,7 +9648,7 @@ window.openPastExerciceSession = (id) => {
 
 window.openPastExerciceResult = (id) => {
   const list = getStoredExercices();
-  const found = list.find(ex => ex.id === id);
+  const found = list.find(ex => ex.id === id || ex.remoteId === id);
   if (found && found.result) {
     window._currentExercice = found;
     displayExerciceResults(found);
@@ -8761,10 +9656,10 @@ window.openPastExerciceResult = (id) => {
 };
 
 window.deleteExerciceFromHistory = (id) => {
-  if (confirm("Supprimer définitivement cet exercice et sa correction ?")) {
-    const list = getStoredExercices().filter(ex => ex.id !== id);
-    localStorage.setItem("dnb_exercices_history", JSON.stringify(list));
-    loadExercicesFeed();
+  if (confirm("Supprimer définitivement cet exercice de ton historique ?")) {
+    const list = getStoredExercices().filter(ex => ex.id !== id && ex.remoteId !== id);
+    localStorage.setItem(getExerciceStorageKey(), JSON.stringify(list));
+    renderExercicesFeed();
     showToast("Exercice supprimé ✓");
   }
 };
@@ -8774,11 +9669,11 @@ window.setExercicesFilter = (tab) => {
   document.querySelectorAll(".ex-tab-filter").forEach(btn => {
     btn.classList.toggle("active", btn.id === `filter-ex-${tab}`);
   });
-  loadExercicesFeed();
+  renderExercicesFeed();
 };
 
 window.handleExerciceSearch = () => {
-  loadExercicesFeed();
+  renderExercicesFeed();
 };
 
 window.openExerciceFilterModal = () => {
@@ -8794,8 +9689,3948 @@ window.applyExerciceModalFilter = () => {
   window._exerciceSubjectFilter = subj;
   window._exerciceSortOrder = sort;
   closeModal("m-ex-filter");
-  loadExercicesFeed();
+  renderExercicesFeed();
   showToast("Filtres appliqués ✓");
 };
 
+// =========================================================================
+// MODULE DASHBOARD PROFESSEUR & ADMIN (#dashboard)
+// =========================================================================
+(() => {
+  const state = {
+    targetProfUsername: "",
+    activeSubtab: "overview",
+    selectedQuizKey: "",
+    posts: [],
+    quizzes: [],
+    aiQuizzes: [],
+    aiExercices: [],
+    attempts: [],
+    charts: {},
+    editQuestionStates: [],
+    loading: false
+  };
 
+  function isDashAuthorized() {
+    return hasProfessorAccess(currentUser) || isAdminUser(currentUser);
+  }
+
+  function destroyDashCharts() {
+    Object.values(state.charts).forEach(ch => {
+      try { ch?.destroy(); } catch (_) {}
+    });
+    state.charts = {};
+  }
+
+  function dashCssVar(name, fallback) {
+    try {
+      const val = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      return val || fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function formatDashDuration(sec) {
+    const s = Math.max(0, Math.round(Number(sec || 0)));
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60);
+    const rem = s % 60;
+    return `${m}m ${String(rem).padStart(2, "0")}s`;
+  }
+
+  function formatDashDate(ts) {
+    if (!ts) return "—";
+    try {
+      return new Date(ts).toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      });
+    } catch (_) {
+      return "—";
+    }
+  }
+
+  function computeAttemptPercent(att) {
+    const max = Number(att.maxScore || 0);
+    const sc = Number(att.score || 0);
+    if (max > 0) return Math.max(0, Math.min(100, Math.round((sc / max) * 100)));
+    if (typeof att.percentage === "number") return Math.max(0, Math.min(100, Math.round(att.percentage)));
+    return 0;
+  }
+
+  function computeAttemptOn20(att) {
+    const max = Number(att.maxScore || 0);
+    const sc = Number(att.score || 0);
+    if (max <= 0) return "—";
+    const val = (sc / max) * 20;
+    return `${Number.isInteger(val) ? val : val.toFixed(1)} / 20`;
+  }
+
+  function getEvalKey(type, id) {
+    return `${type}:${id}`;
+  }
+
+  function getTypeBadgeLabel(type) {
+    if (type === "ai_quiz") return "Quiz IA";
+    if (type === "ai_exercice") return "Exercice IA";
+    return "Quiz";
+  }
+
+  window.populateAuthorCourseLinkSelects = async () => {
+    if (!currentUser?.username) return;
+    if (!isDashAuthorized()) return;
+    const selectIds = ["quiz-create-linked-course", "quiz-ia-linked-course", "ex-create-linked-course"];
+    const selects = selectIds.map(id => document.getElementById(id)).filter(Boolean);
+    if (!selects.length) return;
+
+    try {
+      const snap = await getDocs(query(collection(db, "posts"), where("authorId", "==", currentUser.username)));
+      const posts = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(p => p.type !== "annonce")
+        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+      selects.forEach(sel => {
+        const prev = sel.value;
+        let html = `<option value="">-- Aucun cours associé (indépendant) --</option>`;
+        posts.forEach(p => {
+          const subj = p.matiere || "Cours";
+          html += `<option value="${esc(p.id)}">[${escapeHTML(subj)}] ${escapeHTML(p.title || "Sans titre")}</option>`;
+        });
+        sel.innerHTML = html;
+        if (prev && posts.some(p => p.id === prev)) sel.value = prev;
+      });
+    } catch (e) {
+      console.warn("Impossible de charger la liste des cours pour association :", e);
+    }
+  };
+
+  async function ensureUsersLoadedForDashboard() {
+    if (window.usersMap && window.usersMap.size > 0) return;
+    try {
+      const snap = await getDocs(collection(db, "users"));
+      snap.forEach(d => {
+        const u = { id: d.id, ...d.data() };
+        if (u.username) window.usersMap.set(u.username, u);
+      });
+    } catch (_) {}
+  }
+
+  async function setupAdminProfSelector() {
+    const adminBar = document.getElementById("dash-admin-controls");
+    const selectEl = document.getElementById("dash-admin-prof-select");
+    const isAdmin = isAdminUser(currentUser);
+
+    if (adminBar) adminBar.classList.toggle("hidden", !isAdmin);
+    document.getElementById("dash-th-admin-actions")?.classList.toggle("hidden", !isAdmin);
+    document.getElementById("dash-btn-add-attempt")?.classList.toggle("hidden", !isAdmin);
+
+    if (!isAdmin) {
+      state.targetProfUsername = currentUser?.username || "";
+      return;
+    }
+
+    await ensureUsersLoadedForDashboard();
+    if (!selectEl) return;
+
+    const allUsers = Array.from(window.usersMap.values());
+    const profs = allUsers
+      .filter(u => u.role === "professeur" || (Array.isArray(u.subRoles) && u.subRoles.includes("professeur")))
+      .sort((a, b) => String(a.displayName || a.username || "").localeCompare(String(b.displayName || b.username || ""), "fr"));
+    const admins = allUsers
+      .filter(u => isAdminUser(u) && !profs.some(p => p.username === u.username))
+      .sort((a, b) => String(a.displayName || a.username || "").localeCompare(String(b.displayName || b.username || ""), "fr"));
+
+    let html = "";
+    if (profs.length > 0) {
+      html += `<optgroup label="Professeurs">`;
+      profs.forEach(p => {
+        const label = `${p.displayName || p.username} (@${p.username})`;
+        html += `<option value="${esc(p.username)}">🎓 ${escapeHTML(label)}</option>`;
+      });
+      html += `</optgroup>`;
+    }
+    if (admins.length > 0) {
+      html += `<optgroup label="Administrateurs">`;
+      admins.forEach(a => {
+        const label = `${a.displayName || a.username} (@${a.username})`;
+        html += `<option value="${esc(a.username)}">🛡️ ${escapeHTML(label)}</option>`;
+      });
+      html += `</optgroup>`;
+    }
+    if (!html && currentUser?.username) {
+      html = `<option value="${esc(currentUser.username)}">${escapeHTML(currentUser.displayName || currentUser.username)}</option>`;
+    }
+
+    selectEl.innerHTML = html;
+
+    const candidateUsernames = new Set([...profs, ...admins].map(u => u.username));
+    if (state.targetProfUsername && candidateUsernames.has(state.targetProfUsername)) {
+      selectEl.value = state.targetProfUsername;
+    } else if (profs.length > 0 && !isProfessorUser(currentUser)) {
+      state.targetProfUsername = profs[0].username;
+      selectEl.value = state.targetProfUsername;
+    } else {
+      state.targetProfUsername = selectEl.value || currentUser?.username || "";
+    }
+  }
+
+  window.handleAdminDashboardProfChange = () => {
+    if (!isAdminUser(currentUser)) return;
+    const sel = document.getElementById("dash-admin-prof-select");
+    if (!sel) return;
+    state.targetProfUsername = sel.value || currentUser.username;
+    state.selectedQuizKey = "";
+    window.loadTeacherDashboard(true);
+  };
+
+  window.switchDashboardSubtab = (tab, btn) => {
+    state.activeSubtab = tab;
+    document.querySelectorAll(".dash-subtab").forEach(b => {
+      b.classList.toggle("active", b.dataset.dashTab === tab);
+    });
+    ["overview", "quiz", "courses"].forEach(name => {
+      document.getElementById(`dash-panel-${name}`)?.classList.toggle("hidden", name !== tab);
+    });
+    window.renderTeacherDashboard();
+  };
+
+  window.selectDashboardQuiz = (evalKey, jumpToTab = false) => {
+    state.selectedQuizKey = evalKey || "";
+    if (jumpToTab) {
+      window.switchDashboardSubtab("quiz");
+    } else {
+      renderSelectedQuizDetails();
+      renderQuizStripSelection();
+    }
+  };
+
+  window.loadTeacherDashboard = async () => {
+    if (!currentUser || !isDashAuthorized()) return;
+    const loadEl = document.getElementById("dash-loading");
+    const contentEl = document.getElementById("dash-content");
+    if (loadEl) loadEl.classList.remove("hidden");
+    if (contentEl) contentEl.classList.add("hidden");
+
+    await setupAdminProfSelector();
+    const targetUsername = state.targetProfUsername || currentUser.username;
+
+    const targetUser = window.usersMap.get(targetUsername) || (targetUsername === currentUser.username ? currentUser : null);
+    const kickerEl = document.getElementById("dash-role-kicker");
+    const subtitleEl = document.getElementById("dash-subtitle");
+    if (kickerEl) {
+      kickerEl.textContent = isAdminUser(currentUser) ? "Vue Admin" : "Espace Professeur";
+    }
+    if (subtitleEl) {
+      subtitleEl.textContent = isAdminUser(currentUser)
+        ? `${targetUser?.displayName || targetUsername} (@${targetUsername})`
+        : `${currentUser.displayName || currentUser.username} (@${targetUsername})`;
+    }
+
+    try {
+      const [postsSnap, quizzesSnap, aiQuizzesSnap, aiExSnap, quizAttByAuthorSnap, exAttByAuthorSnap] = await Promise.all([
+        getDocs(query(collection(db, "posts"), where("authorId", "==", targetUsername))).catch(() => null),
+        getDocs(query(collection(db, "quizzes"), where("authorId", "==", targetUsername))).catch(() => null),
+        getDocs(query(collection(db, "ai_quizzes"), where("authorId", "==", targetUsername))).catch(() => null),
+        getDocs(query(collection(db, "ai_exercices"), where("authorId", "==", targetUsername))).catch(() => null),
+        getDocs(query(collection(db, "quiz_attempts"), where("authorId", "==", targetUsername))).catch(() => null),
+        getDocs(query(collection(db, "exercice_attempts"), where("authorId", "==", targetUsername))).catch(() => null)
+      ]);
+
+      state.posts = postsSnap ? postsSnap.docs.map(d => ({ id: d.id, ...d.data() })) : [];
+      state.quizzes = quizzesSnap ? quizzesSnap.docs.map(d => ({ id: d.id, _evalType: "quiz", ...d.data() })) : [];
+      state.aiQuizzes = aiQuizzesSnap ? aiQuizzesSnap.docs.map(d => ({ id: d.id, _evalType: "ai_quiz", ...d.data() })) : [];
+      state.aiExercices = aiExSnap ? aiExSnap.docs.map(d => ({ id: d.id, _evalType: "ai_exercice", matiere: d.data().subject || "Autre", ...d.data() })) : [];
+
+      const attemptsMap = new Map();
+      quizAttByAuthorSnap?.forEach(d => {
+        const data = d.data() || {};
+        attemptsMap.set(`quiz_attempts:${d.id}`, {
+          id: d.id,
+          _col: "quiz_attempts",
+          _evalType: data.isAI ? "ai_quiz" : "quiz",
+          _evalId: data.quizId,
+          ...data
+        });
+      });
+
+      // Fallback for older quiz_attempts saved before authorId was stamped
+      const quizIds = [...state.quizzes, ...state.aiQuizzes].map(q => q.id).filter(Boolean);
+      for (let i = 0; i < quizIds.length; i += 10) {
+        const chunk = quizIds.slice(i, i + 10);
+        try {
+          const legSnap = await getDocs(query(collection(db, "quiz_attempts"), where("quizId", "in", chunk)));
+          legSnap.forEach(d => {
+            const key = `quiz_attempts:${d.id}`;
+            if (!attemptsMap.has(key)) {
+              const data = d.data() || {};
+              const parent = [...state.quizzes, ...state.aiQuizzes].find(q => q.id === data.quizId);
+              attemptsMap.set(key, {
+                id: d.id,
+                _col: "quiz_attempts",
+                _evalType: parent?.isAI ? "ai_quiz" : (data.isAI ? "ai_quiz" : "quiz"),
+                _evalId: data.quizId,
+                ...data
+              });
+            }
+          });
+        } catch (_) {}
+      }
+
+      exAttByAuthorSnap?.forEach(d => {
+        const data = d.data() || {};
+        attemptsMap.set(`exercice_attempts:${d.id}`, {
+          id: d.id,
+          _col: "exercice_attempts",
+          _evalType: "ai_exercice",
+          _evalId: data.exerciceId,
+          ...data
+        });
+      });
+
+      const exIds = state.aiExercices.map(e => e.id).filter(Boolean);
+      for (let i = 0; i < exIds.length; i += 10) {
+        const chunk = exIds.slice(i, i + 10);
+        try {
+          const exLegSnap = await getDocs(query(collection(db, "exercice_attempts"), where("exerciceId", "in", chunk)));
+          exLegSnap.forEach(d => {
+            const key = `exercice_attempts:${d.id}`;
+            if (!attemptsMap.has(key)) {
+              const data = d.data() || {};
+              attemptsMap.set(key, {
+                id: d.id,
+                _col: "exercice_attempts",
+                _evalType: "ai_exercice",
+                _evalId: data.exerciceId,
+                ...data
+              });
+            }
+          });
+        } catch (_) {}
+      }
+
+      state.attempts = Array.from(attemptsMap.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      populateDashboardSubjectFilter();
+      window.renderTeacherDashboard();
+    } catch (err) {
+      console.error("Erreur chargement dashboard prof :", err);
+      showToast("Erreur lors du chargement du dashboard.");
+    } finally {
+      if (loadEl) loadEl.classList.add("hidden");
+      if (contentEl) contentEl.classList.remove("hidden");
+    }
+  };
+
+  function populateDashboardSubjectFilter() {
+    const sel = document.getElementById("dash-filter-subject");
+    if (!sel) return;
+    const prev = sel.value;
+    const subjects = new Set();
+    state.posts.forEach(p => { if (p.matiere) subjects.add(p.matiere); });
+    state.quizzes.forEach(q => { if (q.matiere) subjects.add(q.matiere); });
+    state.aiQuizzes.forEach(q => { if (q.matiere) subjects.add(q.matiere); });
+    state.aiExercices.forEach(e => { if (e.matiere || e.subject) subjects.add(e.matiere || e.subject); });
+    if (window.subjectsMap) {
+      window.subjectsMap.forEach((_, name) => subjects.add(name));
+    }
+
+    const sorted = Array.from(subjects).sort((a, b) => a.localeCompare(b, "fr"));
+    sel.innerHTML = `<option value="all">Toutes les matières</option>` +
+      sorted.map(s => `<option value="${esc(s)}">${window.subjectsMap.get(s) || "📚"} ${escapeHTML(s)}</option>`).join("");
+    if (prev && (prev === "all" || subjects.has(prev))) sel.value = prev;
+  }
+
+  function getFilteredEvaluations() {
+    const subj = document.getElementById("dash-filter-subject")?.value || "all";
+    const typeFilter = document.getElementById("dash-filter-type")?.value || "all";
+    const search = (document.getElementById("dash-search-input")?.value || "").trim().toLowerCase();
+
+    const allEvals = [
+      ...state.quizzes.map(q => ({ ...q, _evalType: "quiz", _key: getEvalKey("quiz", q.id) })),
+      ...state.aiQuizzes.map(q => ({ ...q, _evalType: "ai_quiz", _key: getEvalKey("ai_quiz", q.id) })),
+      ...state.aiExercices.map(e => ({ ...e, _evalType: "ai_exercice", matiere: e.subject || e.matiere || "Autre", _key: getEvalKey("ai_exercice", e.id) }))
+    ].sort((a, b) => (b.timestamp || b.createdAt || 0) - (a.timestamp || a.createdAt || 0));
+
+    return allEvals.filter(ev => {
+      if (subj !== "all" && (ev.matiere || "") !== subj) return false;
+      if (typeFilter !== "all" && ev._evalType !== typeFilter) return false;
+      if (search) {
+        const hay = `${ev.title || ""} ${ev.matiere || ""} ${ev.topic || ""}`.toLowerCase();
+        const hasStudentMatch = state.attempts.some(att =>
+          getEvalKey(att._evalType, att._evalId) === ev._key &&
+          `${att.userDisplayName || ""} ${att.userId || ""}`.toLowerCase().includes(search)
+        );
+        if (!hay.includes(search) && !hasStudentMatch) return false;
+      }
+      return true;
+    });
+  }
+
+  function getFilteredCourses() {
+    const subj = document.getElementById("dash-filter-subject")?.value || "all";
+    const search = (document.getElementById("dash-search-input")?.value || "").trim().toLowerCase();
+    return [...state.posts]
+      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+      .filter(p => {
+        if (subj !== "all" && (p.matiere || "") !== subj) return false;
+        if (search) {
+          const hay = `${p.title || ""} ${p.matiere || ""} ${p.type || ""}`.toLowerCase();
+          if (!hay.includes(search)) return false;
+        }
+        return true;
+      });
+  }
+
+  function getAttemptsForEval(evalKey) {
+    return state.attempts.filter(att => getEvalKey(att._evalType, att._evalId) === evalKey);
+  }
+
+  window.renderTeacherDashboard = () => {
+    const courses = getFilteredCourses();
+    const evals = getFilteredEvaluations();
+    const evalKeys = new Set(evals.map(e => e._key));
+    const attempts = state.attempts.filter(a => evalKeys.has(getEvalKey(a._evalType, a._evalId)));
+
+    // KPIs
+    const totalLikes = courses.reduce((sum, p) => sum + (Array.isArray(p.likes) ? p.likes.length : 0), 0);
+    const totalComments = courses.reduce((sum, p) => sum + (Array.isArray(p.comments) ? p.comments.length : 0), 0);
+    document.getElementById("dash-kpi-courses").textContent = String(courses.length);
+    document.getElementById("dash-kpi-courses-sub").textContent = `${totalLikes} like${totalLikes > 1 ? "s" : ""} · ${totalComments} commentaire${totalComments > 1 ? "s" : ""}`;
+
+    const qCnt = evals.filter(e => e._evalType === "quiz").length;
+    const aiCnt = evals.filter(e => e._evalType === "ai_quiz").length;
+    const exCnt = evals.filter(e => e._evalType === "ai_exercice").length;
+    document.getElementById("dash-kpi-quizzes").textContent = String(evals.length);
+    document.getElementById("dash-kpi-quizzes-sub").textContent = `${qCnt} Quiz · ${aiCnt} IA · ${exCnt} Exercices`;
+
+    const uniqueStudents = new Set(attempts.map(a => a.userId).filter(Boolean));
+    document.getElementById("dash-kpi-attempts").textContent = String(attempts.length);
+    document.getElementById("dash-kpi-attempts-sub").textContent = `${uniqueStudents.size} élève${uniqueStudents.size > 1 ? "s" : ""} distinct${uniqueStudents.size > 1 ? "s" : ""}`;
+
+    if (attempts.length > 0) {
+      const avgPct = Math.round(attempts.reduce((s, a) => s + computeAttemptPercent(a), 0) / attempts.length);
+      const passedCnt = attempts.filter(a => computeAttemptPercent(a) >= 50).length;
+      const passRate = Math.round((passedCnt / attempts.length) * 100);
+      const avgOn20 = ((avgPct / 100) * 20).toFixed(1);
+      document.getElementById("dash-kpi-passrate").textContent = `${passRate}%`;
+      document.getElementById("dash-kpi-avgscore").textContent = `Moyenne : ${avgOn20} / 20 (${avgPct}%)`;
+    } else {
+      document.getElementById("dash-kpi-passrate").textContent = "—";
+      document.getElementById("dash-kpi-avgscore").textContent = "Aucune note enregistrée";
+    }
+
+    if (state.activeSubtab === "overview") {
+      renderOverviewChartsAndTable(evals, attempts);
+    } else if (state.activeSubtab === "quiz") {
+      renderQuizPickerAndDetails(evals);
+    } else if (state.activeSubtab === "courses") {
+      renderCoursesAndLinkedQuizzes(courses, evals);
+    }
+  };
+
+  function renderOverviewChartsAndTable(evals, attempts) {
+    const badgeEl = document.getElementById("dash-chart-quizzes-badge");
+    if (badgeEl) badgeEl.textContent = `${evals.length} évaluation${evals.length > 1 ? "s" : ""}`;
+
+    // Chart 1: Success rate by quiz
+    if (state.charts.quizzesSuccess) {
+      try { state.charts.quizzesSuccess.destroy(); } catch (_) {}
+      state.charts.quizzesSuccess = null;
+    }
+    const barCanvas = document.getElementById("dash-quizzes-success-chart");
+    if (barCanvas && window.Chart) {
+      const inkColor = dashCssVar("--ink", "#0f172a");
+      const mutedColor = dashCssVar("--ink-m", "#64748b");
+      const gridColor = dashCssVar("--hl", "rgba(148,163,184,0.22)");
+
+      const labels = evals.length
+        ? evals.slice(0, 18).map(ev => (ev.title || "Sans titre").length > 22 ? (ev.title || "Sans titre").slice(0, 21) + "…" : (ev.title || "Sans titre"))
+        : ["Aucun quiz"];
+      const rates = evals.length
+        ? evals.slice(0, 18).map(ev => {
+            const list = getAttemptsForEval(ev._key);
+            if (!list.length) return 0;
+            return Math.round(list.reduce((s, a) => s + computeAttemptPercent(a), 0) / list.length);
+          })
+        : [0];
+      const colors = evals.length
+        ? rates.map((r, i) => {
+            const hasAttempts = getAttemptsForEval(evals[i]._key).length > 0;
+            if (!hasAttempts) return "rgba(148,163,184,0.35)";
+            if (r >= 70) return "#16a34a";
+            if (r >= 50) return "#d97706";
+            return "#dc2626";
+          })
+        : ["rgba(148,163,184,0.35)"];
+
+      state.charts.quizzesSuccess = new Chart(barCanvas, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: "Taux de réussite moyen (%)",
+            data: rates,
+            backgroundColor: colors,
+            borderRadius: 8,
+            borderSkipped: false,
+            maxBarThickness: 38
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          onClick: (_, elements) => {
+            if (elements && elements.length > 0 && evals[elements[0].index]) {
+              window.selectDashboardQuiz(evals[elements[0].index]._key, true);
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const ev = evals[ctx.dataIndex];
+                  const cnt = ev ? getAttemptsForEval(ev._key).length : 0;
+                  return cnt ? `${ctx.raw}% de réussite (${cnt} tentative${cnt > 1 ? "s" : ""})` : "Aucune tentative";
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              ticks: { color: mutedColor, callback: v => `${v}%` },
+              grid: { color: gridColor }
+            },
+            x: {
+              ticks: { color: inkColor, maxRotation: 35, minRotation: 0 },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    // Chart 2: Score bracket distribution
+    if (state.charts.scoreDist) {
+      try { state.charts.scoreDist.destroy(); } catch (_) {}
+      state.charts.scoreDist = null;
+    }
+    const distCanvas = document.getElementById("dash-score-dist-chart");
+    const distTotalEl = document.getElementById("dash-dist-total");
+    const distLegendEl = document.getElementById("dash-dist-legend");
+    if (distTotalEl) distTotalEl.textContent = String(attempts.length);
+
+    const brackets = [
+      { label: "75% – 100% (Très bien)", color: "#16a34a", count: 0 },
+      { label: "50% – 74% (Réussi)", color: "#0284c7", count: 0 },
+      { label: "25% – 49% (Fragile)", color: "#d97706", count: 0 },
+      { label: "0% – 24% (Insuffisant)", color: "#dc2626", count: 0 }
+    ];
+    attempts.forEach(a => {
+      const p = computeAttemptPercent(a);
+      if (p >= 75) brackets[0].count++;
+      else if (p >= 50) brackets[1].count++;
+      else if (p >= 25) brackets[2].count++;
+      else brackets[3].count++;
+    });
+
+    if (distLegendEl) {
+      distLegendEl.innerHTML = brackets.map(b => `
+        <div class="stats-legend-row">
+          <span class="stats-legend-dot" style="background:${b.color};"></span>
+          <span class="stats-legend-label">${b.label}</span>
+          <strong class="stats-legend-val">${b.count}</strong>
+        </div>
+      `).join("");
+    }
+
+    if (distCanvas && window.Chart) {
+      const hasAny = attempts.length > 0;
+      state.charts.scoreDist = new Chart(distCanvas, {
+        type: "doughnut",
+        data: {
+          labels: hasAny ? brackets.map(b => b.label) : ["Aucune donnée"],
+          datasets: [{
+            data: hasAny ? brackets.map(b => b.count) : [1],
+            backgroundColor: hasAny ? brackets.map(b => b.color) : ["rgba(148,163,184,0.28)"],
+            borderWidth: 0,
+            hoverOffset: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "70%",
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => hasAny ? `${ctx.label} : ${ctx.raw} copie(s)` : "Aucune copie enregistrée"
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Overview Quizzes Table
+    const tbody = document.getElementById("dash-overview-quizzes-tbody");
+    if (tbody) {
+      if (!evals.length) {
+        tbody.innerHTML = `<tr><td colspan="8" class="stats-empty">Aucun quiz pour ce filtre.</td></tr>`;
+      } else {
+        const courseById = new Map(state.posts.map(p => [p.id, p]));
+        tbody.innerHTML = evals.map(ev => {
+          const list = getAttemptsForEval(ev._key);
+          const avgPct = list.length ? Math.round(list.reduce((s, a) => s + computeAttemptPercent(a), 0) / list.length) : null;
+          const passCnt = list.filter(a => computeAttemptPercent(a) >= 50).length;
+          const passRate = list.length ? Math.round((passCnt / list.length) * 100) : null;
+          const linkedCourse = ev.linkedCourseId ? courseById.get(ev.linkedCourseId) : null;
+          const avgOn20 = avgPct !== null ? `${((avgPct / 100) * 20).toFixed(1)} / 20` : "—";
+          const statusCls = passRate === null ? "" : (passRate >= 70 ? "dash-status-ok" : passRate >= 50 ? "dash-status-mid" : "dash-status-low");
+          return `
+            <tr>
+              <td><strong>${escapeHTML(ev.title || "Sans titre")}</strong></td>
+              <td>${escapeHTML(getTypeBadgeLabel(ev._evalType))}</td>
+              <td>${window.subjectsMap.get(ev.matiere) || "📚"} ${escapeHTML(ev.matiere || "Autre")}</td>
+              <td>${linkedCourse ? escapeHTML(linkedCourse.title || "Cours lié") : "—"}</td>
+              <td class="num">${list.length}</td>
+              <td class="num">${avgOn20}</td>
+              <td class="num"><span class="dash-status-txt ${statusCls}">${passRate !== null ? `${passRate}%` : "—"}</span></td>
+              <td>
+                <button type="button" class="btn-ghost btn-sm" onclick="selectDashboardQuiz('${esc(ev._key)}', true)">Analyser →</button>
+              </td>
+            </tr>
+          `;
+        }).join("");
+      }
+    }
+  }
+
+  function renderQuizStripSelection() {
+    document.querySelectorAll(".dash-quiz-chip-btn").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.evalKey === state.selectedQuizKey);
+    });
+    const sel = document.getElementById("dash-quiz-select");
+    if (sel && state.selectedQuizKey && sel.value !== state.selectedQuizKey) {
+      sel.value = state.selectedQuizKey;
+    }
+  }
+
+  function renderQuizPickerAndDetails(evals) {
+    const emptyEl = document.getElementById("dash-quiz-detail-empty");
+    const bodyEl = document.getElementById("dash-quiz-detail-body");
+    const selectEl = document.getElementById("dash-quiz-select");
+    const stripEl = document.getElementById("dash-quiz-quick-strip");
+
+    if (!evals.length) {
+      if (emptyEl) emptyEl.classList.remove("hidden");
+      if (bodyEl) bodyEl.classList.add("hidden");
+      if (selectEl) selectEl.innerHTML = "";
+      if (stripEl) stripEl.innerHTML = "";
+      return;
+    }
+
+    if (emptyEl) emptyEl.classList.add("hidden");
+    if (bodyEl) bodyEl.classList.remove("hidden");
+
+    if (!state.selectedQuizKey || !evals.some(e => e._key === state.selectedQuizKey)) {
+      state.selectedQuizKey = evals[0]._key;
+    }
+
+    if (selectEl) {
+      selectEl.innerHTML = evals.map(ev => {
+        const cnt = getAttemptsForEval(ev._key).length;
+        return `<option value="${esc(ev._key)}">[${escapeHTML(getTypeBadgeLabel(ev._evalType))}] ${escapeHTML(ev.title || "Sans titre")} (${cnt} note${cnt > 1 ? "s" : ""})</option>`;
+      }).join("");
+      selectEl.value = state.selectedQuizKey;
+    }
+
+    if (stripEl) {
+      stripEl.innerHTML = evals.map(ev => {
+        const list = getAttemptsForEval(ev._key);
+        const avg = list.length ? Math.round(list.reduce((s, a) => s + computeAttemptPercent(a), 0) / list.length) : null;
+        return `
+          <button type="button" class="dash-quiz-chip-btn ${ev._key === state.selectedQuizKey ? "active" : ""}" data-eval-key="${esc(ev._key)}" onclick="selectDashboardQuiz('${esc(ev._key)}')">
+            <span class="dash-quiz-chip-title">${escapeHTML(ev.title || "Sans titre")}</span>
+            <span class="dash-quiz-chip-meta">${escapeHTML(getTypeBadgeLabel(ev._evalType))} · ${list.length} rép.${avg !== null ? ` · ${avg}%` : ""}</span>
+          </button>
+        `;
+      }).join("");
+    }
+
+    renderSelectedQuizDetails();
+  }
+
+  window.renderSelectedQuizDetails = () => {
+    const evals = getFilteredEvaluations();
+    const selectedEval = evals.find(e => e._key === state.selectedQuizKey) || evals[0];
+    if (!selectedEval) return;
+
+    const allAttempts = getAttemptsForEval(selectedEval._key);
+
+    // Populate class filter
+    const classSel = document.getElementById("dash-students-classe");
+    if (classSel) {
+      const prevC = classSel.value;
+      const classIds = new Set(allAttempts.map(a => a.classeId).filter(Boolean));
+      const opts = [`<option value="all">Toutes les classes</option>`];
+      Array.from(classIds).forEach(cid => {
+        const cName = window.classesMap?.get(cid)?.nom || cid;
+        opts.push(`<option value="${esc(cid)}">${escapeHTML(cName)}</option>`);
+      });
+      classSel.innerHTML = opts.join("");
+      if (prevC && (prevC === "all" || classIds.has(prevC))) classSel.value = prevC;
+    }
+
+    // Mini KPIs
+    const uniqueUsers = new Set(allAttempts.map(a => a.userId).filter(Boolean));
+    document.getElementById("dash-q-attempts").textContent = String(allAttempts.length);
+    document.getElementById("dash-q-students").textContent = String(uniqueUsers.size);
+
+    if (allAttempts.length > 0) {
+      const avgPct = Math.round(allAttempts.reduce((s, a) => s + computeAttemptPercent(a), 0) / allAttempts.length);
+      const passed = allAttempts.filter(a => computeAttemptPercent(a) >= 50).length;
+      const passRate = Math.round((passed / allAttempts.length) * 100);
+      const withTime = allAttempts.filter(a => Number(a.timeTaken || 0) > 0);
+      const avgTime = withTime.length ? withTime.reduce((s, a) => s + Number(a.timeTaken || 0), 0) / withTime.length : 0;
+
+      document.getElementById("dash-q-avg").textContent = `${((avgPct / 100) * 20).toFixed(1)} / 20 (${avgPct}%)`;
+      document.getElementById("dash-q-pass").textContent = `${passRate}%`;
+      document.getElementById("dash-q-time").textContent = withTime.length ? formatDashDuration(avgTime) : "—";
+    } else {
+      document.getElementById("dash-q-avg").textContent = "—";
+      document.getElementById("dash-q-pass").textContent = "—";
+      document.getElementById("dash-q-time").textContent = "—";
+    }
+
+    // Per-question statistics
+    const questions = Array.isArray(selectedEval.questions) ? selectedEval.questions : [];
+    const qStats = questions.map((q, idx) => ({
+      index: idx,
+      text: q.question || q.text || q.title || `Question ${idx + 1}`,
+      correctCount: 0,
+      totalCount: 0
+    }));
+
+    allAttempts.forEach(att => {
+      if (!Array.isArray(att.questionResults)) return;
+      att.questionResults.forEach((qr, fallbackIdx) => {
+        const qIdx = typeof qr.questionIndex === "number" ? qr.questionIndex : fallbackIdx;
+        if (qIdx >= 0 && qIdx < qStats.length) {
+          qStats[qIdx].totalCount++;
+          if (qr.isCorrect) qStats[qIdx].correctCount++;
+        }
+      });
+    });
+
+    const qBadge = document.getElementById("dash-q-count-badge");
+    if (qBadge) qBadge.textContent = `${questions.length} question${questions.length > 1 ? "s" : ""}`;
+
+    const qSub = document.getElementById("dash-q-chart-sub");
+    const hasDetailedQData = qStats.some(s => s.totalCount > 0);
+    if (qSub) {
+      qSub.textContent = hasDetailedQData
+        ? `${Math.max(...qStats.map(s => s.totalCount))} copie(s)`
+        : "";
+    }
+
+    if (state.charts.questionSuccess) {
+      try { state.charts.questionSuccess.destroy(); } catch (_) {}
+      state.charts.questionSuccess = null;
+    }
+    const qCanvas = document.getElementById("dash-question-success-chart");
+    if (qCanvas && window.Chart) {
+      const inkColor = dashCssVar("--ink", "#0f172a");
+      const mutedColor = dashCssVar("--ink-m", "#64748b");
+      const gridColor = dashCssVar("--hl", "rgba(148,163,184,0.22)");
+
+      const labels = qStats.length ? qStats.map(s => `Q${s.index + 1}`) : ["Aucune question"];
+      const rates = qStats.length ? qStats.map(s => s.totalCount > 0 ? Math.round((s.correctCount / s.totalCount) * 100) : 0) : [0];
+      const bgColors = qStats.length
+        ? qStats.map((s, i) => {
+            if (!s.totalCount) return "rgba(148,163,184,0.35)";
+            if (rates[i] >= 70) return "#16a34a";
+            if (rates[i] >= 50) return "#d97706";
+            return "#dc2626";
+          })
+        : ["rgba(148,163,184,0.35)"];
+
+      state.charts.questionSuccess = new Chart(qCanvas, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: "Réussite (%)",
+            data: rates,
+            backgroundColor: bgColors,
+            borderRadius: 8,
+            borderSkipped: false,
+            maxBarThickness: 34
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                title: (items) => {
+                  const idx = items?.[0]?.dataIndex ?? 0;
+                  const qs = qStats[idx];
+                  return qs ? `Q${qs.index + 1} · ${qs.text.slice(0, 70)}${qs.text.length > 70 ? "…" : ""}` : "";
+                },
+                label: (ctx) => {
+                  const qs = qStats[ctx.dataIndex];
+                  if (!qs || !qs.totalCount) return "Aucune donnée question";
+                  return `${ctx.raw}% de réussite (${qs.correctCount}/${qs.totalCount} bonnes réponses)`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              ticks: { color: mutedColor, callback: v => `${v}%` },
+              grid: { color: gridColor }
+            },
+            x: {
+              ticks: { color: inkColor },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    const qBreakdownEl = document.getElementById("dash-questions-breakdown");
+    if (qBreakdownEl) {
+      if (!qStats.length) {
+        qBreakdownEl.innerHTML = `<div class="stats-empty">Aucune question.</div>`;
+      } else {
+        qBreakdownEl.innerHTML = qStats.map(qs => {
+          const pct = qs.totalCount > 0 ? Math.round((qs.correctCount / qs.totalCount) * 100) : null;
+          const color = pct === null ? "rgba(148,163,184,0.5)" : pct >= 70 ? "#16a34a" : pct >= 50 ? "#d97706" : "#dc2626";
+          const statusCls = pct === null ? "" : pct >= 70 ? "dash-status-ok" : pct >= 50 ? "dash-status-mid" : "dash-status-low";
+          return `
+            <div class="dash-q-row">
+              <div class="dash-q-row-top">
+                <div class="dash-q-row-title">Q${qs.index + 1}. ${escapeHTML(qs.text)}</div>
+                <div class="dash-q-row-stat ${statusCls}">${pct !== null ? `${pct}% (${qs.correctCount}/${qs.totalCount})` : "—"}</div>
+              </div>
+              <div class="dash-q-row-bar-track">
+                <div class="dash-q-row-bar-fill" style="width:${pct !== null ? Math.max(4, pct) : 0}%; background:${color};"></div>
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
+    }
+
+    // Student grades table
+    const mode = document.getElementById("dash-students-mode")?.value || "all";
+    const classeFilter = document.getElementById("dash-students-classe")?.value || "all";
+    const studentSearch = (document.getElementById("dash-students-search")?.value || "").trim().toLowerCase();
+
+    let rows = allAttempts.filter(att => {
+      if (classeFilter !== "all" && (att.classeId || "") !== classeFilter) return false;
+      if (studentSearch) {
+        const hay = `${att.userDisplayName || ""} ${att.userId || ""}`.toLowerCase();
+        if (!hay.includes(studentSearch)) return false;
+      }
+      return true;
+    });
+
+    if (mode === "best" || mode === "latest") {
+      const byStudent = new Map();
+      rows.forEach(att => {
+        const k = att.userId || att.id;
+        const prev = byStudent.get(k);
+        if (!prev) {
+          byStudent.set(k, att);
+        } else if (mode === "best") {
+          if (computeAttemptPercent(att) > computeAttemptPercent(prev)) byStudent.set(k, att);
+        } else {
+          if ((att.timestamp || 0) > (prev.timestamp || 0)) byStudent.set(k, att);
+        }
+      });
+      rows = Array.from(byStudent.values());
+    }
+
+    rows.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+    const isAdmin = isAdminUser(currentUser);
+    document.getElementById("dash-th-admin-actions")?.classList.toggle("hidden", !isAdmin);
+
+    const tbody = document.getElementById("dash-students-tbody");
+    if (tbody) {
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="${isAdmin ? 8 : 7}" class="stats-empty">Aucune note enregistrée.</td></tr>`;
+      } else {
+        tbody.innerHTML = rows.map(att => {
+          const liveUser = window.usersMap.get(att.userId) || {};
+          const displayName = liveUser.displayName || att.userDisplayName || att.userId || "Élève";
+          const avatar = liveUser.avatar || "";
+          const initials = displayName.split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase() || "?";
+          const avHtml = avatar
+            ? `<img src="${esc(avatar)}" alt="${escapeHTML(displayName)}">`
+            : escapeHTML(initials);
+          const cId = att.classeId || liveUser.classeId || "";
+          const classeName = cId ? (window.classesMap?.get(cId)?.nom || cId) : "—";
+          const pct = computeAttemptPercent(att);
+          const statusCls = pct >= 70 ? "dash-status-ok" : pct >= 50 ? "dash-status-mid" : "dash-status-low";
+          const noteBadge = att.adminNote ? `<div class="caption" style="color:var(--primary);">Admin : ${escapeHTML(att.adminNote)}</div>` : "";
+          return `
+            <tr>
+              <td>
+                <div class="dash-student-cell">
+                  <div class="dash-student-av">${avHtml}</div>
+                  <div>
+                    <div><strong>${escapeHTML(displayName)}</strong></div>
+                    <div class="caption">@${escapeHTML(att.userId || "—")}</div>
+                    ${noteBadge}
+                  </div>
+                </div>
+              </td>
+              <td>${escapeHTML(classeName)}</td>
+              <td class="num"><strong>${Number(att.score || 0)}</strong> / ${Number(att.maxScore || 0)}</td>
+              <td class="num">${computeAttemptOn20(att)}</td>
+              <td class="num"><span class="dash-status-txt ${statusCls}">${pct}%</span></td>
+              <td class="num">${att.timeTaken ? formatDashDuration(att.timeTaken) : "—"}</td>
+              <td>${formatDashDate(att.timestamp)}</td>
+              ${isAdmin ? `
+                <td>
+                  <button type="button" class="btn-ghost btn-sm" onclick="openDashEditAttemptModal('${esc(att._col)}', '${esc(att.id)}')">✏️ Modifier</button>
+                </td>
+              ` : ""}
+            </tr>
+          `;
+        }).join("");
+      }
+    }
+  };
+
+  function renderCoursesAndLinkedQuizzes(courses, evals) {
+    const container = document.getElementById("dash-courses-list");
+    const badge = document.getElementById("dash-courses-count-badge");
+    if (badge) badge.textContent = `${courses.length} cours`;
+    if (!container) return;
+
+    if (!courses.length) {
+      container.innerHTML = `
+        <div class="dash-empty-state" style="grid-column:1/-1;">
+          <div class="dash-empty-ico">📚</div>
+          <h3>Aucun cours déposé</h3>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = courses.map(course => {
+      const explicitLinked = evals.filter(ev => ev.linkedCourseId && ev.linkedCourseId === course.id);
+      const subjectLinked = explicitLinked.length
+        ? explicitLinked
+        : evals.filter(ev => !ev.linkedCourseId && ev.matiere && course.matiere && ev.matiere === course.matiere);
+      const isExplicit = explicitLinked.length > 0;
+      const likesCnt = Array.isArray(course.likes) ? course.likes.length : 0;
+      const comCnt = Array.isArray(course.comments) ? course.comments.length : 0;
+      const filesCnt = Array.isArray(course.files) ? course.files.length : (course.fileData ? 1 : 0);
+
+      const linkedHtml = subjectLinked.length
+        ? subjectLinked.map(ev => {
+            const list = getAttemptsForEval(ev._key);
+            const avg = list.length ? Math.round(list.reduce((s, a) => s + computeAttemptPercent(a), 0) / list.length) : null;
+            return `
+              <div class="dash-linked-quiz-row">
+                <div style="min-width:0;">
+                  <div style="font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(ev.title || "Sans titre")}</div>
+                  <div class="caption">${escapeHTML(getTypeBadgeLabel(ev._evalType))} · ${list.length} note${list.length > 1 ? "s" : ""}${avg !== null ? ` · ${avg}% réussite` : ""}</div>
+                </div>
+                <button type="button" class="btn-ghost btn-sm" style="flex-shrink:0;" onclick="selectDashboardQuiz('${esc(ev._key)}', true)">Stats →</button>
+              </div>
+            `;
+          }).join("")
+        : `<div class="caption">Aucun quiz associé.</div>`;
+
+      return `
+        <div class="dash-course-card">
+          <div class="dash-course-meta">
+            <span>${window.subjectsMap.get(course.matiere) || "📚"} ${escapeHTML(course.matiere || "Général")}</span>
+            <span aria-hidden="true">·</span>
+            <span>${escapeHTML(course.type || "cours")}</span>
+            <span aria-hidden="true">·</span>
+            <span>${formatDashDate(course.timestamp)}</span>
+          </div>
+          <div class="dash-course-title">${escapeHTML(course.title || "Cours sans titre")}</div>
+          <div class="dash-course-stats-line">
+            ❤️ ${likesCnt} like${likesCnt > 1 ? "s" : ""} · 💬 ${comCnt} commentaire${comCnt > 1 ? "s" : ""} · 📎 ${filesCnt} pièce${filesCnt > 1 ? "s" : ""}
+          </div>
+          <div class="dash-course-linked-box">
+            <div class="caption" style="font-weight:700;">${isExplicit ? "Quiz liés à ce cours :" : "Quiz dans cette matière :"}</div>
+            ${linkedHtml}
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // --- Admin Only: Edit / Add / Delete Student Results ---
+  window.openDashEditAttemptModal = (col, attemptId) => {
+    if (!isAdminUser(currentUser)) {
+      showToast("Modification réservée aux administrateurs.");
+      return;
+    }
+    const att = state.attempts.find(a => a._col === col && a.id === attemptId);
+    if (!att) return showToast("Tentative introuvable.");
+
+    document.getElementById("dash-edit-mode").value = "edit";
+    document.getElementById("dash-edit-attempt-id").value = att.id;
+    document.getElementById("dash-edit-attempt-col").value = att._col;
+    document.getElementById("dash-edit-title").textContent = "Modifier le résultat de l'élève";
+
+    const liveUser = window.usersMap.get(att.userId) || {};
+    const studentName = liveUser.displayName || att.userDisplayName || att.userId || "Élève";
+    document.getElementById("dash-edit-subtitle").textContent = `${studentName} (@${att.userId}) · ${att.quizTitle || att.exerciceTitle || "Évaluation"}`;
+
+    document.getElementById("dash-edit-student-wrap")?.classList.add("hidden");
+    document.getElementById("dash-btn-delete-attempt")?.classList.remove("hidden");
+    toggleDashDeleteConfirm(false);
+
+    document.getElementById("dash-edit-score").value = String(Number(att.score || 0));
+    document.getElementById("dash-edit-max").value = String(Math.max(1, Number(att.maxScore || 1)));
+    document.getElementById("dash-edit-time").value = String(Math.max(0, Number(att.timeTaken || 0)));
+    document.getElementById("dash-edit-note").value = att.adminNote || "";
+
+    state.editQuestionStates = Array.isArray(att.questionResults)
+      ? att.questionResults.map(q => ({ ...q }))
+      : [];
+
+    renderDashEditQuestionList();
+    openModal("m-dash-edit-attempt");
+  };
+
+  window.openDashAddAttemptModal = async () => {
+    if (!isAdminUser(currentUser)) {
+      showToast("Action réservée aux administrateurs.");
+      return;
+    }
+    const evals = getFilteredEvaluations();
+    const selectedEval = evals.find(e => e._key === state.selectedQuizKey) || evals[0];
+    if (!selectedEval) return showToast("Sélectionnez d'abord un quiz.");
+
+    await ensureUsersLoadedForDashboard();
+    const stuWrap = document.getElementById("dash-edit-student-wrap");
+    const stuSel = document.getElementById("dash-edit-student-select");
+    if (stuWrap && stuSel) {
+      const students = Array.from(window.usersMap.values())
+        .filter(u => !isProfessorUser(u))
+        .sort((a, b) => String(a.displayName || a.username || "").localeCompare(String(b.displayName || b.username || ""), "fr"));
+      stuSel.innerHTML = students.map(u => `<option value="${esc(u.username)}">${escapeHTML(u.displayName || u.username)} (@${escapeHTML(u.username)})</option>`).join("");
+      stuWrap.classList.remove("hidden");
+    }
+
+    const col = selectedEval._evalType === "ai_exercice" ? "exercice_attempts" : "quiz_attempts";
+    const qs = Array.isArray(selectedEval.questions) ? selectedEval.questions : [];
+    const maxScore = selectedEval._evalType === "ai_exercice" ? 20 : Math.max(1, qs.length);
+
+    document.getElementById("dash-edit-mode").value = "add";
+    document.getElementById("dash-edit-attempt-id").value = selectedEval.id;
+    document.getElementById("dash-edit-attempt-col").value = col;
+    document.getElementById("dash-edit-title").textContent = "Ajouter une note élève (Admin)";
+    document.getElementById("dash-edit-subtitle").textContent = `${selectedEval.title || "Évaluation"}`;
+    document.getElementById("dash-btn-delete-attempt")?.classList.add("hidden");
+    toggleDashDeleteConfirm(false);
+
+    document.getElementById("dash-edit-score").value = String(maxScore);
+    document.getElementById("dash-edit-max").value = String(maxScore);
+    document.getElementById("dash-edit-time").value = "60";
+    document.getElementById("dash-edit-note").value = "";
+
+    state.editQuestionStates = qs.map((q, idx) => ({
+      questionIndex: idx,
+      questionText: String(q.question || q.text || q.title || `Question ${idx + 1}`),
+      pointsAwarded: selectedEval._evalType === "ai_exercice" ? Number(q.points || 0) : 1,
+      maxPoints: selectedEval._evalType === "ai_exercice" ? Number(q.points || 1) : 1,
+      isCorrect: true
+    }));
+
+    renderDashEditQuestionList();
+    openModal("m-dash-edit-attempt");
+  };
+
+  function renderDashEditQuestionList() {
+    const sec = document.getElementById("dash-edit-questions-section");
+    const listEl = document.getElementById("dash-edit-questions-list");
+    if (!sec || !listEl) return;
+
+    if (!state.editQuestionStates.length) {
+      sec.classList.add("hidden");
+      listEl.innerHTML = "";
+      return;
+    }
+
+    sec.classList.remove("hidden");
+    listEl.innerHTML = state.editQuestionStates.map((q, idx) => `
+      <div class="dash-edit-q-item">
+        <div style="min-width:0; flex:1;">
+          <strong>Q${(typeof q.questionIndex === "number" ? q.questionIndex : idx) + 1}.</strong> ${escapeHTML(q.questionText || "Question")}
+        </div>
+        <button type="button" class="btn-sm ${q.isCorrect ? "btn-pill" : "btn-ghost"}" style="flex-shrink:0;" onclick="toggleDashEditQuestionState(${idx})">
+          ${q.isCorrect ? "✓ Réussie" : "✕ Ratée"}
+        </button>
+      </div>
+    `).join("");
+  }
+
+  window.toggleDashEditQuestionState = (idx) => {
+    if (!isAdminUser(currentUser)) return;
+    const item = state.editQuestionStates[idx];
+    if (!item) return;
+    item.isCorrect = !item.isCorrect;
+    if (typeof item.maxPoints === "number") {
+      item.pointsAwarded = item.isCorrect ? item.maxPoints : 0;
+    }
+    renderDashEditQuestionList();
+  };
+
+  window.recalcDashAttemptScoreFromQuestions = () => {
+    if (!isAdminUser(currentUser) || !state.editQuestionStates.length) return;
+    const col = document.getElementById("dash-edit-attempt-col").value;
+    if (col === "exercice_attempts") {
+      const total = state.editQuestionStates.reduce((s, q) => s + (q.isCorrect ? Number(q.pointsAwarded ?? q.maxPoints ?? 0) : 0), 0);
+      document.getElementById("dash-edit-score").value = String(Math.round(total * 10) / 10);
+    } else {
+      const correctCount = state.editQuestionStates.filter(q => q.isCorrect).length;
+      document.getElementById("dash-edit-score").value = String(correctCount);
+      document.getElementById("dash-edit-max").value = String(state.editQuestionStates.length);
+    }
+  };
+
+  window.toggleDashDeleteConfirm = (show) => {
+    document.getElementById("dash-delete-confirm-bar")?.classList.toggle("hidden", !show);
+  };
+
+  window.confirmDeleteDashAttempt = async () => {
+    if (!isAdminUser(currentUser)) return showToast("Action réservée aux administrateurs.");
+    const attemptId = document.getElementById("dash-edit-attempt-id").value;
+    const col = document.getElementById("dash-edit-attempt-col").value;
+    if (!attemptId || !col) return;
+
+    try {
+      await deleteDoc(doc(db, col, attemptId));
+      state.attempts = state.attempts.filter(a => !(a._col === col && a.id === attemptId));
+      closeModal("m-dash-edit-attempt");
+      window.renderTeacherDashboard();
+      showToast("Tentative supprimée ✓");
+    } catch (e) {
+      console.error(e);
+      showToast("Impossible de supprimer cette tentative.");
+    }
+  };
+
+  window.saveDashAttemptEdits = async () => {
+    if (!isAdminUser(currentUser)) return showToast("Modification réservée aux administrateurs.");
+    const mode = document.getElementById("dash-edit-mode").value;
+    const targetId = document.getElementById("dash-edit-attempt-id").value;
+    const col = document.getElementById("dash-edit-attempt-col").value;
+    const maxScore = Math.max(1, Number(document.getElementById("dash-edit-max").value || 1));
+    const score = Math.max(0, Math.min(maxScore, Number(document.getElementById("dash-edit-score").value || 0)));
+    const timeTaken = Math.max(0, Math.round(Number(document.getElementById("dash-edit-time").value || 0)));
+    const adminNote = (document.getElementById("dash-edit-note").value || "").trim();
+    const percentage = Math.round((score / maxScore) * 100);
+
+    try {
+      if (mode === "add") {
+        const stuUsername = document.getElementById("dash-edit-student-select")?.value;
+        if (!stuUsername) return showToast("Choisis un élève.");
+        const stuObj = window.usersMap.get(stuUsername) || { username: stuUsername };
+        const evals = getFilteredEvaluations();
+        const selectedEval = evals.find(e => e.id === targetId && (
+          (col === "exercice_attempts" && e._evalType === "ai_exercice") ||
+          (col === "quiz_attempts" && e._evalType !== "ai_exercice")
+        ));
+        if (!selectedEval) return showToast("Évaluation introuvable.");
+
+        const payload = col === "exercice_attempts"
+          ? {
+              exerciceId: selectedEval.id,
+              exerciceTitle: selectedEval.title || "",
+              subject: selectedEval.matiere || selectedEval.subject || "",
+              authorId: selectedEval.authorId || state.targetProfUsername,
+              linkedCourseId: selectedEval.linkedCourseId || "",
+              userId: stuObj.username,
+              userDisplayName: stuObj.displayName || stuObj.username,
+              classeId: stuObj.classeId || "",
+              etablissementId: stuObj.etablissementId || "",
+              score,
+              maxScore,
+              percentage,
+              timeTaken,
+              adminNote,
+              questionResults: state.editQuestionStates,
+              timestamp: Date.now()
+            }
+          : {
+              quizId: selectedEval.id,
+              quizTitle: selectedEval.title || "",
+              quizType: selectedEval._evalType,
+              isAI: selectedEval._evalType === "ai_quiz",
+              matiere: selectedEval.matiere || "",
+              authorId: selectedEval.authorId || state.targetProfUsername,
+              linkedCourseId: selectedEval.linkedCourseId || "",
+              userId: stuObj.username,
+              userDisplayName: stuObj.displayName || stuObj.username,
+              classeId: stuObj.classeId || "",
+              etablissementId: stuObj.etablissementId || "",
+              score,
+              maxScore,
+              percentage,
+              timeTaken,
+              adminNote,
+              questionResults: state.editQuestionStates,
+              timestamp: Date.now()
+            };
+
+        const ref = await addDoc(collection(db, col), payload);
+        state.attempts.unshift({
+          id: ref.id,
+          _col: col,
+          _evalType: selectedEval._evalType,
+          _evalId: selectedEval.id,
+          ...payload
+        });
+        closeModal("m-dash-edit-attempt");
+        window.renderTeacherDashboard();
+        showToast("Note élève ajoutée ✓");
+        return;
+      }
+
+      const patch = {
+        score,
+        maxScore,
+        percentage,
+        timeTaken,
+        adminNote,
+        modifiedByAdmin: currentUser.username,
+        modifiedAt: Date.now()
+      };
+      if (state.editQuestionStates.length > 0) {
+        patch.questionResults = state.editQuestionStates;
+      }
+
+      await updateDoc(doc(db, col, targetId), patch);
+      const idx = state.attempts.findIndex(a => a._col === col && a.id === targetId);
+      if (idx > -1) {
+        state.attempts[idx] = { ...state.attempts[idx], ...patch };
+      }
+      closeModal("m-dash-edit-attempt");
+      window.renderTeacherDashboard();
+      showToast("Résultat mis à jour ✓");
+    } catch (e) {
+      console.error("Erreur modification tentative :", e);
+      showToast("Erreur lors de la sauvegarde.");
+    }
+  };
+})();
+
+// =========================================================================
+// EASTER EGG : COOKIE CLICKER STUDIO (lié à DnB Reviz + Firebase index 76)
+// =========================================================================
+(() => {
+  const COOKIE_FB = {
+    apiKey: "AIzaSyDXdEnimnKl8dG7xXprd5uhWFANddUr2Sg",
+    authDomain: "dancookieclicker.firebaseapp.com",
+    projectId: "dancookieclicker",
+    storageBucket: "dancookieclicker.firebasestorage.app",
+    messagingSenderId: "438891454674",
+    appId: "1:438891454674:web:603b70cad0b1cd422fcd0b",
+    measurementId: "G-58T7DPL4LH"
+  };
+
+  let cookieApp = null;
+  let cookieDb = null;
+  let cookieAuth = null;
+  const googleProvider = new GoogleAuthProvider();
+
+  function getCookieApp() {
+    if (!cookieApp) cookieApp = initializeApp(COOKIE_FB, "dnbCookieClickerApp");
+    return cookieApp;
+  }
+  function getCookieDb() {
+    if (!cookieDb) cookieDb = getFirestore(getCookieApp());
+    return cookieDb;
+  }
+  function getCookieAuth() {
+    if (!cookieAuth) cookieAuth = getAuth(getCookieApp());
+    return cookieAuth;
+  }
+
+  const defaultSave = {
+    username: "", saveCode: "", displayName: "", password: "", profilePic: "",
+    dnbUsername: "", dnbAvatar: "",
+    cookies: 0, totalCookies: 0, upgradesBought: [], playtime: 0,
+    banned: false, lastAdminSync: 0, lastGCSync: 0, lastForceSave: 0, groupId: null,
+    spinsLeft: 2, lastSpinReset: 0, companions: [], equippedCompanion: null,
+    sugars: 0, sugarTime: 0,
+    buildings: {
+      cursor: { count: 0, level: 0 }, grandma: { count: 0, level: 0 }, farm: { count: 0, level: 0 },
+      mine: { count: 0, level: 0 }, factory: { count: 0, level: 0 }, bank: { count: 0, level: 0 },
+      temple: { count: 0, level: 0 }, wizard: { count: 0, level: 0 }, shipment: { count: 0, level: 0 },
+      alch: { count: 0, level: 0 }, portal: { count: 0, level: 0 }, time: { count: 0, level: 0 },
+      prism: { count: 0, level: 0 }, clone: { count: 0, level: 0 }, brain: { count: 0, level: 0 },
+      corrupted_cursor: { count: 0, level: 0 }, void_portal: { count: 0, level: 0 },
+      cthulhu: { count: 0, level: 0 }, jds_corp: { count: 0, level: 0 }
+    }
+  };
+
+  const buildingData = {
+    cursor: { id: "cursor", name: "Curseur", icon: "🖱️", baseCost: 15, baseCps: 1, desc: "Clique automatiquement toutes les 10 secondes." },
+    grandma: { id: "grandma", name: "Grand-mère", icon: "👵", baseCost: 100, baseCps: 3, desc: "Une gentille mamie pour cuire plus de cookies." },
+    farm: { id: "farm", name: "Ferme", icon: "🌱", baseCost: 1100, baseCps: 10, desc: "Fait pousser des plants de cookies." },
+    mine: { id: "mine", name: "Mine", icon: "⛏️", baseCost: 120000, baseCps: 28, desc: "Extrait de la pâte à cookie." },
+    factory: { id: "factory", name: "Usine", icon: "🏭", baseCost: 1300000, baseCps: 130, desc: "Produit des cookies en masse." },
+    bank: { id: "bank", name: "Banque", icon: "🏦", baseCost: 14000000, baseCps: 170, desc: "Génère des cookies avec les intérêts." },
+    temple: { id: "temple", name: "Temple", icon: "🏛️", baseCost: 200000000, baseCps: 7000, desc: "Prie pour avoir plus de cookies." },
+    wizard: { id: "wizard", name: "Tour de sorcier", icon: "🧙‍♂️", baseCost: 3300000000, baseCps: 100000, desc: "Invoque des cookies magiquement." },
+    shipment: { id: "shipment", name: "Vaisseau", icon: "🚀", baseCost: 51000000000, baseCps: 260000, desc: "Ramène des cookies de la planète cookie." },
+    alch: { id: "alch", name: "Labo Alchimie", icon: "⚗️", baseCost: 75000000000, baseCps: 1600000, desc: "Transforme l'or en cookies." },
+    portal: { id: "portal", name: "Portail", icon: "🌀", baseCost: 1000000000000, baseCps: 1900000, desc: "Ouvre une porte vers le cookie-verse." },
+    time: { id: "time", name: "Machine Temporelle", icon: "⏳", baseCost: 14000000000000, baseCps: 650000, desc: "Ramène des cookies du passé." },
+    prism: { id: "prism", name: "Prisme", icon: "🌈", baseCost: 200000000000000, baseCps: 430000000, desc: "Convertit la lumière en cookies." },
+    clone: { id: "clone", name: "Cloneur", icon: "👥", baseCost: 100000000000000000, baseCps: 35000000, desc: "Clone tes cookies." },
+    brain: { id: "brain", name: "Cerveau Galactique", icon: "🧠", baseCost: 500000000000000000, baseCps: 250000000, desc: "Pense fort à des cookies." },
+    corrupted_cursor: { id: "corrupted_cursor", name: "Curseur Corrompu", icon: "👾", baseCost: 5000000000000000000, baseCps: 1500000000, desc: "Un curseur volé sur le dark web." },
+    void_portal: { id: "void_portal", name: "Faille du Néant", icon: "🕳️", baseCost: 50000000000000000000, baseCps: 10000000000, desc: "Aspire des cookies d'une autre dimension." },
+    cthulhu: { id: "cthulhu", name: "Entité Cosmique", icon: "🐙", baseCost: 1000000000000000000000, baseCps: 100000000000, desc: "Ph'nglui mglw'nafh Cthulhu R'lyeh wgah'nagl fhtagn." },
+    jds_corp: { id: "jds_corp", name: "JDS corp.", icon: "🏢", baseCost: 25000000000000000000000000, baseCps: 70000000000000000000000000, desc: "La multinationale ultime qui domine le marché des cookies." }
+  };
+
+  const upgradeData = [
+    { id: "up1", icon: "🦾", cost: 500, desc: "Clic x2", type: "click_mult", val: 2 },
+    { id: "up2", icon: "👵🏼", cost: 5000, desc: "Mamies x2", type: "b_mult", target: "grandma", val: 2 },
+    { id: "up3", icon: "🚜", cost: 50000, desc: "Fermes x2", type: "b_mult", target: "farm", val: 2 },
+    { id: "up4", icon: "⛏️", cost: 500000, desc: "Mines x2", type: "b_mult", target: "mine", val: 2 },
+    { id: "up5", icon: "🏭", cost: 5000000, desc: "Usines x2", type: "b_mult", target: "factory", val: 2 },
+    { id: "up6", icon: "💸", cost: 50000000, desc: "Banques x2", type: "b_mult", target: "bank", val: 2 },
+    { id: "up7", icon: "🖱️", cost: 100000, desc: "Clic x2 (Encore)", type: "click_mult", val: 2 },
+    { id: "up8", icon: "🖱️", cost: 10002212100, desc: "Clic x3 (Encore)", type: "click_mult", val: 3 },
+    { id: "up9", icon: "👀", cost: 1000, desc: "C'est Dan qui donne c'est carré ! Production globale +71%", type: "global_mult", val: 1.71 },
+    { id: "up10", icon: "👑J", cost: 1000000000000000000000000, desc: "C'est Jayden qui donne c'est carré ! Production globale x8", type: "global_mult", val: 8 }
+  ];
+
+  const companionsDB = {
+    algaz: { id: "algaz", name: "AlgaZ", icon: "💥", cpsMult: 1.25, clickBonus: 1000000, gcMult: 1, desc: "x1.25 CpS | +1M Puissance de Clic", rarity: "Épique", rClass: "r-epic", sellPrice: 10000000000000 },
+    dan: { id: "dan", name: "Dan", icon: "💣", cpsMult: 1.75, clickBonus: 10000000, gcMult: 2, desc: "x1.75 CpS | Apparition Cookies Dorés x2", rarity: "Mythique", rClass: "r-mythic", sellPrice: 50000000000000 },
+    dan_shiny: { id: "dan_shiny", name: "Dan ✨", icon: "💣", cpsMult: 3, clickBonus: 200000000, gcMult: 20, desc: "x3.00 CpS | Cookies Dorés x20 | SHINY ✨", rarity: "Secret", rClass: "r-secret shiny-img", sellPrice: 10000000000000000000000000000 },
+    jayden: { id: "jayden", name: "Jayden", icon: "https://i.ibb.co/qM5P7xxK/m-13.png", cpsMult: 2.0, clickBonus: 3000000, gcMult: 2, desc: "x2.00 CpS | +3M Clic | Cookies Dorés x2", rarity: "Secret", rClass: "r-secret", sellPrice: 250000000000000 },
+    jayden_shiny: { id: "jayden_shiny", name: "Jayden ✨", icon: "https://i.ibb.co/qM5P7xxK/m-13.png", cpsMult: 3, clickBonus: 5000000, gcMult: 4, desc: "x3.00 CpS | +5M Clic | Cookies Dorés x4 | SHINY ✨", rarity: "Secret+", rClass: "r-secret shiny-img", sellPrice: 50000000000000000000000000000 }
+  };
+
+  const imgCookieBase = "https://png.pngtree.com/png-vector/20250425/ourmid/pngtree-chocolate-chip-cookie-icon-white-background-png-image_16100260.png";
+  const imgCookieGolden = "https://i.ibb.co/Y4fx1dPt/image-removebg-preview-2.png";
+  const imgCursorOrbit = "https://static.vecteezy.com/system/resources/thumbnails/055/608/060/small/cursor-icon-pointer-cursor-finger-pointer-clicking-mouse-cursor-png.png";
+  const imgMysteryComp = "https://oise-echecs.fr/wp-content/uploads/2020/05/point-interrogation.png";
+
+  const itemsDef = [
+    { id: "2_5b", label: "2.5B<br>Cookies", img: imgCookieBase, odds: "~47.9%" },
+    { id: "7_5b", label: "7.5B<br>Cookies", img: imgCookieGolden, odds: "35%" },
+    { id: "algaz", label: "AlgaZ<br>(Épique)", icon: "💥", odds: "15%" },
+    { id: "dan", label: "Dan<br>(Mythique)", icon: "💣", odds: "2%" },
+    { id: "dan_shiny", label: "Dan ✨<br>(Secret)", icon: "💣", extraClass: "shiny-img", odds: "0.0015%" },
+    { id: "jayden", label: "Jayden<br>(Secret)", img: "https://i.ibb.co/qM5P7xxK/m-13.png", odds: "0.0003%" }
+  ];
+  const vibrantPalette = ["#FF3B30", "#00D4FF", "#00FF88", "#FF9500", "#34C759", "#FFD700", "#FF2D55", "#5AC8FA"];
+
+  let game = JSON.parse(JSON.stringify(defaultSave));
+  let currentCps = 0;
+  let clickPower = 1;
+  let storeMode = "buy";
+  let unsavedProgress = false;
+  let isGoldenFrenzy = false;
+  let companionAutoClickInterval = null;
+  let frenzyEndTimeout = null;
+  let ccIsAdmin = false;
+  let realtimeListener = null;
+  let chatListener = null;
+  let tradeListenerSender = null;
+  let tradeListenerReceiver = null;
+  let lastCursorCount = -1;
+  let lastStageWidth = -1;
+  let groupsMap = {};
+  let groupCpsBonus = 0;
+  let allLeaderboardPlayers = [];
+  let ccInitialized = false;
+  let goldenTimeout = null;
+
+  let isSpinning = false;
+  let wheelPendingPrize = null;
+  let wheelStartPosY = 0;
+  let wheelStartPosX = 0;
+  let currentWheelLayout = [];
+  let currentWheelEditId = null;
+  let currentWheelEditData = null;
+
+  let currentTradeDocId = null;
+  let currentTradeData = null;
+  let isTradeModalOpen = false;
+  let tradeUpdateTimeout = null;
+
+  let tempLoginCode = "";
+  let tempLoginData = null;
+  let tempProfilePicBase64 = "";
+  let initialChatLoad = true;
+  let appJustLoaded = true;
+  setTimeout(() => { appJustLoaded = false; }, 3500);
+
+  const $id = id => document.getElementById(id);
+
+  function mergeSaveData(parsed) {
+    const mergedBuildings = {};
+    for (const key in buildingData) {
+      const b = parsed?.buildings?.[key] || {};
+      mergedBuildings[key] = {
+        count: ccValidateNum(b.count || 0),
+        level: ccValidateNum(b.level || 0)
+      };
+    }
+    const merged = {
+      ...JSON.parse(JSON.stringify(defaultSave)),
+      ...(parsed || {}),
+      buildings: mergedBuildings
+    };
+    if (!Array.isArray(merged.upgradesBought)) merged.upgradesBought = [];
+    if (!Array.isArray(merged.companions)) merged.companions = [];
+    if (merged.sugars === undefined) merged.sugars = 0;
+    if (merged.sugarTime === undefined) merged.sugarTime = 0;
+    if (merged.spinsLeft === undefined) merged.spinsLeft = 2;
+    if (merged.lastSpinReset === undefined) merged.lastSpinReset = 0;
+    if (merged.profilePic === undefined) merged.profilePic = "";
+    return merged;
+  }
+
+  function findDnBUserProfile(identifier, displayHint) {
+    if (!window.usersMap || window.usersMap.size === 0) return null;
+    const key = String(identifier || "").trim();
+    if (key && window.usersMap.has(key)) return window.usersMap.get(key);
+    const lowKey = key.toLowerCase();
+    const lowDisp = String(displayHint || "").trim().toLowerCase();
+    for (const u of window.usersMap.values()) {
+      if (!u) continue;
+      if (lowKey && String(u.username || "").toLowerCase() === lowKey) return u;
+      if (lowDisp && (String(u.username || "").toLowerCase() === lowDisp || String(u.displayName || "").toLowerCase() === lowDisp)) return u;
+      if (lowKey && String(u.displayName || "").toLowerCase() === lowKey) return u;
+    }
+    return null;
+  }
+
+  function renderCCAvatarHTML(username, displayName, storedAvatar, sizeClass = "") {
+    const matched = findDnBUserProfile(username, displayName);
+    const avatarUrl = storedAvatar || matched?.avatar || "";
+    const label = String(matched?.displayName || displayName || username || "?").trim();
+    const initials = label.split(/\s+/).filter(Boolean).map(w => w.charAt(0)).join("").slice(0, 2).toUpperCase() || "?";
+    const imgHtml = avatarUrl
+      ? `<img src="${esc(avatarUrl)}" alt="" loading="lazy" onerror="this.remove()">`
+      : "";
+    return `<span class="cc-avatar ${sizeClass}" title="${esc(label)}">${imgHtml}<span class="cc-avatar-init">${escapeHTML(initials)}</span></span>`;
+  }
+
+  function ccValidateNum(n) {
+    const num = Number(n);
+    return (isNaN(num) || !isFinite(num) || num < 0) ? 0 : num;
+  }
+
+  function ccFormatNumber(num) {
+    num = ccValidateNum(num);
+    if (num < 1000000) return Math.floor(num).toLocaleString("fr-FR");
+    const units = ["", " Million", " Milliard", " Billion", " Billiard", " Trillion", " Quatrillion", " Quintillion", " Sextillion", " Septillion", " Octillion"];
+    const unitIndex = Math.floor((Math.log10(num) - 3) / 3);
+    if (unitIndex >= units.length) return num.toExponential(3);
+    let shortVal = (num / Math.pow(10, unitIndex * 3 + 3)).toFixed(2);
+    if (shortVal.endsWith(".00")) shortVal = shortVal.substring(0, shortVal.length - 3);
+    let suffix = units[unitIndex];
+    if (parseFloat(shortVal) >= 2 && suffix !== "") suffix += "s";
+    return shortVal + suffix;
+  }
+
+  function getDnBRevizStudyBonus() {
+    const u = window.currentUser;
+    const totalMs = Number(u?.totalStudyMs) || 0;
+    const studyMinutes = Math.floor(totalMs / 60000);
+    const streakDays = Number(u?.streak) || 0;
+    const studyPct = Math.min(150, Math.floor(studyMinutes / 5));
+    const streakPct = streakDays * 5;
+    const totalPct = studyPct + streakPct;
+    return {
+      totalPct,
+      multiplier: 1 + totalPct / 100,
+      studyMinutes,
+      streakDays
+    };
+  }
+
+  function ccShowDialog({ title = "Information", message = "", type = "alert", defaultValue = "", placeholder = "" }) {
+    return new Promise(resolve => {
+      const modal = $id("cc-dialog-modal");
+      const titleEl = $id("cc-dialog-title");
+      const msgEl = $id("cc-dialog-message");
+      const wrap = $id("cc-dialog-input-wrap");
+      const inp = $id("cc-dialog-input");
+      const btnCancel = $id("cc-dialog-cancel");
+      const btnOk = $id("cc-dialog-confirm");
+      if (!modal || !titleEl || !msgEl || !btnOk) { resolve(null); return; }
+
+      titleEl.textContent = title;
+      msgEl.textContent = message;
+      const isPrompt = type === "prompt";
+      const isConfirm = type === "confirm";
+      wrap.classList.toggle("hidden", !isPrompt);
+      btnCancel.classList.toggle("hidden", !(isConfirm || isPrompt));
+      if (isPrompt) {
+        inp.value = defaultValue || "";
+        inp.placeholder = placeholder || "";
+      }
+
+      const cleanup = (val) => {
+        modal.classList.remove("active");
+        btnOk.onclick = null;
+        btnCancel.onclick = null;
+        inp.onkeydown = null;
+        resolve(val);
+      };
+
+      btnOk.onclick = () => cleanup(isPrompt ? inp.value : true);
+      btnCancel.onclick = () => cleanup(isPrompt ? null : false);
+      inp.onkeydown = (e) => {
+        if (e.key === "Enter") cleanup(inp.value);
+        if (e.key === "Escape") cleanup(null);
+      };
+
+      modal.classList.add("active");
+      if (isPrompt) setTimeout(() => inp.focus(), 40);
+    });
+  }
+
+  function getGroupHTML(groupId) {
+    if (!groupId || !groupsMap[groupId]) return "";
+    const g = groupsMap[groupId];
+    const safeName = String(g.name || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    if (g.color === "rainbow") return ` <span class="text-rainbow">[${safeName}]</span>`;
+    if (g.color === "golden-aura") return ` <span class="text-golden-aura">[${safeName}]</span>`;
+    if (g.color === "aura") return ` <span class="text-aura">[${safeName}]</span>`;
+    if (g.color === "dan") return ` <span class="text-dan-secret">[${safeName}]</span>`;
+    return ` <span style="color:${g.color}; font-weight:bold;">[${safeName}]</span>`;
+  }
+
+  async function fetchGroups() {
+    try {
+      const snap = await getDocs(collection(getCookieDb(), "stmg_groups"));
+      groupsMap = {};
+      snap.forEach(d => { groupsMap[d.id] = d.data(); });
+    } catch (e) {
+      console.error("Erreur chargement groupes Cookie Clicker:", e);
+    }
+  }
+
+  function getBuildingBuyCost(id) {
+    const count = ccValidateNum(game.buildings[id]?.count || 0);
+    return Math.ceil(buildingData[id].baseCost * Math.pow(1.15, count));
+  }
+
+  function getBuildingSellCost(id) {
+    const count = ccValidateNum(game.buildings[id]?.count || 0);
+    if (count === 0) return 0;
+    return Math.ceil(buildingData[id].baseCost * Math.pow(1.15, count - 1) * 0.5);
+  }
+
+  window.ccBuyBuildingLevel = (id) => {
+    if (!game.buildings[id]) game.buildings[id] = { count: 0, level: 0 };
+    const lvl = ccValidateNum(game.buildings[id].level || 0);
+    const cost = lvl + 1;
+    if (ccValidateNum(game.sugars) >= cost) {
+      game.sugars -= cost;
+      game.buildings[id].level = lvl + 1;
+      unsavedProgress = true;
+      saveLocal();
+      recalculateStats();
+      updateUI();
+    }
+  };
+
+  function hasUpgrade(id) {
+    return Array.isArray(game.upgradesBought) && game.upgradesBought.includes(id);
+  }
+
+  function calculateCpsForSave(saveObj) {
+    const bMults = {};
+    for (const key in buildingData) bMults[key] = 1;
+    let gMult = 1;
+    let compCpsMult = 1;
+
+    if (saveObj.equippedCompanion && companionsDB[saveObj.equippedCompanion]) {
+      compCpsMult = companionsDB[saveObj.equippedCompanion].cpsMult;
+    }
+
+    (saveObj.upgradesBought || []).forEach(upId => {
+      const up = upgradeData.find(u => u.id === upId);
+      if (up) {
+        if (up.type === "b_mult" && bMults[up.target] !== undefined) bMults[up.target] *= up.val;
+        if (up.type === "global_mult") gMult *= up.val;
+      }
+    });
+
+    let cps = 0;
+    for (const id in saveObj.buildings) {
+      if (saveObj.buildings[id] && buildingData[id]) {
+        const level = ccValidateNum(saveObj.buildings[id].level || 0);
+        const levelMult = 1 + (level * 0.01);
+        cps += ccValidateNum(saveObj.buildings[id].count) * buildingData[id].baseCps * (bMults[id] || 1) * levelMult;
+      }
+    }
+    return ccValidateNum(cps * gMult * compCpsMult) + ccValidateNum(groupCpsBonus);
+  }
+
+  function recalculateStats() {
+    const bMults = {};
+    for (const key in buildingData) bMults[key] = 1;
+    let cMult = 1;
+    let gMult = 1;
+    let compCpsMult = 1;
+    let compClickBonus = 0;
+    let frenzyMult = 2;
+
+    if (game.equippedCompanion && companionsDB[game.equippedCompanion]) {
+      const comp = companionsDB[game.equippedCompanion];
+      compCpsMult = comp.cpsMult;
+      compClickBonus = comp.clickBonus;
+      if (comp.gcMult && comp.gcMult > 1) frenzyMult = comp.gcMult;
+    }
+
+    (game.upgradesBought || []).forEach(upId => {
+      const up = upgradeData.find(u => u.id === upId);
+      if (up) {
+        if (up.type === "b_mult" && bMults[up.target] !== undefined) bMults[up.target] *= up.val;
+        if (up.type === "click_mult") cMult *= up.val;
+        if (up.type === "global_mult") gMult *= up.val;
+      }
+    });
+
+    const revizBonus = getDnBRevizStudyBonus();
+    let cps = 0;
+    for (const id in game.buildings) {
+      if (game.buildings[id] && buildingData[id]) {
+        const level = ccValidateNum(game.buildings[id].level || 0);
+        const levelMult = 1 + (level * 0.01);
+        cps += ccValidateNum(game.buildings[id].count) * buildingData[id].baseCps * (bMults[id] || 1) * levelMult;
+      }
+    }
+
+    const bonusSecu = ccValidateNum(groupCpsBonus);
+    currentCps = ccValidateNum(cps * gMult * compCpsMult * revizBonus.multiplier) + bonusSecu;
+
+    const cursorCount = ccValidateNum(game.buildings.cursor?.count || 0);
+    clickPower = ccValidateNum((1 + cursorCount + Math.floor(currentCps * 0.05)) * cMult * revizBonus.multiplier) + compClickBonus;
+    if (isGoldenFrenzy) clickPower *= frenzyMult;
+
+    const dispCps = $id("cc-cps-display");
+    const dispCpsBonus = $id("cc-cps-bonus-display");
+    const dispClick = $id("cc-click-power-display");
+    const frenzyPill = $id("cc-frenzy-pill");
+    if (dispCps) dispCps.innerText = ccFormatNumber(currentCps);
+    if (dispClick) dispClick.innerText = ccFormatNumber(clickPower);
+    if (frenzyPill) frenzyPill.innerText = `✨ Frénésie Dorée active (Clics x${frenzyMult})`;
+
+    if (dispCpsBonus) {
+      if (bonusSecu > 0) {
+        dispCpsBonus.classList.remove("hidden");
+        dispCpsBonus.innerText = `+${ccFormatNumber(bonusSecu)} CpS (Bonus Classement Groupe)`;
+      } else {
+        dispCpsBonus.classList.add("hidden");
+      }
+    }
+
+    const bonusEl = $id("cc-reviz-bonus-text");
+    if (bonusEl) {
+      bonusEl.innerText = `Bonus Révision : +${revizBonus.totalPct}% (×${revizBonus.multiplier.toFixed(2)})`;
+    }
+  }
+
+  function updateLiquidColor() {
+    const wrapper = $id("ccWrapper");
+    const waves = document.querySelectorAll("#cc-easter-modal .wave");
+    let color = "var(--primary)";
+    let customStyle = null;
+
+    if (isGoldenFrenzy) {
+      color = "#eab308";
+    } else if (game.totalCookies >= 5000000000 && game.groupId && groupsMap[game.groupId]) {
+      const gColor = groupsMap[game.groupId].color;
+      if (["rainbow", "golden-aura", "aura", "dan"].includes(gColor)) {
+        customStyle = gColor;
+      } else if (gColor) {
+        color = gColor;
+      }
+    } else if (game.totalCookies >= 1000000000) {
+      color = "var(--secondary)";
+    } else if (game.totalCookies >= 1000000) {
+      color = "var(--danger)";
+    }
+
+    if (wrapper) {
+      if (customStyle === "rainbow") wrapper.style.borderColor = "var(--secondary)";
+      else if (customStyle === "golden-aura") wrapper.style.borderColor = "#eab308";
+      else if (customStyle === "aura") wrapper.style.borderColor = "#0ABAB5";
+      else if (customStyle === "dan") wrapper.style.borderColor = "#16eae3";
+      else wrapper.style.borderColor = color;
+    }
+
+    waves.forEach(w => {
+      if (customStyle === "rainbow") w.style.background = "linear-gradient(45deg, var(--primary), var(--secondary), #facc15, #fb923c, #ef4444)";
+      else if (customStyle === "golden-aura") w.style.background = "linear-gradient(45deg, #ffd700, #ff8c00, #fffacd)";
+      else if (customStyle === "aura") w.style.background = "linear-gradient(45deg, #0ABAB5, #E0B0FF)";
+      else if (customStyle === "dan") w.style.background = "#1e293b";
+      else w.style.background = color;
+
+      const baseOp = w.classList.contains("wave3") ? 0.20 : (w.classList.contains("wave1") ? 0.15 : (w.classList.contains("wave4") ? 0.12 : 0.10));
+      w.style.opacity = (color === "#eab308" || customStyle) ? Math.min(0.45, baseOp * 1.8) : baseOp;
+    });
+  }
+
+  function updateOrbitingCursors(force = false) {
+    const count = ccValidateNum(game.buildings.cursor ? game.buildings.cursor.count : 0);
+    const stage = $id("cc-cookie-stage");
+    const stageWidth = stage?.offsetWidth || 280;
+    if (!force && count === lastCursorCount && stageWidth === lastStageWidth) return;
+    lastCursorCount = count;
+    lastStageWidth = stageWidth;
+
+    const container = $id("cc-orbiting-cursors");
+    if (!container) return;
+    container.innerHTML = "";
+
+    const visualCount = Math.min(count, 50);
+    const radius = Math.max(84, Math.round(stageWidth * 0.44));
+    for (let i = 0; i < visualCount; i++) {
+      const angle = (i / visualCount) * (2 * Math.PI);
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+      const angleDeg = angle * (180 / Math.PI);
+      const rot = angleDeg - 90;
+
+      const img = document.createElement("img");
+      img.src = imgCursorOrbit;
+      img.className = "cursor-orbit-img";
+      img.alt = "";
+      img.draggable = false;
+      img.style.transform = `translate(calc(-50% + ${x.toFixed(1)}px), calc(-50% + ${y.toFixed(1)}px)) rotate(${rot.toFixed(1)}deg)`;
+      img.onerror = () => {
+        const dot = document.createElement("span");
+        dot.className = "cursor-orbit-dot";
+        dot.textContent = "🖱️";
+        dot.style.transform = `translate(calc(-50% + ${x.toFixed(1)}px), calc(-50% + ${y.toFixed(1)}px)) rotate(${(angleDeg + 90).toFixed(1)}deg)`;
+        img.replaceWith(dot);
+      };
+      container.appendChild(img);
+    }
+  }
+
+  function showTooltip(e, html) {
+    const tt = $id("cc-game-tooltip");
+    if (!tt) return;
+    tt.innerHTML = html;
+    tt.style.opacity = "1";
+    tt.style.left = Math.min(window.innerWidth - 270, e.clientX + 14) + "px";
+    tt.style.top = Math.min(window.innerHeight - 140, e.clientY + 14) + "px";
+  }
+  function hideTooltip() {
+    const tt = $id("cc-game-tooltip");
+    if (tt) tt.style.opacity = "0";
+  }
+
+  function renderActiveCompanionStage() {
+    const box = $id("cc-active-companion");
+    if (!box) return;
+    if (game.equippedCompanion && companionsDB[game.equippedCompanion]) {
+      const c = companionsDB[game.equippedCompanion];
+      const shinyClass = c.rClass.includes("shiny") ? "shiny-img" : "";
+      if (c.icon.startsWith("http")) {
+        box.innerHTML = `<img src="${esc(c.icon)}" class="${shinyClass}" alt="${esc(c.name)}">`;
+      } else {
+        box.innerHTML = `<div class="${shinyClass}">${c.icon}</div>`;
+      }
+      box.style.display = "flex";
+    } else {
+      box.innerHTML = "";
+      box.style.display = "none";
+    }
+  }
+
+  function renderCompanions() {
+    if (!Array.isArray(game.companions)) game.companions = [];
+    renderActiveCompanionStage();
+    const listEl = $id("cc-comp-list");
+    if (!listEl) return;
+    listEl.innerHTML = "";
+
+    const compCounts = {};
+    game.companions.forEach(c => { compCounts[c] = (compCounts[c] || 0) + 1; });
+
+    const ownedIds = Object.keys(compCounts);
+    if (ownedIds.length === 0) {
+      listEl.innerHTML = `<p class="caption" style="grid-column:1/-1;text-align:center;padding:18px 0;">Tu n'as aucun compagnon pour l'instant. Tourne la <strong>🎡 Roue Cosmique</strong> ou fais un <strong>🤝 Trade</strong> !</p>`;
+      return;
+    }
+
+    ownedIds.forEach(cId => {
+      const count = compCounts[cId];
+      const c = companionsDB[cId];
+      if (!c) return;
+      const isEq = game.equippedCompanion === cId;
+      const div = document.createElement("div");
+      div.className = `companion-card ${isEq ? "equipped" : ""}`;
+      const shinyCls = c.rClass.includes("shiny") ? "shiny-img" : "";
+      const iconHtml = c.icon.startsWith("http")
+        ? `<img src="${esc(c.icon)}" class="comp-icon ${shinyCls}" alt="${esc(c.name)}">`
+        : `<div class="comp-icon ${shinyCls}">${c.icon}</div>`;
+      const badgeHTML = count > 1 ? `<span class="comp-count-pill">x${count}</span>` : "";
+
+      div.innerHTML = `
+        <div class="comp-info">
+          ${iconHtml}
+          <div style="min-width:0;flex:1;">
+            <div class="comp-name">${escapeHTML(c.name)} ${badgeHTML} <span class="comp-rarity ${c.rClass}">${escapeHTML(c.rarity)}</span></div>
+            <div class="caption" style="margin-top:3px;">${escapeHTML(c.desc)}</div>
+            <button type="button" class="btn-ghost btn-sm del cc-sell-comp-btn" style="margin-top:6px;">Vendre (+${ccFormatNumber(c.sellPrice)})</button>
+          </div>
+        </div>
+        <div style="font-size:20px;flex-shrink:0;">${isEq ? "✅" : ""}</div>
+      `;
+
+      div.querySelector(".comp-info").onclick = (e) => {
+        if (e.target.closest(".cc-sell-comp-btn")) return;
+        game.equippedCompanion = isEq ? null : cId;
+        unsavedProgress = true;
+        saveLocal();
+        saveGameToServer();
+        recalculateStats();
+        renderCompanions();
+        updateUI();
+      };
+
+      div.querySelector(".cc-sell-comp-btn").onclick = async (e) => {
+        e.stopPropagation();
+        if (await ccShowDialog({
+          type: "confirm",
+          title: "Vendre un compagnon",
+          message: `Vendre ${c.name} pour ${ccFormatNumber(c.sellPrice)} cookies ?`
+        })) {
+          game.cookies = ccValidateNum(game.cookies) + c.sellPrice;
+          game.totalCookies = ccValidateNum(game.totalCookies) + c.sellPrice;
+          const idx = game.companions.indexOf(cId);
+          if (idx > -1) game.companions.splice(idx, 1);
+          if (game.equippedCompanion === cId && !game.companions.includes(cId)) {
+            game.equippedCompanion = null;
+          }
+          unsavedProgress = true;
+          saveLocal();
+          saveGameToServer();
+          recalculateStats();
+          updateUI();
+          renderCompanions();
+        }
+      };
+
+      listEl.appendChild(div);
+    });
+
+    if (game.companions.length > 0) {
+      for (let i = 0; i < 15; i++) {
+        const lockCard = document.createElement("div");
+        lockCard.className = "companion-card locked-companion";
+        lockCard.innerHTML = `
+          <div class="comp-info" style="cursor:not-allowed;">
+            <img src="${imgMysteryComp}" class="comp-icon" style="filter:grayscale(100%);" alt="?">
+            <div>
+              <div class="comp-name" style="color:var(--ink-m);">??? <span class="comp-rarity" style="background:var(--hl);color:var(--ink-m);">???</span></div>
+              <div class="caption">Compagnon inconnu</div>
+            </div>
+          </div>
+          <div style="font-size:20px;">🔒</div>
+        `;
+        listEl.appendChild(lockCard);
+      }
+    }
+  }
+
+  function updateSugars() {
+    const sugarUI = $id("cc-sugar-ui");
+    if (!sugarUI) return;
+    if (game.totalCookies >= 1000000000 || ccValidateNum(game.sugars) > 0) {
+      if (!game.sugarTime) game.sugarTime = Date.now();
+      sugarUI.classList.remove("hidden");
+
+      const elapsed = Date.now() - game.sugarTime;
+      const lumpTime = 3600000;
+      if (elapsed >= lumpTime) {
+        const lumps = Math.floor(elapsed / lumpTime);
+        game.sugars = ccValidateNum(game.sugars) + lumps;
+        game.sugarTime += lumps * lumpTime;
+        saveLocal();
+        if (game.username && !game.username.startsWith("Invité") && !game.banned) saveGameToServer();
+      }
+
+      const remaining = Math.max(0, lumpTime - (Date.now() - game.sugarTime));
+      const m = Math.floor(remaining / 60000);
+      const s = Math.floor((remaining % 60000) / 1000);
+      const cntEl = $id("cc-sugars-count");
+      const tmrEl = $id("cc-sugars-timer");
+      if (cntEl) cntEl.innerText = ccValidateNum(game.sugars);
+      if (tmrEl) tmrEl.innerText = `Suivant : ${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    } else {
+      sugarUI.classList.add("hidden");
+    }
+  }
+
+  function updateUI() {
+    game.cookies = ccValidateNum(game.cookies);
+    const banScreen = $id("cc-ban-screen");
+    if (game.banned) {
+      if (banScreen) banScreen.classList.remove("hidden");
+      return;
+    } else if (banScreen) {
+      banScreen.classList.add("hidden");
+    }
+
+    updateSugars();
+
+    const dispCookies = $id("cc-cookies-display");
+    const dispName = $id("cc-player-name-display");
+    const avSlot = $id("cc-player-avatar-slot");
+    if (dispCookies) dispCookies.innerText = ccFormatNumber(game.cookies);
+    if (dispName) dispName.innerHTML = escapeHTML(game.displayName || game.username || "Invité") + getGroupHTML(game.groupId);
+    if (avSlot) {
+      const avKey = window.currentUser?.username || game.dnbUsername || game.username;
+      const avUrl = game.profilePic || window.currentUser?.avatar || game.dnbAvatar || "";
+      avSlot.innerHTML = renderCCAvatarHTML(avKey, game.displayName || game.username || "?", avUrl, "cc-avatar-sm");
+    }
+
+    for (const id in buildingData) {
+      const elCost = $id(`cc-cost-${id}`);
+      const elItem = $id(`cc-bitem-${id}`);
+      const elCount = $id(`cc-count-${id}`);
+      const lvlBox = $id(`cc-lvlbox-${id}`);
+      if (!game.buildings[id]) game.buildings[id] = { count: 0, level: 0 };
+      const level = ccValidateNum(game.buildings[id].level || 0);
+
+      if (lvlBox) {
+        if (game.totalCookies >= 1000000000 || ccValidateNum(game.sugars) > 0 || level > 0) {
+          const costToLevel = level + 1;
+          const canAfford = ccValidateNum(game.sugars) >= costToLevel;
+          lvlBox.innerHTML = `<button type="button" class="cc-lvl-btn ${canAfford ? "affordable" : ""}" onclick="event.stopPropagation(); window.ccBuyBuildingLevel('${id}')" title="+1% CpS (Coût : ${costToLevel} sucre(s))">Lvl ${level} ⬆</button>`;
+        } else {
+          lvlBox.innerHTML = "";
+        }
+      }
+
+      if (elCost && elItem && elCount) {
+        elCount.innerText = game.buildings[id].count > 0 ? game.buildings[id].count : "";
+        if (storeMode === "buy") {
+          const cost = getBuildingBuyCost(id);
+          elCost.innerText = ccFormatNumber(cost);
+          elCost.style.color = "var(--success)";
+          if (game.cookies >= cost) {
+            elItem.classList.remove("locked");
+            elCost.classList.remove("too-expensive");
+          } else {
+            elItem.classList.add("locked");
+            elCost.classList.add("too-expensive");
+          }
+        } else {
+          const cost = getBuildingSellCost(id);
+          elCost.innerText = "+" + ccFormatNumber(cost);
+          elCost.style.color = "var(--danger)";
+          elCost.classList.remove("too-expensive");
+          elItem.classList.toggle("locked", game.buildings[id].count <= 0);
+        }
+      }
+    }
+
+    const upgradesContainer = $id("cc-upgrades-container");
+    if (upgradesContainer) {
+      upgradesContainer.innerHTML = "";
+      upgradeData.forEach(up => {
+        if (!hasUpgrade(up.id)) {
+          const uDiv = document.createElement("button");
+          uDiv.type = "button";
+          uDiv.className = game.cookies >= up.cost ? "upgrade-item" : "upgrade-item locked";
+          uDiv.innerText = up.icon;
+          uDiv.onmousemove = (e) => showTooltip(e, `<b>${up.desc}</b><br>Coût : <span style="color:var(--success)">${ccFormatNumber(up.cost)}</span>`);
+          uDiv.onmouseleave = hideTooltip;
+          uDiv.onclick = () => {
+            if (game.cookies >= up.cost) {
+              game.cookies -= up.cost;
+              game.upgradesBought.push(up.id);
+              hideTooltip();
+              unsavedProgress = true;
+              saveLocal();
+              recalculateStats();
+              updateUI();
+            }
+          };
+          upgradesContainer.appendChild(uDiv);
+        }
+      });
+    }
+
+    const modalOpen = !$id("cc-easter-modal")?.classList.contains("hidden");
+    if (modalOpen && game.username) {
+      document.title = `${ccFormatNumber(game.cookies)} cookies · DnB Reviz`;
+    }
+    updateLiquidColor();
+    updateOrbitingCursors();
+  }
+
+  function initStore() {
+    const storeContainer = $id("cc-store-container");
+    if (!storeContainer) return;
+    storeContainer.innerHTML = "";
+    for (const id in buildingData) {
+      const b = buildingData[id];
+      const div = document.createElement("div");
+      div.className = "building-item locked";
+      div.id = `cc-bitem-${id}`;
+      div.innerHTML = `<div class="b-icon">${b.icon}</div><div class="b-info"><div class="b-name"><span>${b.name}</span><span id="cc-lvlbox-${id}"></span></div><div class="b-cost" id="cc-cost-${id}">0</div></div><div class="b-count" id="cc-count-${id}"></div>`;
+      div.onmousemove = (e) => {
+        const count = ccValidateNum(game.buildings[id]?.count || 0);
+        const level = ccValidateNum(game.buildings[id]?.level || 0);
+        const levelMult = 1 + (level * 0.01);
+        let bMulti = 1;
+        upgradeData.forEach(u => {
+          if (u.type === "b_mult" && u.target === id && hasUpgrade(u.id)) bMulti *= u.val;
+        });
+        const prod = ccFormatNumber(b.baseCps * count * bMulti * levelMult);
+        let txt = `<b>${b.name}</b><br><i style="color:var(--ink-m); font-size:0.8rem">${b.desc}</i><br>Production actuelle : ${prod} CpS`;
+        if (storeMode === "sell") txt += `<br><span style="color:var(--danger)">Revente : +${ccFormatNumber(getBuildingSellCost(id))}</span>`;
+        showTooltip(e, txt);
+      };
+      div.onmouseleave = hideTooltip;
+      div.addEventListener("click", () => {
+        if (!game.buildings[id]) game.buildings[id] = { count: 0, level: 0 };
+        if (storeMode === "buy") {
+          const cost = getBuildingBuyCost(id);
+          if (game.cookies >= cost) {
+            game.cookies -= cost;
+            game.buildings[id].count++;
+            unsavedProgress = true;
+            saveLocal();
+            recalculateStats();
+            updateUI();
+          }
+        } else if (game.buildings[id].count > 0) {
+          const cost = getBuildingSellCost(id);
+          game.cookies += cost;
+          game.buildings[id].count--;
+          unsavedProgress = true;
+          saveLocal();
+          recalculateStats();
+          updateUI();
+        }
+      });
+      storeContainer.appendChild(div);
+    }
+  }
+
+  function spawnCrack(x, y) {
+    const stage = $id("cc-cookie-stage");
+    if (!stage) return;
+    const crack = document.createElement("div");
+    crack.className = "crack-effect";
+    crack.style.left = (x - 40) + "px";
+    crack.style.top = (y - 40) + "px";
+    stage.appendChild(crack);
+    setTimeout(() => crack.remove(), 200);
+  }
+
+  function spawnCrumb(x, y) {
+    const stage = $id("cc-cookie-stage");
+    if (!stage) return;
+    const crumb = document.createElement("div");
+    crumb.className = "crumb";
+    crumb.style.setProperty("--tx", `${(Math.random() * 110 - 55).toFixed(0)}px`);
+    crumb.style.setProperty("--ty", `${(Math.random() * 110 - 55).toFixed(0)}px`);
+    crumb.style.left = x + "px";
+    crumb.style.top = y + "px";
+    stage.appendChild(crumb);
+    setTimeout(() => crumb.remove(), 480);
+  }
+
+  function showGoldenCookie() {
+    const goldenCookie = $id("cc-golden-cookie");
+    const container = $id("cc-cookie-stage");
+    if (!goldenCookie || !container || !goldenCookie.classList.contains("hidden")) return;
+    goldenCookie.classList.remove("hidden");
+    const size = goldenCookie.offsetWidth || 80;
+    const maxX = Math.max(16, container.offsetWidth - size - 8);
+    const maxY = Math.max(16, container.offsetHeight - size - 8);
+    goldenCookie.style.left = Math.round(Math.random() * maxX) + "px";
+    goldenCookie.style.top = Math.round(Math.random() * maxY) + "px";
+
+    const hideTimeout = setTimeout(() => {
+      goldenCookie.classList.add("hidden");
+    }, 15000);
+
+    const claimGolden = () => {
+      clearTimeout(hideTimeout);
+      goldenCookie.classList.add("hidden");
+      activateGoldenFrenzy();
+    };
+    goldenCookie.onclick = claimGolden;
+    goldenCookie.onkeydown = (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); claimGolden(); }
+    };
+  }
+
+  function activateGoldenFrenzy() {
+    isGoldenFrenzy = true;
+    if (frenzyEndTimeout) clearTimeout(frenzyEndTimeout);
+    if (companionAutoClickInterval) clearInterval(companionAutoClickInterval);
+
+    const mainCookieImg = $id("cc-main-cookie-img");
+    const bigCookieBtn = $id("cc-big-cookie");
+    const activeCompEl = $id("cc-active-companion");
+
+    if (mainCookieImg) {
+      mainCookieImg.src = imgCookieGolden;
+      mainCookieImg.classList.add("frenzy-img");
+    }
+    if (bigCookieBtn) bigCookieBtn.classList.add("frenzy-active");
+    $id("ccWrapper")?.classList.add("golden-frenzy");
+    $id("cc-frenzy-pill")?.classList.remove("hidden");
+
+    if (game.equippedCompanion && companionsDB[game.equippedCompanion]) {
+      activeCompEl?.classList.add("hitting-cookie");
+      companionAutoClickInterval = setInterval(() => {
+        if (!game.banned && game.username) {
+          game.cookies += clickPower;
+          game.totalCookies += clickPower;
+          unsavedProgress = true;
+          const stage = $id("cc-cookie-stage");
+          const cx = (stage?.offsetWidth || 260) / 2 + (Math.random() * 44 - 22);
+          const cy = (stage?.offsetHeight || 260) / 2 + (Math.random() * 44 - 22);
+          spawnCrack(cx, cy);
+          const dc = $id("cc-cookies-display");
+          if (dc) dc.innerText = ccFormatNumber(game.cookies);
+        }
+      }, 333);
+    }
+
+    recalculateStats();
+    updateUI();
+
+    frenzyEndTimeout = setTimeout(() => {
+      isGoldenFrenzy = false;
+      if (mainCookieImg) {
+        mainCookieImg.src = imgCookieBase;
+        mainCookieImg.classList.remove("frenzy-img");
+      }
+      if (bigCookieBtn) bigCookieBtn.classList.remove("frenzy-active");
+      $id("ccWrapper")?.classList.remove("golden-frenzy");
+      $id("cc-frenzy-pill")?.classList.add("hidden");
+      activeCompEl?.classList.remove("hitting-cookie");
+      if (companionAutoClickInterval) {
+        clearInterval(companionAutoClickInterval);
+        companionAutoClickInterval = null;
+      }
+      recalculateStats();
+      updateUI();
+    }, 60000);
+  }
+
+  function spawnGoldenCookieLoop() {
+    if (goldenTimeout) clearTimeout(goldenTimeout);
+    let gcMult = 1;
+    if (game.equippedCompanion && companionsDB[game.equippedCompanion]) {
+      gcMult = companionsDB[game.equippedCompanion].gcMult || 1;
+    }
+    const delay = (Math.random() * (2 * 60000) + (4 * 60000)) / gcMult;
+    goldenTimeout = setTimeout(() => {
+      if (Math.random() <= 0.90 && !game.banned && game.username) {
+        showGoldenCookie();
+      }
+      spawnGoldenCookieLoop();
+    }, delay);
+  }
+
+  // =========================================================================
+  // LA ROUE COSMIQUE
+  // =========================================================================
+  function getRandomColorsForWheel() {
+    const colors = [];
+    let lastColor = null;
+    for (let i = 0; i < 6; i++) {
+      let available = vibrantPalette.filter(c => c !== lastColor && (i !== 5 || c !== colors[0]));
+      if (available.length === 0) available = vibrantPalette;
+      const picked = available[Math.floor(Math.random() * available.length)];
+      colors.push(picked);
+      lastColor = picked;
+    }
+    return colors;
+  }
+
+  function generateWheelLayout() {
+    const shuffled = [...itemsDef].sort(() => 0.5 - Math.random());
+    const colors = getRandomColorsForWheel();
+    currentWheelLayout = [];
+    for (let i = 0; i < 6; i++) {
+      currentWheelLayout.push({ ...shuffled[i], color: colors[i], startDeg: i * 60, endDeg: (i + 1) * 60 });
+    }
+  }
+
+  function renderWheelVisuals() {
+    const wheel = $id("cc-wheel-visual");
+    if (!wheel) return;
+    if (currentWheelLayout.length === 0) generateWheelLayout();
+
+    const gradientString = currentWheelLayout.map((item, i) => `${item.color} ${i * 60}deg ${(i + 1) * 60}deg`);
+    wheel.style.background = `conic-gradient(${gradientString.join(", ")})`;
+
+    let html = "";
+    currentWheelLayout.forEach(item => {
+      const rot = item.startDeg + 30;
+      const media = item.img
+        ? `<img src="${esc(item.img)}" alt="">`
+        : `<div style="font-size:30px;margin-top:4px;" class="${item.extraClass || ""}">${item.icon}</div>`;
+      html += `<div class="fs-icon-container" style="transform: rotate(${rot}deg);">
+        <div class="fs-slice-text">${item.label}</div>
+        <div class="fs-slice-odds">${item.odds}</div>
+        ${media}
+      </div>`;
+    });
+    wheel.innerHTML = html;
+  }
+
+  function checkSpinTimer() {
+    if (game.spinsLeft === undefined) { game.spinsLeft = 2; game.lastSpinReset = 0; }
+    game.spinsLeft = Number(game.spinsLeft) || 0;
+    game.lastSpinReset = Number(game.lastSpinReset) || 0;
+
+    if (game.spinsLeft < 2 && game.lastSpinReset > 0 && Date.now() >= game.lastSpinReset) {
+      game.spinsLeft = 2;
+      game.lastSpinReset = 0;
+      unsavedProgress = true;
+      saveLocal();
+      if (game.username && !game.username.startsWith("Invité") && !game.banned) saveGameToServer();
+    }
+
+    const textEl = $id("cc-spin-timer-text");
+    const btnSpin = $id("cc-btn-spin");
+    if (textEl) {
+      if (game.spinsLeft >= 2) {
+        textEl.innerText = "Tours dispo : 2/2";
+      } else {
+        const diff = Math.max(0, Math.ceil((game.lastSpinReset - Date.now()) / 1000));
+        const m = Math.floor(diff / 60);
+        const s = diff % 60;
+        textEl.innerText = `Tours dispo : ${game.spinsLeft}/2 (Recharge dans ${m}:${String(s).padStart(2, "0")})`;
+      }
+    }
+    if (btnSpin) {
+      btnSpin.disabled = game.spinsLeft < 1 || game.cookies < 5000000000 || isSpinning;
+    }
+  }
+
+  function getWheelPrize() {
+    if (!Array.isArray(game.companions)) game.companions = [];
+    const r = Math.random() * 100;
+    if (r <= 0.0003) {
+      if (Math.random() <= 0.10) return { id: "jayden_shiny", name: "Compagnon JAYDEN (SHINY ✨)" };
+      return { id: "jayden", name: "Compagnon JAYDEN (Secret)" };
+    }
+    if (r <= 0.0018) return { id: "dan_shiny", name: "Compagnon DAN (SHINY ✨)" };
+    if (r <= 2.0018) return { id: "dan", name: "Compagnon DAN (Mythique)" };
+    if (r <= 17.0018) return { id: "algaz", name: "Compagnon ALGAZ (Épique)" };
+    if (r <= 52.0018) return { id: "7_5b", name: "7.5 Billions Cookies" };
+    return { id: "2_5b", name: "2.5 Billions Cookies" };
+  }
+
+  function awardWheelPrize(prize) {
+    if (prize.id === "2_5b") {
+      game.cookies = ccValidateNum(game.cookies) + 2500000000;
+      game.totalCookies = ccValidateNum(game.totalCookies) + 2500000000;
+    } else if (prize.id === "7_5b") {
+      game.cookies = ccValidateNum(game.cookies) + 7500000000;
+      game.totalCookies = ccValidateNum(game.totalCookies) + 7500000000;
+    } else {
+      if (!Array.isArray(game.companions)) game.companions = [];
+      game.companions.push(prize.id);
+    }
+  }
+
+  function launchWheelSpinAnimation() {
+    if (isSpinning || !wheelPendingPrize) return;
+    isSpinning = true;
+    const swipeText = $id("cc-swipe-text");
+    const wheelScaleWrapper = $id("cc-wheel-scale-wrapper");
+    const launchBtn = $id("cc-btn-wheel-launch");
+    if (swipeText) swipeText.innerText = "La roue tourne…";
+    if (launchBtn) launchBtn.disabled = true;
+
+    const spins = 5;
+    let prizeFamilyId = wheelPendingPrize.id;
+    if (prizeFamilyId === "jayden_shiny") prizeFamilyId = "jayden";
+    let targetSlice = currentWheelLayout.find(s => s.id === prizeFamilyId) || currentWheelLayout[0];
+
+    const randomOffset = (Math.random() * 40) - 20;
+    const sliceCenter = targetSlice.startDeg + 30;
+    const finalWheelAngle = (360 - sliceCenter + randomOffset) % 360;
+    const targetDeg = (360 * spins) + finalWheelAngle;
+
+    if (wheelScaleWrapper) {
+      wheelScaleWrapper.style.transition = "transform 4s cubic-bezier(0.15, 0.9, 0.25, 1), box-shadow 1.5s ease-in-out";
+      wheelScaleWrapper.style.transform = `rotate(${targetDeg}deg)`;
+    }
+
+    const isRareLanded = ["dan", "dan_shiny", "jayden", "jayden_shiny"].includes(prizeFamilyId);
+    if (isRareLanded && wheelScaleWrapper) {
+      setTimeout(() => {
+        wheelScaleWrapper.classList.add("wheel-zoom-effect");
+        wheelScaleWrapper.style.transform = `rotate(${targetDeg}deg) scale(1.08)`;
+      }, 2500);
+    }
+
+    setTimeout(async () => {
+      const wonPrize = wheelPendingPrize;
+      wheelPendingPrize = null;
+      isSpinning = false;
+      if (launchBtn) launchBtn.disabled = false;
+      $id("cc-wheel-modal")?.classList.add("hidden");
+      if (wheelScaleWrapper) {
+        wheelScaleWrapper.classList.remove("wheel-zoom-effect");
+        wheelScaleWrapper.style.transform = "rotate(0deg)";
+      }
+
+      if (wonPrize) {
+        awardWheelPrize(wonPrize);
+        unsavedProgress = true;
+        saveLocal();
+        await saveGameToServer();
+        recalculateStats();
+        updateUI();
+        renderCompanions();
+        renderWheelVisuals();
+        checkSpinTimer();
+        await ccShowDialog({
+          title: "🎉 Roue Cosmique",
+          message: `Tu as gagné :\n- ${wonPrize.name}\n\n(Ton solde a été mis à jour)`
+        });
+      }
+    }, 4200);
+  }
+
+  // =========================================================================
+  // MARCHÉ NOIR (TRADES)
+  // =========================================================================
+  function updateHiddenTradeInput() {
+    const amount = parseFloat($id("cc-trade-cookies-amount")?.value) || 0;
+    const unit = parseFloat($id("cc-trade-cookies-unit")?.value) || 1;
+    let total = Math.floor(amount * unit);
+    if (total > game.cookies) total = Math.floor(game.cookies);
+    const hid = $id("cc-trade-my-cookies-input");
+    if (hid) hid.value = String(total);
+    window.ccDebounceUpdateOffer();
+  }
+
+  window.ccDebounceUpdateOffer = () => {
+    if (tradeUpdateTimeout) clearTimeout(tradeUpdateTimeout);
+    tradeUpdateTimeout = setTimeout(sendOfferUpdate, 450);
+  };
+
+  async function sendOfferUpdate() {
+    if (!currentTradeDocId || !currentTradeData) return;
+    let cookiesInput = Math.floor(ccValidateNum($id("cc-trade-my-cookies-input")?.value));
+    if (cookiesInput > game.cookies) {
+      cookiesInput = Math.floor(game.cookies);
+      if ($id("cc-trade-my-cookies-input")) $id("cc-trade-my-cookies-input").value = String(cookiesInput);
+    }
+    const selectedComps = [];
+    document.querySelectorAll(".cc-trade-comp-check:checked").forEach(cb => selectedComps.push(cb.value));
+
+    const isSender = currentTradeData.senderId === game.saveCode;
+    const updates = isSender
+      ? { senderOffer: { cookies: cookiesInput, comps: selectedComps }, senderReady: false, receiverReady: false }
+      : { receiverOffer: { cookies: cookiesInput, comps: selectedComps }, senderReady: false, receiverReady: false };
+
+    try {
+      await updateDoc(doc(getCookieDb(), "stmg_trades", currentTradeDocId), updates);
+    } catch (_) {}
+  }
+
+  function setupTradeListeners() {
+    if (!game.saveCode) return;
+    const fdb = getCookieDb();
+
+    if (tradeListenerReceiver) tradeListenerReceiver();
+    const qReceiver = query(collection(fdb, "stmg_trades"), where("receiverId", "==", game.saveCode));
+    tradeListenerReceiver = onSnapshot(qReceiver, (snap) => {
+      snap.forEach(d => {
+        const t = d.data();
+        if (t.status === "pending" && !appJustLoaded) {
+          const senderEl = $id("cc-incoming-trade-sender");
+          if (senderEl) senderEl.innerText = t.senderName || "Un joueur";
+          currentTradeDocId = d.id;
+          $id("cc-incoming-trade-modal")?.classList.add("active");
+        }
+        if (t.status === "active") {
+          if (t.senderReady && t.receiverReady) {
+            updateDoc(doc(fdb, "stmg_trades", d.id), { status: "completed" }).catch(() => {});
+          } else {
+            $id("cc-incoming-trade-modal")?.classList.remove("active");
+            currentTradeDocId = d.id;
+            currentTradeData = t;
+            if (!isTradeModalOpen) openActiveTradeModal();
+            else syncTradeUI(false);
+          }
+        }
+        if (t.status === "completed" && !t.receiverProcessed) {
+          processTradeCompletion(d.id, t, false);
+        }
+        if (t.status === "cancelled" && isTradeModalOpen && currentTradeDocId === d.id) {
+          $id("cc-active-trade-modal")?.classList.remove("active");
+          isTradeModalOpen = false;
+          currentTradeDocId = null;
+          currentTradeData = null;
+          if (!appJustLoaded) ccShowDialog({ title: "Échange annulé", message: "L'échange a été annulé." });
+        }
+      });
+    });
+
+    if (tradeListenerSender) tradeListenerSender();
+    const qSender = query(collection(fdb, "stmg_trades"), where("senderId", "==", game.saveCode));
+    tradeListenerSender = onSnapshot(qSender, (snap) => {
+      snap.forEach(d => {
+        const t = d.data();
+        if (t.status === "active") {
+          if (t.senderReady && t.receiverReady) {
+            updateDoc(doc(fdb, "stmg_trades", d.id), { status: "completed" }).catch(() => {});
+          } else {
+            currentTradeDocId = d.id;
+            currentTradeData = t;
+            if (!isTradeModalOpen) openActiveTradeModal();
+            else syncTradeUI(true);
+          }
+        }
+        if (t.status === "completed" && !t.senderProcessed) {
+          processTradeCompletion(d.id, t, true);
+        }
+        if (t.status === "cancelled" && isTradeModalOpen && currentTradeDocId === d.id) {
+          $id("cc-active-trade-modal")?.classList.remove("active");
+          isTradeModalOpen = false;
+          currentTradeDocId = null;
+          currentTradeData = null;
+          if (!appJustLoaded) ccShowDialog({ title: "Échange annulé", message: "L'échange a été annulé." });
+        }
+      });
+    });
+  }
+
+  async function renderTradePlayersList() {
+    const listDiv = $id("cc-trade-players-list");
+    if (!listDiv) return;
+    if (!game.saveCode) {
+      listDiv.innerHTML = `<p class="caption" style="text-align:center;">Connecte-toi avec Google ou un Code Secret pour échanger avec d'autres joueurs.</p>`;
+      return;
+    }
+    if (allLeaderboardPlayers.length === 0) {
+      await loadLeaderboards();
+    }
+    listDiv.innerHTML = "";
+    const validPlayers = allLeaderboardPlayers.filter(p => p.id !== game.saveCode && !p.banned);
+    if (validPlayers.length === 0) {
+      listDiv.innerHTML = `<p class="caption" style="text-align:center;">Aucun joueur disponible pour l'instant.</p>`;
+      return;
+    }
+    validPlayers.forEach(p => {
+      const card = document.createElement("div");
+      card.className = "trade-player-card";
+      const gHTML = p.groupId ? getGroupHTML(p.groupId) : "";
+      const avHtml = renderCCAvatarHTML(p.dnbUsername || p.username, p.displayName || p.username, p.profilePic || p.dnbAvatar || "", "cc-avatar-sm");
+      card.innerHTML = `
+        <div class="trade-player-left">
+          ${avHtml}
+          <div style="min-width:0;">
+            <div style="font-weight:800;font-size:14px;">${escapeHTML(p.displayName || p.username)}${gHTML}</div>
+            <div class="caption">${ccFormatNumber(p.score)} Cookies</div>
+          </div>
+        </div>
+        <button type="button" class="btn-pill btn-sm">Proposer</button>
+      `;
+      card.querySelector("button").onclick = () => initTrade(p.id, p.displayName || p.username);
+      listDiv.appendChild(card);
+    });
+  }
+
+  async function initTrade(targetId, targetName) {
+    if (!game.saveCode) {
+      await ccShowDialog({ title: "Connexion requise", message: "Connecte-toi avec un Code ou Google pour proposer un échange." });
+      return;
+    }
+    try {
+      const ref = doc(collection(getCookieDb(), "stmg_trades"));
+      await setDoc(ref, {
+        senderId: game.saveCode,
+        senderName: game.displayName || game.username,
+        receiverId: targetId,
+        receiverName: targetName,
+        status: "pending",
+        senderOffer: { cookies: 0, comps: [] },
+        receiverOffer: { cookies: 0, comps: [] },
+        senderReady: false,
+        receiverReady: false,
+        senderProcessed: false,
+        receiverProcessed: false,
+        chat: [],
+        timestamp: serverTimestamp()
+      });
+      await ccShowDialog({ title: "Demande envoyée", message: `🚀 Demande d'échange envoyée à ${targetName} !` });
+    } catch (_) {
+      await ccShowDialog({ title: "Erreur", message: "Impossible d'envoyer la demande d'échange." });
+    }
+  }
+
+  function openActiveTradeModal() {
+    if (!currentTradeData) return;
+    isTradeModalOpen = true;
+    const isSender = currentTradeData.senderId === game.saveCode;
+    const targetName = isSender ? currentTradeData.receiverName : currentTradeData.senderName;
+    if ($id("cc-trade-target-name")) $id("cc-trade-target-name").innerText = targetName || "Joueur";
+    if ($id("cc-trade-cookies-amount")) $id("cc-trade-cookies-amount").value = "";
+    if ($id("cc-trade-cookies-unit")) $id("cc-trade-cookies-unit").value = "1";
+    if ($id("cc-trade-my-cookies-input")) $id("cc-trade-my-cookies-input").value = "0";
+
+    const myCompsList = $id("cc-trade-my-comps-list");
+    if (myCompsList) {
+      myCompsList.innerHTML = "";
+      if (!Array.isArray(game.companions)) game.companions = [];
+      game.companions.forEach(c => {
+        const compData = companionsDB[c];
+        if (!compData) return;
+        const label = document.createElement("label");
+        label.className = "cc-trade-comp-pill";
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.value = c;
+        cb.className = "cc-trade-comp-check";
+        cb.onchange = window.ccDebounceUpdateOffer;
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(` ${compData.name}`));
+        myCompsList.appendChild(label);
+      });
+      if (game.companions.length === 0) {
+        myCompsList.innerHTML = `<span class="caption">Aucun compagnon</span>`;
+      }
+    }
+
+    syncTradeUI(isSender);
+    $id("cc-active-trade-modal")?.classList.add("active");
+  }
+
+  function syncTradeUI(isSender) {
+    if (!currentTradeData) return;
+    const theirOffer = isSender ? currentTradeData.receiverOffer : currentTradeData.senderOffer;
+    const amIReady = isSender ? currentTradeData.senderReady : currentTradeData.receiverReady;
+    const areTheyReady = isSender ? currentTradeData.receiverReady : currentTradeData.senderReady;
+
+    if ($id("cc-trade-their-cookies")) $id("cc-trade-their-cookies").innerText = ccFormatNumber(theirOffer?.cookies || 0);
+    const theirCompsText = (theirOffer?.comps || []).map(c => companionsDB[c]?.name || c).join(", ");
+    if ($id("cc-trade-their-comps")) $id("cc-trade-their-comps").innerText = theirCompsText || "Aucun";
+
+    const tBox = $id("cc-their-trade-box");
+    const tReady = $id("cc-trade-their-ready");
+    if (tBox && tReady) {
+      tBox.classList.toggle("ready", !!areTheyReady);
+      tReady.className = `cc-trade-status ${areTheyReady ? "ready" : "not-ready"}`;
+      tReady.innerText = areTheyReady ? "✅ Prêt !" : "❌ Pas prêt";
+    }
+
+    const myBox = $id("cc-my-trade-box");
+    if (myBox) myBox.classList.toggle("ready", !!amIReady);
+    if ($id("cc-trade-cookies-amount")) $id("cc-trade-cookies-amount").disabled = !!amIReady;
+    if ($id("cc-trade-cookies-unit")) $id("cc-trade-cookies-unit").disabled = !!amIReady;
+    document.querySelectorAll(".cc-trade-comp-check").forEach(cb => { cb.disabled = !!amIReady; });
+    if ($id("cc-trade-my-ready-check")) $id("cc-trade-my-ready-check").checked = !!amIReady;
+
+    const tcb = $id("cc-trade-chat-box");
+    if (tcb) {
+      tcb.innerHTML = "";
+      (currentTradeData.chat || []).forEach(msg => {
+        const isMe = msg.senderId === game.saveCode;
+        const align = isMe ? "right" : "left";
+        const color = isMe ? "var(--primary)" : "var(--secondary)";
+        tcb.innerHTML += `<div style="text-align:${align};">
+          <div style="font-size:11px;font-weight:800;color:${color};">${escapeHTML(msg.name || "Joueur")}</div>
+          <span style="background:var(--card-bg);border:1px solid var(--hl);padding:4px 9px;border-radius:10px;display:inline-block;font-size:12.5px;max-width:85%;text-align:left;">${escapeHTML(msg.text || "")}</span>
+        </div>`;
+      });
+      tcb.scrollTop = tcb.scrollHeight;
+    }
+  }
+
+  async function processTradeCompletion(docId, tradeData, isSender) {
+    if (window["ccTradeProcessed_" + docId]) return;
+    window["ccTradeProcessed_" + docId] = true;
+
+    const myOffer = isSender ? tradeData.senderOffer : tradeData.receiverOffer;
+    const theirOffer = isSender ? tradeData.receiverOffer : tradeData.senderOffer;
+
+    const cookiesGiven = ccValidateNum(myOffer?.cookies || 0);
+    const cookiesReceived = ccValidateNum(theirOffer?.cookies || 0);
+    let newCookies = ccValidateNum(game.cookies) - cookiesGiven + cookiesReceived;
+    if (newCookies < 0) newCookies = 0;
+
+    game.cookies = newCookies;
+    if (cookiesReceived > 0) game.totalCookies = ccValidateNum(game.totalCookies) + cookiesReceived;
+    if (!Array.isArray(game.companions)) game.companions = [];
+
+    if (Array.isArray(myOffer?.comps)) {
+      myOffer.comps.forEach(c => {
+        const idx = game.companions.indexOf(c);
+        if (idx > -1) game.companions.splice(idx, 1);
+        if (game.equippedCompanion === c && !game.companions.includes(c)) {
+          game.equippedCompanion = null;
+        }
+      });
+    }
+    if (Array.isArray(theirOffer?.comps)) {
+      theirOffer.comps.forEach(c => game.companions.push(c));
+    }
+
+    const wasOpen = isTradeModalOpen && currentTradeDocId === docId;
+    if (wasOpen) {
+      $id("cc-active-trade-modal")?.classList.remove("active");
+      isTradeModalOpen = false;
+      currentTradeDocId = null;
+      currentTradeData = null;
+    }
+
+    const updates = isSender ? { senderProcessed: true } : { receiverProcessed: true };
+    try { await updateDoc(doc(getCookieDb(), "stmg_trades", docId), updates); } catch (_) {}
+
+    unsavedProgress = true;
+    saveLocal();
+    await saveGameToServer();
+    recalculateStats();
+    updateUI();
+    renderCompanions();
+
+    if (wasOpen && !appJustLoaded) {
+      await ccShowDialog({
+        title: "✅ Échange terminé !",
+        message: `Envoyé : ${ccFormatNumber(cookiesGiven)} cookies & ${(myOffer?.comps || []).length} compagnon(s)\nReçu : ${ccFormatNumber(cookiesReceived)} cookies & ${(theirOffer?.comps || []).length} compagnon(s)`
+      });
+    }
+  }
+
+  function saveLocal() {
+    try { localStorage.setItem("danCookieSave_v6", JSON.stringify(game)); } catch (_) {}
+  }
+
+  function generateUniqueCode(pseudo) {
+    return `${pseudo}-${Math.floor(Math.random() * 90000) + 10000}`;
+  }
+
+  async function saveGameToServer() {
+    if (!game.saveCode || !game.username || game.username.startsWith("Invité") || game.banned) return;
+    game.cookies = ccValidateNum(game.cookies);
+    if (window.currentUser?.username) {
+      game.dnbUsername = window.currentUser.username;
+      game.dnbAvatar = window.currentUser.avatar || "";
+      if (!game.profilePic && window.currentUser.avatar) {
+        game.profilePic = window.currentUser.avatar;
+      }
+    }
+    try {
+      const fdb = getCookieDb();
+      await setDoc(doc(fdb, "stmg_saves", game.saveCode), {
+        saveData: JSON.stringify(game),
+        lastUpdate: new Date().toISOString()
+      });
+      await setDoc(doc(fdb, "stmg_leaderboard", game.saveCode), {
+        username: game.username,
+        displayName: game.displayName || game.username,
+        dnbUsername: game.dnbUsername || window.currentUser?.username || "",
+        dnbAvatar: game.dnbAvatar || window.currentUser?.avatar || "",
+        profilePic: game.profilePic || window.currentUser?.avatar || "",
+        score: Math.floor(game.cookies),
+        sugars: ccValidateNum(game.sugars || 0),
+        cps: Math.floor(currentCps),
+        playtime: game.playtime || 0,
+        groupId: game.groupId || null,
+        banned: !!game.banned
+      }, { merge: true });
+      saveLocal();
+      unsavedProgress = false;
+      $id("cc-reminder-text")?.classList.add("hidden");
+    } catch (e) {
+      console.error("Erreur save Cookie Clicker server:", e);
+    }
+  }
+
+  function setupRealtimeListener() {
+    if (!game.saveCode) return;
+    if (realtimeListener) realtimeListener();
+    realtimeListener = onSnapshot(doc(getCookieDb(), "stmg_leaderboard", game.saveCode), async (docSnap) => {
+      if (!docSnap.exists()) return;
+      const data = docSnap.data();
+
+      if (data.banned && !game.banned) {
+        game.banned = true;
+        saveLocal();
+        $id("cc-ban-screen")?.classList.remove("hidden");
+      } else if (!data.banned && game.banned) {
+        game.banned = false;
+        saveLocal();
+        $id("cc-ban-screen")?.classList.add("hidden");
+      }
+
+      if (data.forceSave && data.forceSave > (game.lastForceSave || 0)) {
+        const isFirstLoad = !(game.lastForceSave > 0);
+        game.lastForceSave = data.forceSave;
+        saveLocal();
+        if (!isFirstLoad && !game.banned) saveGameToServer();
+      }
+
+      if (data.forceGC && data.forceGC > (game.lastGCSync || 0)) {
+        const isFirstLoad = !(game.lastGCSync > 0);
+        game.lastGCSync = data.forceGC;
+        saveLocal();
+        if (!isFirstLoad && !game.banned) showGoldenCookie();
+      }
+
+      if (data.groupId !== undefined && data.groupId !== game.groupId) {
+        game.groupId = data.groupId;
+        saveLocal();
+        updateUI();
+        loadLeaderboards();
+      }
+
+      if (data.adminEditTimestamp && data.adminEditTimestamp > (game.lastAdminSync || 0)) {
+        game.lastAdminSync = data.adminEditTimestamp;
+        const saveSnap = await getDoc(doc(getCookieDb(), "stmg_saves", game.saveCode));
+        if (saveSnap.exists()) {
+          const parsed = JSON.parse(saveSnap.data().saveData);
+          parsed.lastAdminSync = data.adminEditTimestamp;
+          game = mergeSaveData(parsed);
+          saveLocal();
+          recalculateStats();
+          updateUI();
+          renderCompanions();
+          checkSpinTimer();
+          if (!appJustLoaded) {
+            ccShowDialog({ title: "Mise à jour Admin", message: "⚠️ Tes données (ou tours de roue) ont été modifiées en direct par un Administrateur." });
+          }
+        }
+      }
+    });
+  }
+
+  async function executeLogin(code, parsedData) {
+    $id("cc-login-code-modal")?.classList.remove("active");
+    game = mergeSaveData(parsedData);
+    game.saveCode = code;
+    saveLocal();
+    setupRealtimeListener();
+    setupTradeListeners();
+    await fetchGroups();
+    finishLogin();
+  }
+
+  async function handleGoogleAuth() {
+    try {
+      const result = await signInWithPopup(getCookieAuth(), googleProvider);
+      const user = result.user;
+      const fdb = getCookieDb();
+      const docSnap = await getDoc(doc(fdb, "stmg_saves", user.uid));
+      if (docSnap.exists()) {
+        const parsed = JSON.parse(docSnap.data().saveData);
+        await executeLogin(user.uid, parsed);
+      } else {
+        game = mergeSaveData({});
+        game.saveCode = user.uid;
+        game.username = user.displayName || (user.email ? user.email.split("@")[0] : "Joueur");
+        game.displayName = game.username;
+        game.profilePic = user.photoURL || window.currentUser?.avatar || "";
+        saveLocal();
+        await saveGameToServer();
+        setupRealtimeListener();
+        setupTradeListeners();
+        await fetchGroups();
+        finishLogin();
+      }
+    } catch (error) {
+      await ccShowDialog({
+        title: "Connexion Google",
+        message: "Impossible de finaliser la connexion Google : " + (error?.message || "Erreur inconnue")
+      });
+    }
+  }
+
+  async function processImport(code) {
+    if (code === "...............................................................................") {
+      ccIsAdmin = true;
+      $id("cc-btn-open-admin")?.classList.remove("hidden");
+      $id("cc-subtab-admin")?.classList.remove("hidden");
+      await fetchGroups();
+      renderAdminGroups();
+      loadAdminData();
+      window.switchCCSubTab("admin");
+      return;
+    }
+    try {
+      const docSnap = await getDoc(doc(getCookieDb(), "stmg_saves", code));
+      if (!docSnap.exists()) {
+        await ccShowDialog({ title: "Code introuvable", message: "❌ Aucun compte trouvé pour ce Code Secret." });
+        return;
+      }
+      const parsed = JSON.parse(docSnap.data().saveData);
+      if (parsed.password && parsed.password !== "") {
+        $id("cc-check-pwd").value = "";
+        $id("cc-pwd-modal")?.classList.add("active");
+        $id("cc-btn-verify-pwd").onclick = async () => {
+          if ($id("cc-check-pwd").value === parsed.password) {
+            $id("cc-pwd-modal")?.classList.remove("active");
+            await executeLogin(code, parsed);
+          } else {
+            await ccShowDialog({ title: "Erreur", message: "Mot de passe incorrect." });
+          }
+        };
+        $id("cc-btn-cancel-pwd").onclick = () => {
+          $id("cc-pwd-modal")?.classList.remove("active");
+        };
+        return;
+      }
+      await executeLogin(code, parsed);
+    } catch (e) {
+      await ccShowDialog({ title: "Erreur de connexion", message: "Impossible d'importer ce code pour l'instant." });
+    }
+  }
+
+  function startChat() {
+    if (chatListener) chatListener();
+    initialChatLoad = true;
+    const q = query(collection(getCookieDb(), "stmg_chat"), orderBy("timestamp", "desc"), limit(25));
+    chatListener = onSnapshot(q, (snap) => {
+      const box = $id("cc-chat-box");
+      if (!box) return;
+      box.innerHTML = "";
+      const msgs = [];
+      snap.forEach(d => msgs.push({ id: d.id, ...d.data() }));
+      msgs.reverse().forEach(m => {
+        const adminBtns = ccIsAdmin
+          ? `<button type="button" class="btn-ghost btn-sm" onclick="window.ccDeleteChatMessage('${esc(m.id)}')">SUPPR</button> <button type="button" class="btn-danger btn-sm" onclick="window.ccBanChatMessage('${esc(m.id)}','${esc(m.userId)}')">BAN</button>`
+          : "";
+        const grpTag = m.groupId ? getGroupHTML(m.groupId) : "";
+        const storedAv = m.profilePic || m.dnbAvatar || "";
+        const avHtml = renderCCAvatarHTML(m.dnbUsername || m.userId, m.displayName || m.userId, storedAv, "cc-avatar-sm");
+        box.innerHTML += `
+          <div class="cc-chat-msg">
+            <div class="cc-chat-author">
+              <span class="cc-chat-author-left">${avHtml}<span>${escapeHTML(m.displayName || m.userId || "Joueur")}${grpTag}</span></span>
+              <div>${adminBtns}</div>
+            </div>
+            <div>${escapeHTML(m.text || "")}</div>
+          </div>`;
+      });
+      box.scrollTop = box.scrollHeight;
+
+      const chatTabActive = $id("cc-tab-chat")?.classList.contains("active");
+      if (!initialChatLoad && !chatTabActive && msgs.length > 0) {
+        const lastMsg = msgs[msgs.length - 1];
+        if (lastMsg.userId !== game.username) {
+          $id("cc-chat-badge")?.classList.remove("hidden");
+        }
+      }
+      initialChatLoad = false;
+    });
+  }
+
+  async function loadLeaderboards() {
+    try {
+      const fdb = getCookieDb();
+      allLeaderboardPlayers = [];
+
+      const qCook = query(collection(fdb, "stmg_leaderboard"), where("banned", "==", false), orderBy("score", "desc"), limit(10));
+      const snapCook = await getDocs(qCook);
+      const lbCook = $id("cc-lb-cookies");
+      if (lbCook) {
+        lbCook.innerHTML = "";
+        let rank = 1;
+        snapCook.forEach(d => {
+          const dat = d.data();
+          allLeaderboardPlayers.push({ id: d.id, ...dat });
+          const grpStr = dat.groupId ? getGroupHTML(dat.groupId) : "";
+          const storedAv = dat.profilePic || dat.dnbAvatar || "";
+          const avHtml = renderCCAvatarHTML(dat.dnbUsername || dat.username, dat.displayName || dat.username, storedAv, "cc-avatar-sm");
+          lbCook.innerHTML += `<div class="cc-lb-row ${rank === 1 ? "top-1" : rank === 2 ? "top-2" : rank === 3 ? "top-3" : ""}"><div class="cc-lb-rank">#${rank}</div><div class="cc-lb-name" title="${esc(dat.username)}">${avHtml}<span class="cc-lb-name-txt">${escapeHTML(dat.displayName || dat.username)}${grpStr}</span></div><div class="cc-lb-score">${ccFormatNumber(dat.score)}</div></div>`;
+          rank++;
+        });
+      }
+
+      const qCps = query(collection(fdb, "stmg_leaderboard"), where("banned", "==", false), orderBy("cps", "desc"), limit(10));
+      const snapCps = await getDocs(qCps);
+      const lbCps = $id("cc-lb-cps");
+      if (lbCps) {
+        lbCps.innerHTML = "";
+        let rank = 1;
+        snapCps.forEach(d => {
+          const dat = d.data();
+          const grpStr = dat.groupId ? getGroupHTML(dat.groupId) : "";
+          const storedAv = dat.profilePic || dat.dnbAvatar || "";
+          const avHtml = renderCCAvatarHTML(dat.dnbUsername || dat.username, dat.displayName || dat.username, storedAv, "cc-avatar-sm");
+          lbCps.innerHTML += `<div class="cc-lb-row ${rank === 1 ? "top-1" : rank === 2 ? "top-2" : rank === 3 ? "top-3" : ""}"><div class="cc-lb-rank">#${rank}</div><div class="cc-lb-name" title="${esc(dat.username)}">${avHtml}<span class="cc-lb-name-txt">${escapeHTML(dat.displayName || dat.username)}${grpStr}</span></div><div class="cc-lb-score">${ccFormatNumber(dat.cps || 0)}/s</div></div>`;
+          rank++;
+        });
+      }
+
+      const groupScores = {};
+      const allPlayersSnap = await getDocs(query(collection(fdb, "stmg_leaderboard"), where("banned", "==", false)));
+      allPlayersSnap.forEach(d => {
+        const dat = d.data();
+        if (!allLeaderboardPlayers.find(p => p.id === d.id)) {
+          allLeaderboardPlayers.push({ id: d.id, ...dat });
+        }
+        if (dat.groupId && groupsMap[dat.groupId]) {
+          groupScores[dat.groupId] = (groupScores[dat.groupId] || 0) + (dat.score || 0);
+        }
+      });
+
+      const sortedGroups = Object.keys(groupScores).map(id => ({ id, score: groupScores[id] })).sort((a, b) => b.score - a.score).slice(0, 10);
+      const lbGroups = $id("cc-lb-groups");
+      if (lbGroups) {
+        lbGroups.innerHTML = "";
+        let rankG = 1;
+        sortedGroups.forEach(g => {
+          lbGroups.innerHTML += `<div class="cc-lb-row ${rankG === 1 ? "top-1" : rankG === 2 ? "top-2" : rankG === 3 ? "top-3" : ""}"><div class="cc-lb-rank">#${rankG}</div><div class="cc-lb-name"><span class="cc-lb-name-txt">${getGroupHTML(g.id)}</span></div><div class="cc-lb-score">${ccFormatNumber(g.score)}</div></div>`;
+          rankG++;
+        });
+        if (sortedGroups.length === 0) {
+          lbGroups.innerHTML = '<p class="caption" style="text-align:center;">Aucun groupe actif pour le moment</p>';
+        }
+      }
+
+      groupCpsBonus = 0;
+      if (game.groupId) {
+        const myGroupRank = sortedGroups.findIndex(g => g.id === game.groupId) + 1;
+        if (myGroupRank === 1) groupCpsBonus = 50000000;
+        else if (myGroupRank === 2) groupCpsBonus = 25000000;
+        else if (myGroupRank === 3) groupCpsBonus = 10000000;
+      }
+      recalculateStats();
+    } catch (e) {
+      console.error("Erreur classements Cookie Clicker:", e);
+    }
+  }
+
+  function renderAdminGroups() {
+    const box = $id("cc-admin-groups-list");
+    if (!box) return;
+    let html = "";
+    for (const id in groupsMap) {
+      html += `<div style="display:flex; justify-content:space-between; align-items:center; background:var(--card-bg); border:1px solid var(--hl); padding:8px 12px; border-radius:10px;">
+        <span>ID: <small class="caption">${escapeHTML(id)}</small> · Rendu: ${getGroupHTML(id)}</span>
+        <button type="button" class="btn-danger btn-sm" onclick="window.ccDelGroup('${esc(id)}')">Suppr.</button>
+      </div>`;
+    }
+    if (Object.keys(groupsMap).length === 0) html = `<p class="caption">Aucun groupe créé.</p>`;
+    box.innerHTML = html;
+  }
+
+  async function loadAdminData() {
+    await fetchGroups();
+    renderAdminGroups();
+    const sTable = document.querySelector("#cc-admin-saves-table tbody");
+    if (!sTable) return;
+    sTable.innerHTML = "";
+    try {
+      const lSnap = await getDocs(collection(getCookieDb(), "stmg_leaderboard"));
+      lSnap.forEach(d => {
+        const dat = d.data();
+        const isBan = dat.banned;
+        const banBtn = isBan
+          ? `<button type="button" class="btn-ghost btn-sm" onclick="window.ccBanDoc('${esc(d.id)}', false)">Débannir</button>`
+          : `<button type="button" class="btn-danger btn-sm" onclick="window.ccBanDoc('${esc(d.id)}', true)">Ban</button>`;
+        const gcBtn = `<button type="button" class="btn-ghost btn-sm" title="Envoyer un Cookie Doré" onclick="window.ccSendGoldenCookie('${esc(d.id)}')"><img src="${imgCookieGolden}" alt="✨" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;"></button>`;
+        const wheelBtn = `<button type="button" class="btn-ghost btn-sm" title="Gérer la Roue" onclick="window.ccOpenWheelAdminModal('${esc(d.id)}')">🎡</button>`;
+        const storedAv = dat.profilePic || dat.dnbAvatar || "";
+        const avHtml = renderCCAvatarHTML(dat.dnbUsername || dat.username, dat.displayName || dat.username, storedAv, "cc-avatar-sm");
+        let groupOptions = `<option value="">-- Aucun --</option>`;
+        for (const gId in groupsMap) {
+          groupOptions += `<option value="${esc(gId)}" ${dat.groupId === gId ? "selected" : ""}>${escapeHTML(groupsMap[gId].name)}</option>`;
+        }
+        const groupSelectHTML = `<select onchange="window.ccUpdatePlayerGroup('${esc(d.id)}', this.value)" style="background:var(--input-bg); color:var(--ink); border:1px solid var(--input-b); border-radius:8px; padding:4px 8px; font-size:12px;">${groupOptions}</select>`;
+        sTable.innerHTML += `<tr>
+          <td><span class="caption">${escapeHTML(d.id)}</span></td>
+          <td style="${isBan ? "text-decoration:line-through;color:var(--danger);" : ""}"><span style="display:inline-flex;align-items:center;gap:6px;">${avHtml}<span>${escapeHTML(dat.displayName || dat.username)}</span></span></td>
+          <td>${groupSelectHTML}</td>
+          <td>${ccFormatNumber(dat.score)}</td>
+          <td>${ccFormatNumber(dat.sugars || 0)}</td>
+          <td>${ccFormatNumber(dat.cps || 0)}</td>
+          <td style="display:flex;gap:4px;flex-wrap:wrap;">
+            <button type="button" class="btn-ghost btn-sm" onclick="window.ccOpenEditModal('${esc(d.id)}')">Éditer</button>
+            <button type="button" class="btn-danger btn-sm" onclick="window.ccDelDoc('${esc(d.id)}')">Suppr.</button>
+            ${banBtn}
+            ${gcBtn}
+            ${wheelBtn}
+          </td>
+        </tr>`;
+      });
+    } catch (e) {
+      sTable.innerHTML = '<tr><td colspan="7">Erreur Firebase</td></tr>';
+    }
+  }
+
+  window.ccDelGroup = async (id) => {
+    if (await ccShowDialog({ type: "confirm", title: "Supprimer le groupe", message: "Supprimer ce groupe ? Les joueurs le perdront." })) {
+      await deleteDoc(doc(getCookieDb(), "stmg_groups", id));
+      await fetchGroups();
+      loadAdminData();
+    }
+  };
+  window.ccUpdatePlayerGroup = async (userId, newGroupId) => {
+    try {
+      const finalGroupId = newGroupId === "" ? null : newGroupId;
+      const fdb = getCookieDb();
+      await updateDoc(doc(fdb, "stmg_leaderboard", userId), { groupId: finalGroupId });
+      const s = await getDoc(doc(fdb, "stmg_saves", userId));
+      if (s.exists()) {
+        const p = JSON.parse(s.data().saveData);
+        p.groupId = finalGroupId;
+        await updateDoc(doc(fdb, "stmg_saves", userId), { saveData: JSON.stringify(p) });
+      }
+    } catch (_) {
+      ccShowDialog({ title: "Erreur", message: "Erreur lors de la mise à jour du groupe." });
+    }
+  };
+  window.ccDelDoc = async (id) => {
+    if (await ccShowDialog({ type: "confirm", title: "Supprimer sauvegarde", message: `Supprimer définitivement ${id} ?` })) {
+      const fdb = getCookieDb();
+      await deleteDoc(doc(fdb, "stmg_saves", id));
+      await deleteDoc(doc(fdb, "stmg_leaderboard", id));
+      loadAdminData();
+    }
+  };
+  window.ccBanDoc = async (id, status) => {
+    if (await ccShowDialog({ type: "confirm", title: status ? "Bannir" : "Débannir", message: status ? "Bannir ce joueur ?" : "Débannir ce joueur ?" })) {
+      const fdb = getCookieDb();
+      await updateDoc(doc(fdb, "stmg_leaderboard", id), { banned: status });
+      const saveRef = doc(fdb, "stmg_saves", id);
+      const s = await getDoc(saveRef);
+      if (s.exists()) {
+        const p = JSON.parse(s.data().saveData);
+        p.banned = status;
+        await updateDoc(saveRef, { saveData: JSON.stringify(p) });
+      }
+      loadAdminData();
+    }
+  };
+  window.ccSendGoldenCookie = async (id) => {
+    if (!ccIsAdmin) return;
+    try {
+      await updateDoc(doc(getCookieDb(), "stmg_leaderboard", id), { forceGC: Date.now() });
+      ccShowDialog({ title: "Cookie Doré envoyé", message: "✨ Cookie Doré envoyé au joueur !" });
+    } catch (_) {
+      ccShowDialog({ title: "Erreur", message: "Erreur lors de l'envoi du Cookie Doré." });
+    }
+  };
+
+  window.ccOpenWheelAdminModal = async (id) => {
+    const s = await getDoc(doc(getCookieDb(), "stmg_saves", id));
+    if (!s.exists()) return;
+    currentWheelEditId = id;
+    currentWheelEditData = mergeSaveData(JSON.parse(s.data().saveData));
+    $id("cc-admin-wheel-player-name").innerText = currentWheelEditData.displayName || currentWheelEditData.username || id;
+    $id("cc-admin-wheel-spins").value = currentWheelEditData.spinsLeft !== undefined ? currentWheelEditData.spinsLeft : 2;
+    $id("cc-admin-wheel-modal")?.classList.add("active");
+  };
+
+  window.ccAdminQuickAdd = async (id, type, amount) => {
+    const fdb = getCookieDb();
+    const s = await getDoc(doc(fdb, "stmg_saves", id));
+    if (!s.exists()) return;
+    const p = mergeSaveData(JSON.parse(s.data().saveData));
+    if (type === "cookies") p.cookies = ccValidateNum(p.cookies) + amount;
+    if (type === "sugars") p.sugars = ccValidateNum(p.sugars) + amount;
+    await updateDoc(doc(fdb, "stmg_saves", id), { saveData: JSON.stringify(p) });
+    await updateDoc(doc(fdb, "stmg_leaderboard", id), {
+      score: p.cookies,
+      sugars: p.sugars,
+      adminEditTimestamp: Date.now()
+    });
+    if (type === "cookies" && $id("cc_edit_cookies")) {
+      $id("cc_edit_cookies").value = Math.floor(p.cookies).toLocaleString("fullwide", { useGrouping: false });
+    }
+    if (type === "sugars" && $id("cc_edit_sugars")) {
+      $id("cc_edit_sugars").value = p.sugars;
+    }
+    loadAdminData();
+    ccShowDialog({ title: "Appliqué", message: "✅ Action appliquée en temps réel au joueur !" });
+  };
+
+  window.ccAdminWipeSave = async (id) => {
+    if (!await ccShowDialog({ type: "confirm", title: "Remise à Zéro", message: "⚠️ Remettre ce compte totalement à ZÉRO ?" })) return;
+    const fdb = getCookieDb();
+    const s = await getDoc(doc(fdb, "stmg_saves", id));
+    if (!s.exists()) return;
+    const oldData = JSON.parse(s.data().saveData);
+    const newData = mergeSaveData({
+      username: oldData.username,
+      displayName: oldData.displayName,
+      saveCode: oldData.saveCode,
+      password: oldData.password,
+      profilePic: oldData.profilePic || "",
+      dnbUsername: oldData.dnbUsername || "",
+      dnbAvatar: oldData.dnbAvatar || "",
+      banned: !!oldData.banned,
+      groupId: oldData.groupId || null
+    });
+    await updateDoc(doc(fdb, "stmg_saves", id), { saveData: JSON.stringify(newData) });
+    await updateDoc(doc(fdb, "stmg_leaderboard", id), { score: 0, cps: 0, sugars: 0, adminEditTimestamp: Date.now() });
+    $id("cc-admin-edit-modal")?.classList.remove("active");
+    loadAdminData();
+    ccShowDialog({ title: "Réinitialisé", message: "✅ Compte réinitialisé !" });
+  };
+
+  window.ccOpenEditModal = async (id) => {
+    const fdb = getCookieDb();
+    const s = await getDoc(doc(fdb, "stmg_saves", id));
+    if (!s.exists()) return;
+    const editDat = mergeSaveData(JSON.parse(s.data().saveData));
+    $id("cc-edit-player-name").innerText = editDat.username || editDat.displayName || id;
+    const safeCookieStr = Math.floor(ccValidateNum(editDat.cookies)).toLocaleString("fullwide", { useGrouping: false });
+
+    let html = `
+      <div class="cc-admin-edit-grid">
+        <div class="cc-admin-edit-card">
+          <h4>📊 Statistiques</h4>
+          <div class="input-group"><label>Cookies</label><input type="text" id="cc_edit_cookies" value="${esc(safeCookieStr)}"></div>
+          <div class="input-group"><label>Sucres</label><input type="number" id="cc_edit_sugars" value="${ccValidateNum(editDat.sugars)}"></div>
+          <div class="input-group"><label>Avatar (URL / Base64)</label><input type="text" id="cc_edit_profilePic" value="${esc(editDat.profilePic || "")}"></div>
+          <button type="button" class="btn-ghost btn-sm del" style="width:100%;" onclick="document.getElementById('cc_edit_profilePic').value=''">🗑️ Vider l'Avatar</button>
+        </div>
+        <div class="cc-admin-edit-card">
+          <h4>⚡ Actions Instantanées</h4>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button type="button" class="btn-pill btn-sm" onclick="window.ccAdminQuickAdd('${esc(id)}', 'cookies', 1000000000)">+ 1 Billion Cookies</button>
+            <button type="button" class="btn-ghost btn-sm" onclick="window.ccAdminQuickAdd('${esc(id)}', 'sugars', 10)">+ 10 Sucres</button>
+            <button type="button" class="btn-danger btn-sm" onclick="window.ccAdminWipeSave('${esc(id)}')">⚠️ Remettre à Zéro</button>
+          </div>
+        </div>
+      </div>
+      <div class="cc-section-mini-title" style="margin-top:14px;">🐾 Compagnons possédés</div>
+      <div class="cc-admin-b-grid">
+    `;
+    ["algaz", "dan", "dan_shiny", "jayden", "jayden_shiny"].forEach(c => {
+      const qty = (editDat.companions || []).filter(x => x === c).length;
+      html += `<div class="cc-admin-b-box">
+        <strong style="font-size:12.5px;">${escapeHTML(companionsDB[c].name)}</strong>
+        <input type="number" id="cc_edit_comp_${c}" value="${qty}" min="0">
+      </div>`;
+    });
+    html += `</div><div class="cc-section-mini-title" style="margin-top:14px;">🏢 Bâtiments (Quantité & Niveau)</div><div class="cc-admin-b-grid">`;
+    for (const key in buildingData) {
+      const count = ccValidateNum(editDat.buildings[key]?.count || 0);
+      const lvl = ccValidateNum(editDat.buildings[key]?.level || 0);
+      html += `<div class="cc-admin-b-box">
+        <strong style="font-size:12.5px;">${buildingData[key].icon} ${buildingData[key].name}</strong>
+        <div class="cc-admin-b-inputs">
+          <label>Qté <input type="number" id="cc_edit_b_${key}" value="${count}" min="0"></label>
+          <label>Lvl <input type="number" id="cc_edit_b_lvl_${key}" value="${lvl}" min="0"></label>
+        </div>
+      </div>`;
+    }
+    html += `</div>`;
+
+    $id("cc-edit-form-content").innerHTML = html;
+    $id("cc-admin-edit-modal")?.classList.add("active");
+
+    $id("cc-btn-save-admin-edit").onclick = async () => {
+      editDat.cookies = ccValidateNum(parseFloat($id("cc_edit_cookies").value));
+      editDat.sugars = ccValidateNum(parseFloat($id("cc_edit_sugars").value));
+      editDat.profilePic = ($id("cc_edit_profilePic").value || "").trim();
+
+      editDat.companions = [];
+      ["algaz", "dan", "dan_shiny", "jayden", "jayden_shiny"].forEach(c => {
+        const qty = parseInt($id(`cc_edit_comp_${c}`).value, 10) || 0;
+        for (let i = 0; i < qty; i++) editDat.companions.push(c);
+      });
+      if (editDat.equippedCompanion && !editDat.companions.includes(editDat.equippedCompanion)) {
+        editDat.equippedCompanion = null;
+      }
+
+      for (const key in buildingData) {
+        const countVal = ccValidateNum(parseInt($id(`cc_edit_b_${key}`).value, 10));
+        const lvlVal = ccValidateNum(parseInt($id(`cc_edit_b_lvl_${key}`).value, 10));
+        editDat.buildings[key] = { count: countVal, level: lvlVal };
+      }
+      const newCps = calculateCpsForSave(editDat);
+      await updateDoc(doc(fdb, "stmg_saves", id), { saveData: JSON.stringify(editDat) });
+      await updateDoc(doc(fdb, "stmg_leaderboard", id), {
+        score: editDat.cookies,
+        sugars: editDat.sugars,
+        cps: Math.floor(newCps),
+        profilePic: editDat.profilePic || editDat.dnbAvatar || "",
+        adminEditTimestamp: Date.now()
+      });
+      $id("cc-admin-edit-modal")?.classList.remove("active");
+      loadAdminData();
+      loadLeaderboards();
+      ccShowDialog({ title: "Enregistré", message: "Compte modifié avec succès !" });
+    };
+  };
+
+  window.ccDeleteChatMessage = async (msgId) => {
+    if (!ccIsAdmin) return;
+    if (await ccShowDialog({ type: "confirm", title: "Supprimer message", message: "Supprimer ce message du chat ?" })) {
+      await deleteDoc(doc(getCookieDb(), "stmg_chat", msgId));
+    }
+  };
+  window.ccBanChatMessage = async (msgId, userId) => {
+    if (!ccIsAdmin) return;
+    if (await ccShowDialog({ type: "confirm", title: "Bannir", message: "Supprimer ce message et bannir le joueur ?" })) {
+      const fdb = getCookieDb();
+      await deleteDoc(doc(fdb, "stmg_chat", msgId));
+      const snap = await getDocs(query(collection(fdb, "stmg_leaderboard"), where("username", "==", userId)));
+      snap.forEach(async d => {
+        await updateDoc(doc(fdb, "stmg_leaderboard", d.id), { banned: true });
+      });
+    }
+  };
+
+  async function finishLogin() {
+    const overlay = $id("cc-username-overlay");
+    if (overlay) overlay.style.display = "none";
+    $id("cc-btn-gear")?.classList.remove("hidden");
+    $id("cc-shortcuts-bar")?.classList.remove("hidden");
+    if (game.username === "admin1234" || game.username === "adminSSE22" || isAdminUser(window.currentUser)) {
+      ccIsAdmin = true;
+      $id("cc-btn-open-admin")?.classList.remove("hidden");
+      $id("cc-subtab-admin")?.classList.remove("hidden");
+    }
+    startChat();
+    renderCompanions();
+    initStore();
+    recalculateStats();
+    updateUI();
+    await loadLeaderboards();
+  }
+
+  function refreshDnbQuickLinkBtn() {
+    const quickBtn = $id("cc-btn-quick-dnb");
+    if (!quickBtn) return;
+    const dnbName = window.currentUser?.username;
+    if (dnbName && !game.username) {
+      quickBtn.classList.remove("hidden");
+      quickBtn.innerText = `⚡ Continuer avec mon compte DnB (${dnbName})`;
+    } else {
+      quickBtn.classList.add("hidden");
+    }
+  }
+
+  async function signUpCookieAccount(pseudoInput) {
+    const clean = String(pseudoInput || "").trim();
+    if (clean.length < 3) {
+      await ccShowDialog({ title: "Pseudo trop court", message: "Entre un pseudo d'au moins 3 caractères." });
+      return;
+    }
+    const fdb = getCookieDb();
+    const q = query(collection(fdb, "stmg_leaderboard"), where("username", "==", clean));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      await ccShowDialog({
+        title: "Pseudo déjà enregistré",
+        message: "Ce pseudo existe déjà sur Cookie Clicker ! Si c'est le tien, clique sur « Connexion Code » avec ton Code Secret."
+      });
+      return;
+    }
+    game = mergeSaveData({});
+    game.username = clean;
+    game.displayName = window.currentUser?.displayName || clean;
+    game.profilePic = window.currentUser?.avatar || "";
+    game.saveCode = (clean === "admin1234" || clean === "adminSSE22") ? clean : generateUniqueCode(clean);
+    saveLocal();
+    await saveGameToServer();
+    setupRealtimeListener();
+    setupTradeListeners();
+    await fetchGroups();
+    finishLogin();
+  }
+
+  function openLoginModal() {
+    tempLoginCode = "";
+    tempLoginData = null;
+    if ($id("cc-login-input-code")) $id("cc-login-input-code").value = "";
+    if ($id("cc-login-input-pwd")) $id("cc-login-input-pwd").value = "";
+    $id("cc-login-code-step")?.classList.remove("hidden");
+    $id("cc-login-pwd-step")?.classList.add("hidden");
+    if ($id("cc-btn-submit-login")) $id("cc-btn-submit-login").innerText = "Vérifier";
+    $id("cc-login-code-modal")?.classList.add("active");
+  }
+
+  function initCookieClickerOnce() {
+    if (ccInitialized) return;
+    ccInitialized = true;
+    initStore();
+
+    $id("cc-btn-mode-buy")?.addEventListener("click", (e) => {
+      storeMode = "buy";
+      e.target.classList.add("active");
+      $id("cc-btn-mode-sell")?.classList.remove("sell-active");
+      updateUI();
+    });
+    $id("cc-btn-mode-sell")?.addEventListener("click", (e) => {
+      storeMode = "sell";
+      e.target.classList.add("sell-active");
+      $id("cc-btn-mode-buy")?.classList.remove("active");
+      updateUI();
+    });
+    $id("cc-btn-mode-trade")?.addEventListener("click", () => {
+      window.switchCCSubTab("trade");
+    });
+
+    $id("cc-btn-history")?.addEventListener("click", () => {
+      const list = $id("cc-history-list");
+      if (!list) return;
+      list.innerHTML = "";
+      if (!game.upgradesBought || game.upgradesBought.length === 0) {
+        list.innerHTML = `<p class="caption" style="text-align:center;">Aucune amélioration achetée pour le moment.</p>`;
+      } else {
+        game.upgradesBought.forEach(upId => {
+          const up = upgradeData.find(u => u.id === upId);
+          if (up) {
+            list.innerHTML += `<div class="cc-history-item">
+              <div style="font-size:28px;">${up.icon}</div>
+              <div>
+                <div style="font-weight:800;font-size:14px;">${escapeHTML(up.desc)}</div>
+                <div class="caption">Coût : ${ccFormatNumber(up.cost)}</div>
+              </div>
+            </div>`;
+          }
+        });
+      }
+      $id("cc-history-modal")?.classList.add("active");
+    });
+
+    const handleBigCookieClick = (clientX, clientY) => {
+      if (!game.username || game.banned) return;
+      game.cookies += clickPower;
+      game.totalCookies += clickPower;
+      unsavedProgress = true;
+
+      const stage = $id("cc-cookie-stage");
+      const rect = stage.getBoundingClientRect();
+      const x = clientX ? (clientX - rect.left) : rect.width / 2;
+      const y = clientY ? (clientY - rect.top) : rect.height / 2;
+
+      const p = document.createElement("div");
+      p.className = "click-particle";
+      p.innerText = `+${ccFormatNumber(clickPower)}`;
+      p.style.left = `${x}px`;
+      p.style.top = `${y}px`;
+      stage.appendChild(p);
+      setTimeout(() => p.remove(), 950);
+      spawnCrack(x, y);
+      for (let i = 0; i < 3; i++) spawnCrumb(x, y);
+      updateUI();
+    };
+
+    $id("cc-big-cookie")?.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      handleBigCookieClick(e.clientX, e.clientY);
+    });
+    $id("cc-big-cookie")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        handleBigCookieClick(0, 0);
+      }
+    });
+    window.addEventListener("resize", () => {
+      if (ccInitialized && !$id("cc-easter-modal")?.classList.contains("hidden")) {
+        updateOrbitingCursors(true);
+      }
+    });
+
+    // Wheel CTA & Gestures
+    $id("cc-btn-spin")?.addEventListener("click", async () => {
+      if (game.spinsLeft < 1 || isSpinning) return;
+      if (game.cookies < 5000000000) {
+        await ccShowDialog({ title: "Fonds insuffisants", message: "Il te faut 5 Billions de Cookies pour tourner la roue !" });
+        return;
+      }
+      game.cookies = ccValidateNum(game.cookies) - 5000000000;
+      game.spinsLeft -= 1;
+      if (game.spinsLeft === 1 || (!game.lastSpinReset || game.lastSpinReset <= Date.now())) {
+        game.lastSpinReset = Date.now() + (5 * 60 * 1000);
+      }
+      unsavedProgress = true;
+      saveLocal();
+      saveGameToServer();
+      recalculateStats();
+      updateUI();
+      checkSpinTimer();
+
+      wheelPendingPrize = getWheelPrize();
+      generateWheelLayout();
+      renderWheelVisuals();
+
+      const wrapper = $id("cc-wheel-scale-wrapper");
+      if (wrapper) {
+        wrapper.style.transition = "none";
+        wrapper.style.transform = "rotate(0deg)";
+        wrapper.classList.remove("wheel-zoom-effect");
+      }
+      if ($id("cc-swipe-text")) $id("cc-swipe-text").innerText = "👇 Glisse vers le bas (ou touche le bouton) pour tourner ! 👇";
+      $id("cc-wheel-modal")?.classList.remove("hidden");
+    });
+
+    const wheelGestureArea = $id("cc-wheel-gesture-area");
+    const onSwipeStart = (e) => {
+      if (isSpinning || !wheelPendingPrize) return;
+      wheelStartPosY = e.touches ? e.touches[0].clientY : e.clientY;
+      wheelStartPosX = e.touches ? e.touches[0].clientX : e.clientX;
+    };
+    const onSwipeEnd = (e) => {
+      if (isSpinning || !wheelPendingPrize) return;
+      const endY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+      const endX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+      if (Math.abs(endY - wheelStartPosY) > 36 || Math.abs(endX - wheelStartPosX) > 36) {
+        launchWheelSpinAnimation();
+      }
+    };
+    wheelGestureArea?.addEventListener("mousedown", onSwipeStart);
+    wheelGestureArea?.addEventListener("touchstart", onSwipeStart, { passive: true });
+    wheelGestureArea?.addEventListener("mouseup", onSwipeEnd);
+    wheelGestureArea?.addEventListener("touchend", onSwipeEnd, { passive: true });
+    $id("cc-btn-wheel-launch")?.addEventListener("click", launchWheelSpinAnimation);
+
+    // Trades events
+    $id("cc-trade-cookies-amount")?.addEventListener("input", updateHiddenTradeInput);
+    $id("cc-trade-cookies-unit")?.addEventListener("change", updateHiddenTradeInput);
+    $id("cc-btn-decline-trade")?.addEventListener("click", async () => {
+      if (currentTradeDocId) {
+        try { await updateDoc(doc(getCookieDb(), "stmg_trades", currentTradeDocId), { status: "cancelled" }); } catch (_) {}
+        $id("cc-incoming-trade-modal")?.classList.remove("active");
+        currentTradeDocId = null;
+        currentTradeData = null;
+      }
+    });
+    $id("cc-btn-accept-trade")?.addEventListener("click", async () => {
+      if (currentTradeDocId) {
+        await updateDoc(doc(getCookieDb(), "stmg_trades", currentTradeDocId), { status: "active" });
+      }
+    });
+    $id("cc-btn-send-trade-chat")?.addEventListener("click", async () => {
+      const inp = $id("cc-trade-chat-input");
+      const txt = inp?.value.trim();
+      if (!txt || !currentTradeDocId) return;
+      await updateDoc(doc(getCookieDb(), "stmg_trades", currentTradeDocId), {
+        chat: arrayUnion({
+          senderId: game.saveCode,
+          name: game.displayName || game.username,
+          text: txt,
+          time: Date.now()
+        })
+      });
+      inp.value = "";
+    });
+    $id("cc-trade-chat-input")?.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") $id("cc-btn-send-trade-chat")?.click();
+    });
+    $id("cc-trade-my-ready-check")?.addEventListener("change", async (e) => {
+      if (!currentTradeDocId || !currentTradeData) return;
+      const ready = e.target.checked;
+      const isSender = currentTradeData.senderId === game.saveCode;
+      const myOfferCookies = Math.floor(ccValidateNum($id("cc-trade-my-cookies-input")?.value));
+      if (ready && myOfferCookies > game.cookies) {
+        await ccShowDialog({ title: "Solde insuffisant", message: "Tu ne peux pas valider : tu n'as plus assez de cookies !" });
+        e.target.checked = false;
+        if ($id("cc-trade-cookies-amount")) $id("cc-trade-cookies-amount").value = Math.floor(game.cookies);
+        if ($id("cc-trade-cookies-unit")) $id("cc-trade-cookies-unit").value = "1";
+        updateHiddenTradeInput();
+        return;
+      }
+      const updates = isSender ? { senderReady: ready } : { receiverReady: ready };
+      const bothReady = isSender ? (ready && currentTradeData.receiverReady) : (ready && currentTradeData.senderReady);
+      if (bothReady) updates.status = "completed";
+      try { await updateDoc(doc(getCookieDb(), "stmg_trades", currentTradeDocId), updates); } catch (_) {}
+    });
+    $id("cc-btn-cancel-active-trade")?.addEventListener("click", async () => {
+      if (currentTradeDocId) {
+        try { await updateDoc(doc(getCookieDb(), "stmg_trades", currentTradeDocId), { status: "cancelled" }); } catch (_) {}
+        $id("cc-active-trade-modal")?.classList.remove("active");
+        isTradeModalOpen = false;
+        currentTradeDocId = null;
+        currentTradeData = null;
+      }
+    });
+
+    // Auth & Login
+    $id("cc-btn-google-main")?.addEventListener("click", handleGoogleAuth);
+    $id("cc-btn-login-google-only")?.addEventListener("click", () => {
+      $id("cc-login-code-modal")?.classList.remove("active");
+      handleGoogleAuth();
+    });
+    $id("cc-btn-link-google")?.addEventListener("click", async () => {
+      try {
+        const result = await signInWithPopup(getCookieAuth(), googleProvider);
+        const user = result.user;
+        const oldSaveCode = game.saveCode;
+        if (oldSaveCode !== user.uid) {
+          game.saveCode = user.uid;
+          if (!game.profilePic) game.profilePic = user.photoURL || "";
+          await saveGameToServer();
+          setupRealtimeListener();
+          setupTradeListeners();
+          if (oldSaveCode && !oldSaveCode.includes(user.uid)) {
+            const fdb = getCookieDb();
+            try {
+              await deleteDoc(doc(fdb, "stmg_saves", oldSaveCode));
+              await deleteDoc(doc(fdb, "stmg_leaderboard", oldSaveCode));
+            } catch (_) {}
+          }
+          await ccShowDialog({ title: "Compte lié", message: "✅ Compte lié à Google et sécurisé !" });
+        } else {
+          await ccShowDialog({ title: "Déjà lié", message: "Ce compte est déjà lié à cette adresse Google." });
+        }
+        $id("cc-settings-modal")?.classList.remove("active");
+      } catch (error) {
+        await ccShowDialog({ title: "Erreur Google", message: "Erreur lors de la liaison Google : " + (error?.message || "") });
+      }
+    });
+
+    $id("cc-btn-signup")?.addEventListener("click", async () => {
+      const btn = $id("cc-btn-signup");
+      btn.disabled = true;
+      btn.innerText = "Vérification…";
+      try {
+        await signUpCookieAccount($id("cc-username-input").value);
+      } catch (_) {
+        await ccShowDialog({ title: "Erreur", message: "Erreur serveur Firebase Cookie Clicker." });
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Créer un code";
+      }
+    });
+
+    $id("cc-btn-quick-dnb")?.addEventListener("click", async () => {
+      if (!window.currentUser?.username) return;
+      await signUpCookieAccount(window.currentUser.username);
+    });
+
+    $id("cc-btn-login-code")?.addEventListener("click", openLoginModal);
+    $id("cc-btn-import-footer")?.addEventListener("click", openLoginModal);
+
+    $id("cc-btn-submit-login")?.addEventListener("click", async () => {
+      const btn = $id("cc-btn-submit-login");
+      if (!tempLoginData) {
+        const code = ($id("cc-login-input-code")?.value || "").trim();
+        if (!code) return;
+        if (code === "...............................................................................") {
+          $id("cc-login-code-modal")?.classList.remove("active");
+          ccIsAdmin = true;
+          $id("cc-btn-open-admin")?.classList.remove("hidden");
+          $id("cc-subtab-admin")?.classList.remove("hidden");
+          window.switchCCSubTab("admin");
+          return;
+        }
+        btn.innerText = "Recherche…";
+        try {
+          const docSnap = await getDoc(doc(getCookieDb(), "stmg_saves", code));
+          if (docSnap.exists()) {
+            const parsed = JSON.parse(docSnap.data().saveData);
+            tempLoginCode = code;
+            tempLoginData = parsed;
+            if (parsed.password && parsed.password !== "") {
+              $id("cc-login-code-step")?.classList.add("hidden");
+              $id("cc-login-pwd-step")?.classList.remove("hidden");
+              btn.innerText = "Déverrouiller";
+            } else {
+              await executeLogin(tempLoginCode, tempLoginData);
+            }
+          } else {
+            btn.innerText = "Vérifier";
+            await ccShowDialog({ title: "Introuvable", message: "❌ Code Secret introuvable." });
+          }
+        } catch (_) {
+          btn.innerText = "Vérifier";
+          await ccShowDialog({ title: "Erreur", message: "Erreur de connexion Firebase." });
+        }
+      } else {
+        const pwd = $id("cc-login-input-pwd")?.value || "";
+        if (pwd === tempLoginData.password) {
+          await executeLogin(tempLoginCode, tempLoginData);
+        } else {
+          await ccShowDialog({ title: "Mot de passe incorrect", message: "❌ Mot de passe incorrect." });
+        }
+      }
+    });
+    $id("cc-login-input-code")?.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") $id("cc-btn-submit-login")?.click();
+    });
+    $id("cc-login-input-pwd")?.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") $id("cc-btn-submit-login")?.click();
+    });
+
+    $id("cc-btn-show-code")?.addEventListener("click", async () => {
+      if (game.saveCode) {
+        await ccShowDialog({ type: "prompt", title: "Ton Code Secret", message: "Copie et conserve précieusement ce code pour retrouver ta partie partout :", defaultValue: game.saveCode });
+      } else {
+        await ccShowDialog({ title: "Mode Invité", message: "Tu joues actuellement en Invité (sauvegarde locale uniquement)." });
+      }
+    });
+
+    $id("cc-btn-guest")?.addEventListener("click", async () => {
+      game = mergeSaveData({});
+      game.username = "Invité";
+      game.displayName = window.currentUser?.displayName || "Invité";
+      game.profilePic = window.currentUser?.avatar || "";
+      game.saveCode = "";
+      const overlay = $id("cc-username-overlay");
+      if (overlay) overlay.style.display = "none";
+      $id("cc-shortcuts-bar")?.classList.remove("hidden");
+      await fetchGroups();
+      renderCompanions();
+      recalculateStats();
+      updateUI();
+      loadLeaderboards();
+    });
+
+    $id("cc-btn-save-data")?.addEventListener("click", async () => {
+      const btn = $id("cc-btn-save-data");
+      btn.innerText = "⏳ Sauvegarde…";
+      btn.disabled = true;
+      await saveGameToServer();
+      await loadLeaderboards();
+      btn.innerText = "💾 Sauvegarder";
+      btn.disabled = false;
+      ccShowDialog({ title: "Sauvegarde en ligne", message: "✅ Partie sauvegardée dans Firebase !" });
+    });
+
+    $id("cc-btn-reset")?.addEventListener("click", async () => {
+      if (await ccShowDialog({ type: "confirm", title: "Reset local", message: "Effacer ton cache local ? (Ton compte en ligne reste intact si tu as ton Code Secret)" })) {
+        if (companionAutoClickInterval) { clearInterval(companionAutoClickInterval); companionAutoClickInterval = null; }
+        game = JSON.parse(JSON.stringify(defaultSave));
+        localStorage.removeItem("danCookieSave_v6");
+        unsavedProgress = false;
+        const overlay = $id("cc-username-overlay");
+        if (overlay) overlay.style.display = "flex";
+        $id("cc-shortcuts-bar")?.classList.add("hidden");
+        refreshDnbQuickLinkBtn();
+        renderCompanions();
+        recalculateStats();
+        updateUI();
+      }
+    });
+
+    $id("cc-btn-ban-logout")?.addEventListener("click", () => {
+      if (companionAutoClickInterval) { clearInterval(companionAutoClickInterval); companionAutoClickInterval = null; }
+      game = JSON.parse(JSON.stringify(defaultSave));
+      localStorage.removeItem("danCookieSave_v6");
+      $id("cc-ban-screen")?.classList.add("hidden");
+      const overlay = $id("cc-username-overlay");
+      if (overlay) overlay.style.display = "flex";
+      refreshDnbQuickLinkBtn();
+      recalculateStats();
+      updateUI();
+    });
+
+    // Settings + Profile Pic
+    $id("cc-btn-gear")?.addEventListener("click", () => {
+      $id("cc-set-display-name").value = game.displayName || game.username;
+      $id("cc-set-pwd").value = game.password || "";
+      tempProfilePicBase64 = game.profilePic || window.currentUser?.avatar || "";
+      const preview = $id("cc-preview-profile-pic");
+      const removeBtn = $id("cc-btn-remove-profile-pic");
+      if ($id("cc-set-profile-pic-url")) $id("cc-set-profile-pic-url").value = "";
+      if ($id("cc-set-profile-pic-file")) $id("cc-set-profile-pic-file").value = "";
+
+      if (tempProfilePicBase64 && preview && removeBtn) {
+        preview.src = tempProfilePicBase64;
+        preview.classList.remove("hidden");
+        removeBtn.classList.remove("hidden");
+      } else {
+        preview?.classList.add("hidden");
+        removeBtn?.classList.add("hidden");
+      }
+      $id("cc-settings-modal")?.classList.add("active");
+    });
+
+    $id("cc-set-profile-pic-file")?.addEventListener("change", (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX_SIZE = 150;
+          let width = img.width;
+          let height = img.height;
+          if (width > height) {
+            if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+          } else {
+            if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+          }
+          canvas.width = Math.max(1, Math.round(width));
+          canvas.height = Math.max(1, Math.round(height));
+          canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+          tempProfilePicBase64 = canvas.toDataURL("image/jpeg", 0.8);
+          const preview = $id("cc-preview-profile-pic");
+          if (preview) {
+            preview.src = tempProfilePicBase64;
+            preview.classList.remove("hidden");
+          }
+          $id("cc-btn-remove-profile-pic")?.classList.remove("hidden");
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    $id("cc-btn-remove-profile-pic")?.addEventListener("click", () => {
+      tempProfilePicBase64 = "";
+      $id("cc-preview-profile-pic")?.classList.add("hidden");
+      $id("cc-btn-remove-profile-pic")?.classList.add("hidden");
+      if ($id("cc-set-profile-pic-url")) $id("cc-set-profile-pic-url").value = "";
+      if ($id("cc-set-profile-pic-file")) $id("cc-set-profile-pic-file").value = "";
+    });
+
+    $id("cc-btn-save-settings")?.addEventListener("click", async () => {
+      game.displayName = $id("cc-set-display-name").value.trim() || game.username;
+      game.password = $id("cc-set-pwd").value.trim();
+      const urlInput = ($id("cc-set-profile-pic-url")?.value || "").trim();
+      game.profilePic = urlInput || tempProfilePicBase64;
+      $id("cc-settings-modal")?.classList.remove("active");
+      saveLocal();
+      await saveGameToServer();
+      updateUI();
+      loadLeaderboards();
+    });
+
+    // Admin actions
+    $id("cc-btn-open-admin")?.addEventListener("click", () => window.switchCCSubTab("admin"));
+    $id("cc-btn-refresh-admin")?.addEventListener("click", () => loadAdminData());
+    $id("cc-btn-reset-wheel-timer")?.addEventListener("click", () => {
+      if (currentWheelEditData) {
+        currentWheelEditData.lastSpinReset = 0;
+        ccShowDialog({ title: "Timer réinitialisé", message: "Timer remis à 0 sec ! Clique sur Sauvegarder pour appliquer au joueur." });
+      }
+    });
+    $id("cc-btn-save-admin-wheel")?.addEventListener("click", async () => {
+      if (!currentWheelEditData || !currentWheelEditId) return;
+      currentWheelEditData.spinsLeft = parseInt($id("cc-admin-wheel-spins").value, 10) || 0;
+      const fdb = getCookieDb();
+      await updateDoc(doc(fdb, "stmg_saves", currentWheelEditId), { saveData: JSON.stringify(currentWheelEditData) });
+      await updateDoc(doc(fdb, "stmg_leaderboard", currentWheelEditId), { adminEditTimestamp: Date.now() });
+      $id("cc-admin-wheel-modal")?.classList.remove("active");
+      ccShowDialog({ title: "Roue mise à jour", message: "Paramètres de roue appliqués au joueur !" });
+    });
+
+    $id("cc-btn-force-save-all")?.addEventListener("click", async () => {
+      if (!ccIsAdmin) return;
+      if (!await ccShowDialog({ type: "confirm", title: "Sauvegarde Globale", message: "⚠️ Forcer la sauvegarde de TOUS les joueurs connectés ?" })) return;
+      const btn = $id("cc-btn-force-save-all");
+      btn.innerText = "Envoi…";
+      btn.disabled = true;
+      try {
+        const fdb = getCookieDb();
+        const snap = await getDocs(collection(fdb, "stmg_leaderboard"));
+        const now = Date.now();
+        const promises = [];
+        snap.forEach(d => {
+          if (!d.data().banned) promises.push(updateDoc(doc(fdb, "stmg_leaderboard", d.id), { forceSave: now }));
+        });
+        await Promise.all(promises);
+        ccShowDialog({ title: "Signal envoyé", message: "✅ Signal de sauvegarde globale envoyé !" });
+      } catch (_) {
+        ccShowDialog({ title: "Erreur", message: "Erreur lors de l'envoi du signal." });
+      } finally {
+        btn.innerText = "⚠️ Forcer Sauvegarde Globale";
+        btn.disabled = false;
+      }
+    });
+
+    $id("cc-btn-create-group")?.addEventListener("click", async () => {
+      const name = $id("cc-new-group-name").value.trim();
+      const color = $id("cc-new-group-color").value;
+      if (!name) {
+        ccShowDialog({ title: "Nom requis", message: "Donne un nom au groupe !" });
+        return;
+      }
+      const btn = $id("cc-btn-create-group");
+      btn.disabled = true;
+      try {
+        const id = "grp_" + Date.now();
+        await setDoc(doc(getCookieDb(), "stmg_groups", id), { name, color });
+        $id("cc-new-group-name").value = "";
+        await fetchGroups();
+        loadAdminData();
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    $id("cc-btn-send-chat")?.addEventListener("click", async () => {
+      const inp = $id("cc-chat-input");
+      const txt = inp?.value.trim();
+      if (!txt || !game.username) return;
+      const pic = game.profilePic || window.currentUser?.avatar || "";
+      await setDoc(doc(collection(getCookieDb(), "stmg_chat")), {
+        userId: game.username,
+        displayName: game.displayName || game.username,
+        dnbUsername: window.currentUser?.username || game.dnbUsername || "",
+        dnbAvatar: window.currentUser?.avatar || game.dnbAvatar || "",
+        profilePic: pic || null,
+        groupId: game.groupId || null,
+        text: txt,
+        timestamp: serverTimestamp()
+      });
+      inp.value = "";
+    });
+
+    $id("cc-chat-input")?.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") $id("cc-btn-send-chat")?.click();
+    });
+
+    // Load saved local game & sync from server if saveCode exists
+    const saved = localStorage.getItem("danCookieSave_v6");
+    if (saved) {
+      try {
+        game = mergeSaveData(JSON.parse(saved));
+      } catch (_) {}
+    }
+
+    if (game.username) {
+      setupRealtimeListener();
+      if (game.saveCode && !game.username.startsWith("Invité")) {
+        setupTradeListeners();
+        getDoc(doc(getCookieDb(), "stmg_saves", game.saveCode)).then(snap => {
+          if (snap.exists()) {
+            game = mergeSaveData(JSON.parse(snap.data().saveData));
+            saveLocal();
+            if (game.banned) $id("cc-ban-screen")?.classList.remove("hidden");
+            else {
+              renderCompanions();
+              recalculateStats();
+              updateUI();
+            }
+          }
+        }).catch(() => {});
+      }
+      if (game.banned) {
+        $id("cc-ban-screen")?.classList.remove("hidden");
+      } else {
+        fetchGroups().then(() => finishLogin());
+      }
+    } else {
+      const overlay = $id("cc-username-overlay");
+      if (overlay) overlay.style.display = "flex";
+      refreshDnbQuickLinkBtn();
+    }
+
+    setInterval(() => {
+      if (currentCps > 0 && game.username && !game.banned) {
+        const toAdd = currentCps / 10;
+        game.cookies += ccValidateNum(toAdd);
+        game.totalCookies += ccValidateNum(toAdd);
+        updateUI();
+      }
+      if (game.username && !game.banned) updateSugars();
+    }, 100);
+
+    setInterval(() => {
+      if (game.username && !game.username.startsWith("Invité") && !game.banned) game.playtime++;
+      if (unsavedProgress && game.saveCode) $id("cc-reminder-text")?.classList.remove("hidden");
+      checkSpinTimer();
+      saveLocal();
+    }, 1000);
+
+    window.addEventListener("beforeunload", () => {
+      if (unsavedProgress && !game.banned && game.saveCode) saveGameToServer();
+    });
+
+    spawnGoldenCookieLoop();
+  }
+
+  window.switchCCSubTab = (tabName) => {
+    document.querySelectorAll("#cc-nav-tabs .cc-subtab").forEach(b => {
+      b.classList.toggle("active", b.dataset.cctab === tabName);
+    });
+    document.querySelectorAll("#cc-easter-modal .cc-tab-panel").forEach(p => {
+      p.classList.toggle("active", p.id === `cc-tab-${tabName}`);
+    });
+    if (tabName === "game") {
+      requestAnimationFrame(() => updateOrbitingCursors(true));
+    }
+    if (tabName === "wheel") {
+      checkSpinTimer();
+      renderWheelVisuals();
+    }
+    if (tabName === "comps") {
+      renderCompanions();
+    }
+    if (tabName === "trade") {
+      renderTradePlayersList();
+    }
+    if (tabName === "chat") {
+      $id("cc-chat-badge")?.classList.add("hidden");
+    }
+    if (tabName === "rankings") loadLeaderboards();
+    if (tabName === "admin" && ccIsAdmin) loadAdminData();
+  };
+
+  window.refreshCookieClickerThemeSync = () => {
+    const sel = $id("cc-theme-quick-select");
+    const theme = localStorage.getItem("dnb_theme") || document.documentElement.getAttribute("data-theme") || "light";
+    if (sel) sel.value = theme;
+    if (ccInitialized) {
+      updateLiquidColor();
+    }
+  };
+
+  window.refreshCookieClickerLinks = () => {
+    refreshDnbQuickLinkBtn();
+    window.refreshCookieClickerThemeSync();
+    if (ccInitialized) {
+      recalculateStats();
+      updateUI();
+      if ($id("cc-tab-rankings")?.classList.contains("active")) loadLeaderboards();
+    } else {
+      const reviz = getDnBRevizStudyBonus();
+      const bonusEl = $id("cc-reviz-bonus-text");
+      if (bonusEl) bonusEl.innerText = `Bonus Révision : +${reviz.totalPct}% (×${reviz.multiplier.toFixed(2)})`;
+    }
+  };
+
+  window.openCookieClickerEasterEgg = () => {
+    const modal = $id("cc-easter-modal");
+    if (!modal) return;
+    modal.classList.remove("hidden");
+    initCookieClickerOnce();
+    window.refreshCookieClickerLinks();
+    requestAnimationFrame(() => updateOrbitingCursors(true));
+  };
+
+  window.closeCookieClickerEasterEgg = () => {
+    const modal = $id("cc-easter-modal");
+    if (!modal) return;
+    if (unsavedProgress && game.saveCode && !game.banned) {
+      saveGameToServer();
+    }
+    modal.classList.add("hidden");
+    document.title = "DnB Reviz";
+  };
+})();
